@@ -1,0 +1,19 @@
+{
+  "name": "@stoic/agentos-sdk",
+  "version": "0.1.0",
+  "description": "Official SDK for Stoic AgentOS — AI Agent Operations Platform",
+  "main": "src/index.js",
+  "type": "module",
+  "bin": {
+    "agentos": "./src/cli.js"
+  },
+  "keywords": ["ai", "agents", "monitoring", "observability", "agent-ops", "llm", "orchestration"],
+  "author": "Benjamin Kernbaum <benjamin@stoicagentos.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/benjaminkernbaum-ux/stoic-agentos-sdk"
+  },
+  "homepage": "https://agentos.dev",
+  "dependencies": {}
+}
