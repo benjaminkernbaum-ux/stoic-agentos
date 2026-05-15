@@ -41,6 +41,7 @@ export default function Dashboard() {
   const [captureForm, setCaptureForm] = useState({ type: 'note', title: '', content: '' });
   const [captureLoading, setCaptureLoading] = useState(false);
   const [apiKey, setApiKey] = useState(null);
+  const [apiKeys, setApiKeys] = useState([]);
   const [upgradeLoading, setUpgradeLoading] = useState(false);
 
   const fetchData = useCallback(async () => {
@@ -76,12 +77,13 @@ export default function Dashboard() {
     setDataLoading(false);
   }, [org?.id]);
 
-  // Fetch API key on mount
+  // Fetch API key and key list on mount
   useEffect(() => {
     if (!org?.id) return;
     (async () => {
       try {
         const token = (await supabase.auth.getSession()).data.session?.access_token;
+        // Setup org (creates default key if needed)
         const res = await fetch(`${API_BASE}/api/v1/auth/setup-org`, {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
@@ -91,6 +93,11 @@ export default function Dashboard() {
           const data = await res.json();
           if (data.api_key) setApiKey(data.api_key);
         }
+        // Fetch API key list
+        const keysRes = await fetch(`${API_BASE}/api/v1/api-keys?org_id=${org.id}`, {
+          headers: { 'Authorization': `Bearer ${token}` },
+        });
+        if (keysRes.ok) setApiKeys(await keysRes.json());
       } catch {}
     })();
   }, [org?.id]);
@@ -504,19 +511,75 @@ export default function Dashboard() {
               </div>
             </div>
             <div className="dash-panel" style={{ marginTop: 20 }}>
-              <div className="dash-panel-header"><h3>API Keys</h3></div>
-              <div className="dash-settings-row">
-                <label>Your API Key</label>
-                <div className="dash-api-key">
-                  {apiKey ? (
-                    <code style={{ cursor: 'pointer' }} onClick={() => { navigator.clipboard.writeText(apiKey); alert('API key copied!'); }}>
-                      {apiKey.slice(0, 12)}...{apiKey.slice(-6)} 📋
-                    </code>
-                  ) : (
-                    <code>Loading API key...</code>
-                  )}
-                </div>
+              <div className="dash-panel-header">
+                <h3>API Keys</h3>
+                <button className="btn btn-primary btn-sm" onClick={async () => {
+                  try {
+                    const token = (await supabase.auth.getSession()).data.session?.access_token;
+                    const res = await fetch(`${API_BASE}/api/v1/api-keys`, {
+                      method: 'POST',
+                      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ name: `Key ${new Date().toLocaleDateString()}` }),
+                    });
+                    if (res.ok) {
+                      const newKey = await res.json();
+                      setApiKey(newKey.key); // Show full key once
+                      // Refresh key list
+                      const listRes = await fetch(`${API_BASE}/api/v1/api-keys?org_id=${org.id}`, {
+                        headers: { 'Authorization': `Bearer ${token}` },
+                      });
+                      if (listRes.ok) setApiKeys(await listRes.json());
+                    }
+                  } catch {}
+                }}>+ Generate Key</button>
               </div>
+              {apiKey && (
+                <div className="dash-settings-row" style={{ background: 'rgba(155,89,255,0.08)', borderRadius: 8, padding: 16, marginBottom: 16 }}>
+                  <label style={{ color: 'var(--accent-green)', fontWeight: 600 }}>🔑 New Key Created — Copy now! (shown once)</label>
+                  <div className="dash-api-key">
+                    <code style={{ cursor: 'pointer', fontSize: 13, wordBreak: 'break-all' }} onClick={() => { navigator.clipboard.writeText(apiKey); alert('API key copied!'); }}>
+                      {apiKey} 📋
+                    </code>
+                  </div>
+                </div>
+              )}
+              {apiKeys.length > 0 ? (
+                <table className="dash-table" style={{ marginTop: 8 }}>
+                  <thead>
+                    <tr><th>Name</th><th>Key</th><th>Status</th><th>Created</th><th>Last Used</th><th>Actions</th></tr>
+                  </thead>
+                  <tbody>
+                    {apiKeys.map(k => (
+                      <tr key={k.id} style={{ opacity: k.active ? 1 : 0.4 }}>
+                        <td>{k.name}</td>
+                        <td><code style={{ fontSize: 12 }}>{k.key}</code></td>
+                        <td style={{ color: k.active ? 'var(--accent-green)' : 'var(--accent-red)' }}>{k.active ? 'Active' : 'Revoked'}</td>
+                        <td>{new Date(k.created_at).toLocaleDateString()}</td>
+                        <td>{k.last_used_at ? new Date(k.last_used_at).toLocaleDateString() : 'Never'}</td>
+                        <td>
+                          {k.active && (
+                            <button className="btn btn-ghost btn-sm" style={{ color: 'var(--accent-red)' }} onClick={async () => {
+                              if (!confirm('Revoke this API key? This cannot be undone.')) return;
+                              try {
+                                const token = (await supabase.auth.getSession()).data.session?.access_token;
+                                await fetch(`${API_BASE}/api/v1/api-keys/${k.id}`, {
+                                  method: 'DELETE',
+                                  headers: { 'Authorization': `Bearer ${token}` },
+                                });
+                                setApiKeys(prev => prev.map(key => key.id === k.id ? { ...key, active: false } : key));
+                              } catch {}
+                            }}>Revoke</button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-dim)' }}>
+                  No API keys yet. Click "Generate Key" to create one.
+                </div>
+              )}
             </div>
           </div>
         )}

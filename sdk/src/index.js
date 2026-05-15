@@ -123,8 +123,8 @@ export class AgentOS {
           metadata: { event: 'success', duration_ms: durationMs },
         });
 
-        // Update agent heartbeat
-        await sdk._send('/agents', { name: agentName, status: 'success', last_heartbeat: new Date().toISOString() }, 'PATCH').catch(() => {});
+        // Update agent heartbeat via dedicated endpoint
+        await sdk._send('/agents/heartbeat', { name: agentName, status: 'success' }).catch(() => {});
 
         return result;
       } catch (error) {
@@ -137,6 +137,9 @@ export class AgentOS {
           agent: agentName,
           metadata: { event: 'error', duration_ms: durationMs, error_name: error.name },
         });
+
+        // Record error heartbeat
+        await sdk._send('/agents/heartbeat', { name: agentName, status: 'error' }).catch(() => {});
 
         throw error; // Re-throw
       }
