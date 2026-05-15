@@ -6,17 +6,18 @@
 
 import express from 'express';
 import cors from 'cors';
+import crypto from 'crypto';
 import { createClient } from '@supabase/supabase-js';
 
 // ── Config ──
 const PORT = process.env.PORT || 4444;
-const SUPABASE_URL = process.env.SUPABASE_URL || '';
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://hwmpphhujhxdzuhjkskh.supabase.co';
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY || '';
 const STRIPE_SECRET = process.env.STRIPE_SECRET_KEY || '';
 const API_VERSION = 'v1';
 
-// ── Supabase Client ──
-const supabase = SUPABASE_URL
+// ── Supabase Client (service role — bypasses RLS) ──
+const supabase = SUPABASE_URL && SUPABASE_SERVICE_KEY
   ? createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
   : null;
 
@@ -50,13 +51,13 @@ async function authenticate(req, res, next) {
   if (token.startsWith('sk_')) {
     if (!supabase) return res.status(500).json({ error: 'Database not configured' });
     const { data: apiKey } = await supabase
-      .from('api_keys')
-      .select('*, organizations(*)')
+      .from('agentos_api_keys')
+      .select('*, agentos_organizations(*)')
       .eq('key', token)
       .eq('active', true)
       .single();
     if (!apiKey) return res.status(401).json({ error: 'Invalid API key' });
-    req.org = apiKey.organizations;
+    req.org = apiKey.agentos_organizations;
     req.apiKey = apiKey;
     return next();
   }
@@ -66,16 +67,32 @@ async function authenticate(req, res, next) {
   const { data: { user }, error } = await supabase.auth.getUser(token);
   if (error || !user) return res.status(401).json({ error: 'Invalid token' });
 
-  // Get user's org
-  const { data: membership } = await supabase
-    .from('org_members')
-    .select('*, organizations(*)')
-    .eq('user_id', user.id)
-    .single();
+  // Get user's org — try org_id from query first for multi-org support
+  const orgId = req.query.org_id || req.body?.org_id;
+  let membership;
+
+  if (orgId) {
+    const { data } = await supabase
+      .from('agentos_org_members')
+      .select('*, agentos_organizations(*)')
+      .eq('user_id', user.id)
+      .eq('org_id', orgId)
+      .single();
+    membership = data;
+  } else {
+    const { data } = await supabase
+      .from('agentos_org_members')
+      .select('*, agentos_organizations(*)')
+      .eq('user_id', user.id)
+      .limit(1)
+      .single();
+    membership = data;
+  }
+
   if (!membership) return res.status(403).json({ error: 'No organization found' });
 
   req.user = user;
-  req.org = membership.organizations;
+  req.org = membership.agentos_organizations;
   req.role = membership.role;
   next();
 }
@@ -91,7 +108,7 @@ const PLAN_LIMITS = {
 function checkLimit(plan, resource, current) {
   const limits = PLAN_LIMITS[plan] || PLAN_LIMITS.free;
   const max = limits[resource];
-  if (max === -1) return true; // unlimited
+  if (max === -1) return true;
   return current < max;
 }
 
@@ -100,8 +117,63 @@ function checkLimit(plan, resource, current) {
 // ══════════════════════════════════
 
 // ── Health ──
-app.get('/health', (req, res) => res.json({ status: 'ok', version: API_VERSION, uptime: process.uptime() }));
+app.get('/health', (req, res) => res.json({ status: 'ok', version: API_VERSION, uptime: process.uptime(), db: !!supabase }));
 app.get(`/api/${API_VERSION}/health`, (req, res) => res.json({ status: 'ok', version: API_VERSION }));
+
+// ── Auth: Setup Org (called after first signup) ──
+app.post(`/api/${API_VERSION}/auth/setup-org`, async (req, res) => {
+  try {
+    const auth = req.headers.authorization;
+    if (!auth?.startsWith('Bearer ')) return res.status(401).json({ error: 'Missing auth' });
+    if (!supabase) return res.status(500).json({ error: 'Database not configured' });
+
+    const token = auth.slice(7);
+    const { data: { user }, error: authErr } = await supabase.auth.getUser(token);
+    if (authErr || !user) return res.status(401).json({ error: 'Invalid token' });
+
+    // Check if user already has an org
+    const { data: existing } = await supabase
+      .from('agentos_org_members')
+      .select('org_id, agentos_organizations(*)')
+      .eq('user_id', user.id)
+      .single();
+
+    if (existing?.agentos_organizations) {
+      return res.json(existing.agentos_organizations);
+    }
+
+    const { name, slug } = req.body;
+    const orgName = name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'My Organization';
+    const orgSlug = slug || orgName.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').slice(0, 40) + '-' + Date.now().toString(36);
+
+    // Create org
+    const { data: org, error: orgErr } = await supabase
+      .from('agentos_organizations')
+      .insert({ name: orgName, slug: orgSlug, plan: 'free' })
+      .select()
+      .single();
+    if (orgErr) throw orgErr;
+
+    // Add user as owner
+    const { error: memberErr } = await supabase
+      .from('agentos_org_members')
+      .insert({ org_id: org.id, user_id: user.id, role: 'owner' });
+    if (memberErr) throw memberErr;
+
+    // Generate initial API key
+    const apiKey = `sk_live_${crypto.randomBytes(24).toString('hex')}`;
+    await supabase.from('agentos_api_keys').insert({
+      org_id: org.id,
+      key: apiKey,
+      name: 'Default',
+    });
+
+    res.json({ ...org, api_key: apiKey });
+  } catch (err) {
+    console.error('Setup org error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // ── Observations ──
 app.post(`/api/${API_VERSION}/observations`, authenticate, async (req, res) => {
@@ -110,11 +182,12 @@ app.post(`/api/${API_VERSION}/observations`, authenticate, async (req, res) => {
     if (!type || !title) return res.status(400).json({ error: 'type and title required' });
 
     // Check observation limit
+    const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
     const { count } = await supabase
-      .from('observations')
+      .from('agentos_observations')
       .select('*', { count: 'exact', head: true })
       .eq('org_id', req.org.id)
-      .gte('created_at', new Date(new Date().setDate(1)).toISOString()); // month start
+      .gte('created_at', monthStart);
 
     if (!checkLimit(req.org.plan, 'observations', count)) {
       return res.status(429).json({
@@ -126,7 +199,7 @@ app.post(`/api/${API_VERSION}/observations`, authenticate, async (req, res) => {
     }
 
     const { data, error } = await supabase
-      .from('observations')
+      .from('agentos_observations')
       .insert({
         org_id: req.org.id,
         workspace_id: workspace || null,
@@ -151,19 +224,19 @@ app.get(`/api/${API_VERSION}/observations`, authenticate, async (req, res) => {
   try {
     const { limit = 50, offset = 0, type, workspace, agent } = req.query;
     let query = supabase
-      .from('observations')
-      .select('*', { count: 'exact' })
+      .from('agentos_observations')
+      .select('*')
       .eq('org_id', req.org.id)
       .order('created_at', { ascending: false })
-      .range(offset, offset + limit - 1);
+      .range(+offset, +offset + +limit - 1);
 
     if (type) query = query.eq('type', type);
     if (workspace) query = query.eq('workspace_id', workspace);
     if (agent) query = query.eq('agent_id', agent);
 
-    const { data, count, error } = await query;
+    const { data, error } = await query;
     if (error) throw error;
-    res.json({ data, total: count, limit: +limit, offset: +offset });
+    res.json(data || []);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -175,9 +248,8 @@ app.post(`/api/${API_VERSION}/agents`, authenticate, async (req, res) => {
     const { name, description, module, status, config } = req.body;
     if (!name) return res.status(400).json({ error: 'name required' });
 
-    // Check agent limit
     const { count } = await supabase
-      .from('agents')
+      .from('agentos_agents')
       .select('*', { count: 'exact', head: true })
       .eq('org_id', req.org.id);
 
@@ -186,7 +258,7 @@ app.post(`/api/${API_VERSION}/agents`, authenticate, async (req, res) => {
     }
 
     const { data, error } = await supabase
-      .from('agents')
+      .from('agentos_agents')
       .insert({
         org_id: req.org.id,
         name,
@@ -208,12 +280,12 @@ app.post(`/api/${API_VERSION}/agents`, authenticate, async (req, res) => {
 app.get(`/api/${API_VERSION}/agents`, authenticate, async (req, res) => {
   try {
     const { data, error } = await supabase
-      .from('agents')
+      .from('agentos_agents')
       .select('*')
       .eq('org_id', req.org.id)
       .order('name');
     if (error) throw error;
-    res.json({ data });
+    res.json(data || []);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -229,7 +301,7 @@ app.patch(`/api/${API_VERSION}/agents/:id`, authenticate, async (req, res) => {
     updates.updated_at = new Date().toISOString();
 
     const { data, error } = await supabase
-      .from('agents')
+      .from('agentos_agents')
       .update(updates)
       .eq('id', req.params.id)
       .eq('org_id', req.org.id)
@@ -250,7 +322,7 @@ app.post(`/api/${API_VERSION}/workspaces`, authenticate, async (req, res) => {
     if (!name) return res.status(400).json({ error: 'name required' });
 
     const { count } = await supabase
-      .from('workspaces')
+      .from('agentos_workspaces')
       .select('*', { count: 'exact', head: true })
       .eq('org_id', req.org.id);
 
@@ -259,7 +331,7 @@ app.post(`/api/${API_VERSION}/workspaces`, authenticate, async (req, res) => {
     }
 
     const { data, error } = await supabase
-      .from('workspaces')
+      .from('agentos_workspaces')
       .insert({
         org_id: req.org.id,
         name,
@@ -281,12 +353,12 @@ app.post(`/api/${API_VERSION}/workspaces`, authenticate, async (req, res) => {
 app.get(`/api/${API_VERSION}/workspaces`, authenticate, async (req, res) => {
   try {
     const { data, error } = await supabase
-      .from('workspaces')
+      .from('agentos_workspaces')
       .select('*')
       .eq('org_id', req.org.id)
       .order('name');
     if (error) throw error;
-    res.json({ data });
+    res.json(data || []);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -296,12 +368,12 @@ app.get(`/api/${API_VERSION}/workspaces`, authenticate, async (req, res) => {
 app.get(`/api/${API_VERSION}/knowledge-items`, authenticate, async (req, res) => {
   try {
     const { data, error } = await supabase
-      .from('knowledge_items')
+      .from('agentos_knowledge_items')
       .select('*')
       .eq('org_id', req.org.id)
       .order('updated_at', { ascending: false });
     if (error) throw error;
-    res.json({ data });
+    res.json(data || []);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -313,7 +385,7 @@ app.post(`/api/${API_VERSION}/knowledge-items`, authenticate, async (req, res) =
     if (!name) return res.status(400).json({ error: 'name required' });
 
     const { count } = await supabase
-      .from('knowledge_items')
+      .from('agentos_knowledge_items')
       .select('*', { count: 'exact', head: true })
       .eq('org_id', req.org.id);
 
@@ -322,7 +394,7 @@ app.post(`/api/${API_VERSION}/knowledge-items`, authenticate, async (req, res) =
     }
 
     const { data, error } = await supabase
-      .from('knowledge_items')
+      .from('agentos_knowledge_items')
       .insert({
         org_id: req.org.id,
         name,
@@ -344,14 +416,14 @@ app.post(`/api/${API_VERSION}/knowledge-items`, authenticate, async (req, res) =
 app.get(`/api/${API_VERSION}/stats`, authenticate, async (req, res) => {
   try {
     const orgId = req.org.id;
-    const monthStart = new Date(new Date().setDate(1)).toISOString();
+    const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
 
     const [agents, workspaces, observations, knowledgeItems, monthlyObs] = await Promise.all([
-      supabase.from('agents').select('*', { count: 'exact', head: true }).eq('org_id', orgId),
-      supabase.from('workspaces').select('*', { count: 'exact', head: true }).eq('org_id', orgId),
-      supabase.from('observations').select('*', { count: 'exact', head: true }).eq('org_id', orgId),
-      supabase.from('knowledge_items').select('*', { count: 'exact', head: true }).eq('org_id', orgId),
-      supabase.from('observations').select('*', { count: 'exact', head: true }).eq('org_id', orgId).gte('created_at', monthStart),
+      supabase.from('agentos_agents').select('*', { count: 'exact', head: true }).eq('org_id', orgId),
+      supabase.from('agentos_workspaces').select('*', { count: 'exact', head: true }).eq('org_id', orgId),
+      supabase.from('agentos_observations').select('*', { count: 'exact', head: true }).eq('org_id', orgId),
+      supabase.from('agentos_knowledge_items').select('*', { count: 'exact', head: true }).eq('org_id', orgId),
+      supabase.from('agentos_observations').select('*', { count: 'exact', head: true }).eq('org_id', orgId).gte('created_at', monthStart),
     ]);
 
     const plan = req.org.plan || 'free';
@@ -359,11 +431,33 @@ app.get(`/api/${API_VERSION}/stats`, authenticate, async (req, res) => {
 
     res.json({
       plan,
-      agents: { current: agents.count, limit: limits.agents },
-      workspaces: { current: workspaces.count, limit: limits.workspaces },
-      observations: { total: observations.count, this_month: monthlyObs.count, limit: limits.observations },
-      knowledge_items: { current: knowledgeItems.count, limit: limits.knowledge_items },
+      agents: agents.count || 0,
+      workspaces: workspaces.count || 0,
+      observations: monthlyObs.count || 0,
+      knowledgeItems: knowledgeItems.count || 0,
+      observationLimit: limits.observations,
     });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── API Key Management ──
+app.get(`/api/${API_VERSION}/api-keys`, authenticate, async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('agentos_api_keys')
+      .select('id, name, key, active, created_at, last_used_at')
+      .eq('org_id', req.org.id)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    // Mask keys for security
+    const masked = (data || []).map(k => ({
+      ...k,
+      key: k.key.slice(0, 12) + '...' + k.key.slice(-4),
+      full_key: undefined,
+    }));
+    res.json(masked);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -375,16 +469,18 @@ app.post(`/api/${API_VERSION}/webhooks/git`, async (req, res) => {
     const { api_key, repo, branch, commit_hash, commit_message, author } = req.body;
     if (!api_key || !repo) return res.status(400).json({ error: 'api_key and repo required' });
 
+    if (!supabase) return res.status(500).json({ error: 'Database not configured' });
+
     const { data: key } = await supabase
-      .from('api_keys')
-      .select('*, organizations(*)')
+      .from('agentos_api_keys')
+      .select('*, agentos_organizations(*)')
       .eq('key', api_key)
       .eq('active', true)
       .single();
 
     if (!key) return res.status(401).json({ error: 'Invalid API key' });
 
-    await supabase.from('observations').insert({
+    await supabase.from('agentos_observations').insert({
       org_id: key.org_id,
       type: 'git_commit',
       title: `[${repo}] ${commit_hash?.slice(0, 7)}: ${commit_message}`,
@@ -405,6 +501,6 @@ app.post(`/api/${API_VERSION}/webhooks/git`, async (req, res) => {
 app.listen(PORT, () => {
   console.log(`\n⚡ Stoic AgentOS API — v${API_VERSION}`);
   console.log(`   Port: ${PORT}`);
-  console.log(`   Supabase: ${SUPABASE_URL ? '✅ Connected' : '⚠️  No URL (demo mode)'}`);
+  console.log(`   Supabase: ${supabase ? '✅ Connected' : '⚠️  No URL or Service Key (demo mode)'}`);
   console.log(`   Stripe: ${STRIPE_SECRET ? '✅ Ready' : '⚠️  Not configured'}\n`);
 });
