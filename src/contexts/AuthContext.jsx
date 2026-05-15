@@ -90,6 +90,10 @@ export function AuthProvider({ children }) {
           plan: orgData.plan || 'free',
           role: 'owner',
         });
+        // Surface the first API key to the dashboard once — it's only returned at creation
+        if (orgData.api_key && typeof sessionStorage !== 'undefined') {
+          sessionStorage.setItem('stoic_first_api_key', orgData.api_key);
+        }
       }
     } catch (err) {
       console.error('Failed to create org:', err);

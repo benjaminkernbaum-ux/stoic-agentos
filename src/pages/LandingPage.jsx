@@ -4,12 +4,12 @@ import './LandingPage.css';
 const NAV_LINKS = ['Features', 'SDK', 'Pricing', 'Docs'];
 
 const FEATURES = [
-  { icon: '🤖', color: 'rgba(155,89,255,0.12)', title: 'Agent Fleet Monitoring', desc: 'Track 100+ AI agents across departments. Real-time status, execution history, and performance metrics in one dashboard.' },
-  { icon: '🧠', color: 'rgba(77,124,255,0.12)', title: 'Knowledge Brain', desc: 'Persistent memory across all AI sessions. Auto-capture decisions, discoveries, and architectural changes. Never lose context again.' },
-  { icon: '🕸️', color: 'rgba(0,212,255,0.12)', title: 'Knowledge Graph', desc: 'Interactive force-directed visualization of your codebase relationships. See how agents, files, and workflows connect.' },
-  { icon: '📦', color: 'rgba(0,230,138,0.12)', title: 'Multi-Workspace', desc: 'Manage 50+ repos from a single pane of glass. Git status, branches, dirty files, and context routing across projects.' },
-  { icon: '⚡', color: 'rgba(255,159,67,0.12)', title: 'Auto-Capture Hooks', desc: 'Git post-commit hooks auto-log every change. Scheduled brain refresh keeps knowledge items fresh without manual work.' },
-  { icon: '🏛', color: 'rgba(255,107,157,0.12)', title: 'Financial Department', desc: '8 AI agents replacing $184K/yr of manual work — CFO, Bookkeeper, Tax, Forecasting, Reconciliation, all automated.' },
+  { icon: '🔌', color: 'rgba(155,89,255,0.12)', title: 'MCP-Native Capture', desc: 'Wrap any MCP client and every tool call is captured automatically — server, tool, args, latency, success/error. The post-MCP observability layer Langfuse and AgentOps were not built for.' },
+  { icon: '🛑', color: 'rgba(239,68,68,0.12)', title: 'Containment & Kill Switch', desc: '60% of orgs cannot stop a misbehaving agent. We can. Pause an API key or every key in your org in one click — SDKs receive 401 within seconds and the action is logged to your audit feed.' },
+  { icon: '📜', color: 'rgba(0,230,138,0.12)', title: 'EU-AI-Act Audit Trail', desc: 'Every observation is timestamped and immutable. Export the full execution ledger to satisfy high-risk system documentation obligations under the EU AI Act (Aug 2026 deadline).' },
+  { icon: '🧠', color: 'rgba(77,124,255,0.12)', title: 'Knowledge Brain', desc: 'Sovereign context layer: decisions, architectures, deployments, and discoveries stored as queryable observations. Agents read their own history instead of re-deriving it every run.' },
+  { icon: '📦', color: 'rgba(0,212,255,0.12)', title: 'Multi-Workspace', desc: 'Route observations across multiple repos and environments from one org. Git status, branches, and per-workspace agent fleets in a single pane.' },
+  { icon: '⚡', color: 'rgba(255,159,67,0.12)', title: 'Auto-Capture Hooks', desc: 'Git post-commit and CI hooks log every change without instrumentation code. Three lines and your stack starts reporting.' },
 ];
 
 const PRICING = [
@@ -22,36 +22,32 @@ const PRICING = [
 const COMPARE = [
   { feature: 'Agent Fleet Monitoring', us: '✅', crewai: '✅', langfuse: '❌', agentops: '🟡' },
   { feature: 'Knowledge Brain + Memory', us: '✅', crewai: '❌', langfuse: '🟡', agentops: '🟡' },
-  { feature: 'Knowledge Graph', us: '✅', crewai: '❌', langfuse: '❌', agentops: '❌' },
   { feature: 'Multi-Repo Workspace', us: '✅', crewai: '❌', langfuse: '❌', agentops: '❌' },
   { feature: 'Auto-Capture (Git Hooks)', us: '✅', crewai: '❌', langfuse: '🟡', agentops: '🟡' },
-  { feature: 'Brand/Voice Vault', us: '✅', crewai: '❌', langfuse: '❌', agentops: '❌' },
-  { feature: 'Financial AI Agents', us: '✅', crewai: '❌', langfuse: '❌', agentops: '❌' },
+  { feature: 'MCP-Native Auto-Capture', us: '✅', crewai: '❌', langfuse: '❌', agentops: '❌' },
+  { feature: 'One-Click Kill Switch', us: '✅', crewai: '❌', langfuse: '❌', agentops: '❌' },
+  { feature: 'EU-AI-Act Audit Export', us: '✅', crewai: '❌', langfuse: '❌', agentops: '❌' },
   { feature: 'Visual Dashboard', us: '✅', crewai: '🟡', langfuse: '✅', agentops: '🟡' },
   { feature: 'Open-Source Core', us: '✅', crewai: '✅', langfuse: '✅', agentops: '✅' },
 ];
 
 const SDK_CODE = `<span class="kw">import</span> { AgentOS } <span class="kw">from</span> <span class="str">'@stoic/agentos-sdk'</span>;
+<span class="kw">import</span> { Client } <span class="kw">from</span> <span class="str">'@modelcontextprotocol/sdk/client/index.js'</span>;
 
-<span class="cm">// Initialize with your API key</span>
-<span class="kw">const</span> os = <span class="kw">new</span> <span class="fn">AgentOS</span>({
-  apiKey: <span class="str">'sk_live_xxx'</span>,
-  workspace: <span class="str">'my-saas-backend'</span>,
+<span class="kw">const</span> os = <span class="kw">new</span> <span class="fn">AgentOS</span>({ apiKey: <span class="str">'sk_live_xxx'</span> });
+
+<span class="cm">// 🔌 MCP-native: wrap any MCP client, every tool call is captured</span>
+<span class="kw">const</span> github = os.<span class="fn">wrapMcpClient</span>(<span class="kw">new</span> <span class="fn">Client</span>(...), { serverName: <span class="str">'github'</span> });
+<span class="kw">await</span> github.<span class="fn">callTool</span>({ name: <span class="str">'create_issue'</span>, arguments: { ... } });
+<span class="cm">// → captured: latency, args, result, success/error, full audit trail</span>
+
+<span class="cm">// 🤖 Or wrap any agent function — auto-captures runs + errors</span>
+<span class="kw">const</span> summarize = os.<span class="fn">wrapAgent</span>(<span class="str">'summarizer'</span>, <span class="kw">async</span> (text) <span class="op">=></span> {
+  <span class="kw">return</span> <span class="kw">await</span> <span class="fn">model</span>.<span class="fn">complete</span>(text);
 });
 
-<span class="cm">// Wrap any agent — auto-captures start/end/errors</span>
-<span class="kw">const</span> invoiceAgent = os.<span class="fn">wrapAgent</span>(<span class="str">'invoice-processor'</span>, <span class="kw">async</span> (input) <span class="op">=></span> {
-  <span class="kw">const</span> result = <span class="kw">await</span> <span class="fn">processInvoice</span>(input);
-  <span class="kw">return</span> result;
-});
-
-<span class="cm">// Manual capture for decisions & discoveries</span>
-os.<span class="fn">capture</span>({
-  type: <span class="str">'decision'</span>,
-  title: <span class="str">'Switched to GPT-4o-mini'</span>,
-  content: <span class="str">'Reduced cost by 40% with no quality loss'</span>,
-  agent: <span class="str">'content-writer'</span>,
-});`;
+<span class="cm">// 🛑 Misbehaving agent? Hit the kill switch from the dashboard.</span>
+<span class="cm">//    Every SDK gets 401 within seconds. Action logged to audit feed.</span>`;
 
 export default function LandingPage() {
   const [scrolled, setScrolled] = useState(false);
@@ -74,7 +70,7 @@ export default function LandingPage() {
           <div className="nav-links">
             {NAV_LINKS.map(l => <a key={l} className="nav-link" href={`#${l.toLowerCase()}`}>{l}</a>)}
             <a className="nav-link" href="/login">Sign In</a>
-            <button className="btn btn-primary btn-sm" onClick={() => window.location.href = '/signup'}>Get Started Free</button>
+            <button className="btn btn-primary btn-sm" onClick={() => window.location.href = '/signup'}>Get API key →</button>
           </div>
         </div>
       </nav>
@@ -87,16 +83,16 @@ export default function LandingPage() {
             $11.6B market · Backed by real production use
           </div>
           <h1 className="animate-in delay-1">
-            Your AI Agents Need<br />
-            a <span className="gradient-text">Command Center</span>
+            The <span className="gradient-text">MCP-native</span><br />
+            observability layer for AI agents
           </h1>
           <p className="hero-sub animate-in delay-2">
-            Monitor, orchestrate, and scale your AI agent fleet from a single premium dashboard. 
-            Knowledge persistence, auto-capture, and multi-workspace management — built for teams shipping AI.
+            Capture every tool call. Kill misbehaving agents in one click. Ship an EU-AI-Act-ready audit trail.
+            Built for the post-MCP agent stack — not retrofitted from the LLM era.
           </p>
           <div className="hero-cta animate-in delay-3">
             <button className="btn btn-primary btn-lg" onClick={() => window.location.href = '/signup'}>
-              🚀 Start Free — No Credit Card
+              ⚡ Get API key in 30s
             </button>
             <button className="btn btn-secondary btn-lg" onClick={() => document.getElementById('sdk')?.scrollIntoView({ behavior: 'smooth' })}>
               View SDK →
@@ -104,20 +100,20 @@ export default function LandingPage() {
           </div>
           <div className="hero-metrics animate-in delay-4">
             <div className="hero-metric">
-              <div className="hero-metric-value" style={{ color: 'var(--accent-purple)' }}>23</div>
-              <div className="hero-metric-label">Agents Managed</div>
+              <div className="hero-metric-value" style={{ color: 'var(--accent-purple)', fontSize: 28 }}>🔌</div>
+              <div className="hero-metric-label">MCP-native capture</div>
             </div>
             <div className="hero-metric">
-              <div className="hero-metric-value" style={{ color: 'var(--accent-cyan)' }}>17</div>
-              <div className="hero-metric-label">Repos Connected</div>
+              <div className="hero-metric-value" style={{ color: 'var(--accent-red)', fontSize: 28 }}>🛑</div>
+              <div className="hero-metric-label">One-click kill switch</div>
             </div>
             <div className="hero-metric">
-              <div className="hero-metric-value" style={{ color: 'var(--accent-green)' }}>$184K</div>
-              <div className="hero-metric-label">Annual Savings</div>
+              <div className="hero-metric-value" style={{ color: 'var(--accent-green)', fontSize: 28 }}>📜</div>
+              <div className="hero-metric-label">EU AI Act audit trail</div>
             </div>
             <div className="hero-metric">
-              <div className="hero-metric-value" style={{ color: 'var(--accent-orange)' }}>324</div>
-              <div className="hero-metric-label">Observations</div>
+              <div className="hero-metric-value" style={{ color: 'var(--accent-orange)', fontSize: 28 }}>⚡</div>
+              <div className="hero-metric-label">3 lines to install</div>
             </div>
           </div>
         </div>

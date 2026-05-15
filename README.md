@@ -1,65 +1,98 @@
 # ⚡ Stoic AgentOS
 
-**The Operating System for AI Agent Fleets**
+**The MCP-native observability layer for autonomous AI agents.**
 
-Monitor, orchestrate, and scale your AI agents from a single premium dashboard. Knowledge persistence, auto-capture, and multi-workspace management — built for teams shipping AI.
+Capture every tool call. Kill misbehaving agents in one click. Ship an EU-AI-Act-ready
+audit trail. Built for the post-MCP agent stack — not retrofitted from the LLM era.
 
 ![License](https://img.shields.io/badge/license-MIT-purple)
-![Version](https://img.shields.io/badge/version-0.1.0-blue)
+![Status](https://img.shields.io/badge/status-public%20beta-orange)
 
-## 🚀 Quick Start
+## Why Stoic
+
+Langfuse traced LLM calls. AgentOps logged agent runs. Both shipped before MCP went
+from spec to **9,400+ servers in production**. Stoic captures the *tool-call*
+surface — the place where modern agents actually fail — and the *containment*
+surface — the place where ops actually need control:
+
+| | Langfuse | AgentOps | **Stoic** |
+| --- | :---: | :---: | :---: |
+| MCP-native tool capture | ❌ | ❌ | ✅ |
+| One-click kill switch (org-wide) | ❌ | ❌ | ✅ |
+| EU-AI-Act audit export | ❌ | ❌ | ✅ |
+| LLM trace visualization | ✅ | 🟡 | 🟡 |
+| Open-source core | ✅ | ✅ | ✅ |
+
+## Quick start
 
 ```bash
-# Install the SDK
 npm install @stoic/agentos-sdk
-
-# Initialize in your project
-npx agentos init YOUR_API_KEY my-workspace
 ```
 
-```javascript
+```js
 import { AgentOS } from '@stoic/agentos-sdk';
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 
-const os = new AgentOS({
-  apiKey: 'sk_live_xxx',
-  workspace: 'my-saas-backend',
-});
+const os = new AgentOS({ apiKey: process.env.AGENTOS_API_KEY });
 
-// Wrap any agent — auto-captures start/end/errors
-const myAgent = os.wrapAgent('invoice-processor', async (input) => {
-  const result = await processInvoice(input);
-  return result;
-});
+// MCP-native — every tool call captured automatically
+const github = os.wrapMcpClient(new Client(...), { serverName: 'github' });
+await github.callTool({ name: 'create_issue', arguments: { ... } });
 
-// Manual capture
-os.capture({
-  type: 'decision',
-  title: 'Switched to GPT-4o-mini',
-  content: 'Reduced cost by 40% with no quality loss',
-});
+// Or wrap any agent function
+const summarize = os.wrapAgent('summarizer', async (text) => model.complete(text));
 ```
 
-## ✨ Features
+Get an API key at [stoic-agentos.vercel.app](https://stoic-agentos.vercel.app).
 
-- 🤖 **Agent Fleet Monitoring** — Track 100+ agents across departments
-- 🧠 **Knowledge Brain** — Persistent memory across all AI sessions
-- 🕸️ **Knowledge Graph** — Interactive codebase visualization
-- 📦 **Multi-Workspace** — Manage 50+ repos from one dashboard
-- ⚡ **Auto-Capture** — Git hooks auto-log every change
-- 🏛 **Financial Department** — 8 AI agents replacing $184K/yr
+## Architecture
 
-## 💎 Pricing
+Three components, three layers:
 
-| | Free | Pro ($49/mo) | Team ($299/mo) | Enterprise |
-|---|------|-------------|----------------|------------|
-| Workspaces | 2 | 10 | Unlimited | Unlimited |
-| Agents | 5 | 25 | 100 | Unlimited |
-| Observations/mo | 10,000 | 100,000 | Unlimited | Unlimited |
+```
+┌─────────────────────────────────────────────────────┐
+│  Dashboard (React + Vite, deployed on Vercel)       │
+│  Auth, agent fleet, observations, kill switch        │
+├─────────────────────────────────────────────────────┤
+│  API (Express + Supabase, deployed on Railway)       │
+│  Multi-tenant REST, JWT + API-key auth, plan limits  │
+├─────────────────────────────────────────────────────┤
+│  SDK (@stoic/agentos-sdk on npm)                     │
+│  MCP wrapper, agent wrapper, batched capture         │
+└─────────────────────────────────────────────────────┘
+```
 
-## 📚 Documentation
+Schema: `organizations`, `org_members`, `api_keys`, `workspaces`, `agents`,
+`observations`, `knowledge_items`, `usage_monthly`. Row-level security
+enforces org isolation; the API uses the service role with explicit org
+scoping in every query.
 
-Visit [agentos.dev/docs](https://agentos.dev/docs) for full documentation.
+## Repo layout
 
-## 📄 License
+```
+src/         Frontend (React + Vite)
+api/src/     Backend (Express + Supabase)
+api/supabase/  SQL migrations
+sdk/         Published npm package (@stoic/agentos-sdk)
+```
 
-MIT © 2026 Benjamin Kernbaum
+## Local development
+
+```bash
+# Frontend
+npm install
+npm run dev      # http://localhost:5173
+
+# Backend
+cd api && npm install && npm start
+# Requires SUPABASE_URL and SUPABASE_SERVICE_KEY env vars
+```
+
+## Status
+
+Public beta. Self-hosted is not yet supported — managed cloud only.
+Pricing and limits are evolving; see the in-app Settings tab for current plan.
+
+## License
+
+MIT © Benjamin Kernbaum

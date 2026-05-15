@@ -1,7 +1,8 @@
 # @stoic/agentos-sdk
 
-Official SDK for [Stoic AgentOS](https://stoic-agentos.vercel.app) — the AI Agent Operations Platform.
-Capture decisions, errors, deployments, and agent runs in one place.
+Official SDK for [Stoic AgentOS](https://stoic-agentos.vercel.app) — the MCP-native
+observability layer for autonomous AI agents. Capture every tool call, agent run,
+decision, and error. Hit the kill switch from the dashboard when something goes wrong.
 
 ## Install
 
@@ -9,30 +10,49 @@ Capture decisions, errors, deployments, and agent runs in one place.
 npm install @stoic/agentos-sdk
 ```
 
-## Quick start
+## Quick start — MCP
+
+The wedge. Wrap any MCP client and every tool call is captured automatically
+(latency, args, result, success/error), with zero instrumentation in your business logic.
 
 ```js
 import { AgentOS } from '@stoic/agentos-sdk';
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 
-const os = new AgentOS({
-  apiKey: process.env.AGENTOS_API_KEY, // sk_live_xxx — generate one in the dashboard
-  workspace: 'my-app',
+const os = new AgentOS({ apiKey: process.env.AGENTOS_API_KEY });
+
+const raw = new Client(/* your MCP transport */);
+const github = os.wrapMcpClient(raw, { serverName: 'github' });
+
+// Every call is captured to your dashboard
+await github.callTool({ name: 'create_issue', arguments: { title: 'bug' } });
+await github.readResource({ uri: 'repo://owner/name/README.md' });
+```
+
+Works with the official `@modelcontextprotocol/sdk` Client or any object exposing
+`callTool`, `listTools`, `readResource`, `listResources`, or `getPrompt`.
+
+## Quick start — agent wrapping
+
+For non-MCP agents (or plain functions), wrap them once:
+
+```js
+const summarize = os.wrapAgent('summarizer', async (text) => {
+  return model.complete(text);
 });
 
-// Capture an observation
+await summarize('hello world');
+// → captures start, success or error, duration, and updates the agent record
+```
+
+## Manual capture
+
+```js
 await os.capture({
   type: 'decision',
   title: 'Switched to GPT-4o-mini',
   content: 'Cost dropped 73% with no measurable quality regression on our eval set.',
 });
-
-// Wrap an agent function — auto-captures start, success/error, and updates the agent record
-const summarize = os.wrapAgent('summarizer', async (text) => {
-  // ...your agent code
-  return summary;
-});
-
-await summarize('hello world');
 ```
 
 ## API

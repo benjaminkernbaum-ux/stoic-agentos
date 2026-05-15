@@ -48,6 +48,16 @@ export default function Dashboard() {
   const [newKey, setNewKey] = useState(null); // full key shown once after creation
   const [creatingKey, setCreatingKey] = useState(false);
 
+  // Welcome banner — show the first API key once after signup
+  const [welcomeKey, setWelcomeKey] = useState(() => {
+    if (typeof sessionStorage === 'undefined') return null;
+    return sessionStorage.getItem('stoic_first_api_key');
+  });
+  const dismissWelcomeKey = () => {
+    sessionStorage.removeItem('stoic_first_api_key');
+    setWelcomeKey(null);
+  };
+
   const fetchData = useCallback(async () => {
     if (!org?.id) return;
     setDataLoading(true);
@@ -151,17 +161,38 @@ export default function Dashboard() {
     setCreatingKey(false);
   };
 
-  const handleRevokeKey = async (id) => {
+  const handleToggleKey = async (id, currentlyActive) => {
     if (!org?.id) return;
     try {
       await fetch(`${API_BASE}/api/v1/api-keys/${id}?org_id=${org.id}`, {
-        method: 'DELETE',
+        method: 'PATCH',
         headers: await authHeaders(),
+        body: JSON.stringify({ active: !currentlyActive }),
       });
       fetchApiKeys();
     } catch (err) {
-      console.error('Revoke failed:', err);
+      console.error('Toggle failed:', err);
     }
+  };
+
+  const [killSwitchBusy, setKillSwitchBusy] = useState(false);
+  const handleKillSwitch = async (action) => {
+    if (!org?.id) return;
+    const verb = action === 'pause' ? 'PAUSE ALL' : 'RESUME ALL';
+    if (action === 'pause' && !confirm(`${verb} API keys?\n\nEvery SDK using this org will get 401 on the next request. Use this if an agent is misbehaving in production.`)) return;
+    setKillSwitchBusy(true);
+    try {
+      await fetch(`${API_BASE}/api/v1/kill-switch?org_id=${org.id}`, {
+        method: 'POST',
+        headers: await authHeaders(),
+        body: JSON.stringify({ action }),
+      });
+      fetchApiKeys();
+      fetchData();
+    } catch (err) {
+      console.error('Kill switch failed:', err);
+    }
+    setKillSwitchBusy(false);
   };
 
   const handleLogout = async () => {
@@ -251,6 +282,35 @@ export default function Dashboard() {
             <button className="btn btn-primary btn-sm">+ New Agent</button>
           </div>
         </header>
+
+        {/* Welcome — first-time API key banner */}
+        {welcomeKey && (
+          <div className="dash-content" style={{ paddingBottom: 0 }}>
+            <div className="dash-panel" style={{ border: '1px solid rgba(155,89,255,0.4)', background: 'linear-gradient(135deg, rgba(155,89,255,0.08), rgba(77,124,255,0.08))' }}>
+              <div className="dash-panel-header">
+                <h3>👋 Your API key is ready</h3>
+                <button className="btn btn-ghost btn-sm" onClick={dismissWelcomeKey}>Dismiss</button>
+              </div>
+              <p style={{ color: 'var(--text-dim)', marginBottom: 12 }}>
+                Copy this now — it&apos;s the only time we&apos;ll show it in full. You can generate more in the Settings tab.
+              </p>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <code style={{ flex: 1, padding: 10, background: 'rgba(0,0,0,0.4)', borderRadius: 6, fontFamily: 'monospace', overflowX: 'auto' }}>{welcomeKey}</code>
+                <button className="btn btn-primary btn-sm" onClick={() => { navigator.clipboard?.writeText(welcomeKey); }}>Copy</button>
+              </div>
+              <details style={{ marginTop: 12 }}>
+                <summary style={{ cursor: 'pointer', color: 'var(--accent-cyan)' }}>Quick-start with the SDK</summary>
+                <pre style={{ marginTop: 8, padding: 12, background: 'rgba(0,0,0,0.4)', borderRadius: 6, overflowX: 'auto', fontSize: 13 }}>
+{`npm install @stoic/agentos-sdk
+
+import { AgentOS } from '@stoic/agentos-sdk';
+const os = new AgentOS({ apiKey: '${welcomeKey.slice(0, 16)}…', workspace: 'my-app' });
+await os.capture({ type: 'note', title: 'Hello AgentOS!' });`}
+                </pre>
+              </details>
+            </div>
+          </div>
+        )}
 
         {/* Overview Tab */}
         {activeTab === 'overview' && (
@@ -555,13 +615,55 @@ export default function Dashboard() {
                     <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>
                       {k.last_used_at ? `Used ${new Date(k.last_used_at).toLocaleDateString()}` : 'Never used'}
                     </span>
-                    {k.active && (
-                      <button className="btn btn-ghost btn-sm" onClick={() => handleRevokeKey(k.id)}>Revoke</button>
+                    {k.active ? (
+                      <button className="btn btn-ghost btn-sm" onClick={() => handleToggleKey(k.id, true)}>Pause</button>
+                    ) : (
+                      <>
+                        <span style={{ fontSize: 12, color: 'var(--accent-red)' }}>Paused</span>
+                        <button className="btn btn-ghost btn-sm" onClick={() => handleToggleKey(k.id, false)}>Resume</button>
+                      </>
                     )}
-                    {!k.active && <span style={{ fontSize: 12, color: 'var(--accent-red)' }}>Revoked</span>}
                   </div>
                 </div>
               ))}
+            </div>
+
+            {/* Containment / Kill switch panel */}
+            <div className="dash-panel" style={{ marginTop: 20, border: '1px solid rgba(239,68,68,0.3)' }}>
+              <div className="dash-panel-header">
+                <h3>🛑 Containment</h3>
+                <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>
+                  Emergency stop for all agents using this org&apos;s API keys
+                </span>
+              </div>
+              <div className="dash-settings-row" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ flex: 1 }}>
+                  <strong style={{ display: 'block', marginBottom: 4 }}>Kill switch — pause all keys</strong>
+                  <span style={{ fontSize: 13, color: 'var(--text-dim)' }}>
+                    Revokes every active key in one click. SDKs will start receiving 401 within seconds.
+                    Resume any time. The action is logged to your audit feed.
+                  </span>
+                </div>
+                {apiKeys.some(k => k.active) ? (
+                  <button
+                    className="btn btn-sm"
+                    style={{ background: 'rgba(239,68,68,0.15)', color: 'var(--accent-red)', border: '1px solid rgba(239,68,68,0.4)' }}
+                    onClick={() => handleKillSwitch('pause')}
+                    disabled={killSwitchBusy}
+                  >
+                    {killSwitchBusy ? 'Working…' : '🛑 Pause all'}
+                  </button>
+                ) : (
+                  <button
+                    className="btn btn-sm"
+                    style={{ background: 'rgba(34,197,94,0.15)', color: 'var(--accent-green)', border: '1px solid rgba(34,197,94,0.4)' }}
+                    onClick={() => handleKillSwitch('resume')}
+                    disabled={killSwitchBusy}
+                  >
+                    {killSwitchBusy ? 'Working…' : '✅ Resume all'}
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         )}

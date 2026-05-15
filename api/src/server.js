@@ -534,6 +534,28 @@ app.post(`/api/${API_VERSION}/api-keys`, authenticate, async (req, res) => {
   }
 });
 
+app.patch(`/api/${API_VERSION}/api-keys/:id`, authenticate, async (req, res) => {
+  try {
+    const { active, name } = req.body || {};
+    const updates = {};
+    if (typeof active === 'boolean') updates.active = active;
+    if (typeof name === 'string' && name.trim()) updates.name = name.trim();
+    if (Object.keys(updates).length === 0) return res.status(400).json({ error: 'No updates supplied' });
+
+    const { data, error } = await supabase
+      .from('api_keys')
+      .update(updates)
+      .eq('id', req.params.id)
+      .eq('org_id', req.org.id)
+      .select('id, name, active, last_used_at')
+      .single();
+    if (error) throw error;
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.delete(`/api/${API_VERSION}/api-keys/:id`, authenticate, async (req, res) => {
   try {
     const { error } = await supabase
@@ -543,6 +565,41 @@ app.delete(`/api/${API_VERSION}/api-keys/:id`, authenticate, async (req, res) =>
       .eq('org_id', req.org.id);
     if (error) throw error;
     res.json({ revoked: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Emergency kill switch — pause/resume ALL keys for the org ──
+app.post(`/api/${API_VERSION}/kill-switch`, authenticate, async (req, res) => {
+  try {
+    const action = req.body?.action || 'pause';
+    if (!['pause', 'resume'].includes(action)) {
+      return res.status(400).json({ error: 'action must be "pause" or "resume"' });
+    }
+    if (req.role && req.role !== 'owner' && req.role !== 'admin') {
+      return res.status(403).json({ error: 'Owner or admin role required' });
+    }
+    const { data, error } = await supabase
+      .from('api_keys')
+      .update({ active: action === 'resume' })
+      .eq('org_id', req.org.id)
+      .select('id');
+    if (error) throw error;
+
+    // Log the action as an observation so it appears in the audit feed
+    await supabase.from('observations').insert({
+      org_id: req.org.id,
+      type: action === 'pause' ? 'error' : 'note',
+      title: action === 'pause'
+        ? `🛑 Kill switch activated — ${data.length} keys paused`
+        : `✅ Kill switch released — ${data.length} keys reactivated`,
+      content: `Triggered by ${req.user?.email || 'API key'}`,
+      importance: action === 'pause' ? 10 : 7,
+      metadata: { event: 'kill_switch', action, affected_keys: data.length },
+    });
+
+    res.json({ action, affected: data.length });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

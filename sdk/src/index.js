@@ -158,6 +158,104 @@ export class AgentOS {
   }
 
   /**
+   * Wrap an MCP client so every tool call is captured automatically.
+   * Works with the official @modelcontextprotocol/sdk Client or any object
+   * exposing { callTool, listTools, readResource, listResources }.
+   *
+   * @param {Object} client - The MCP client instance to instrument
+   * @param {Object} [options]
+   * @param {string} [options.serverName] - Logical name for the MCP server (for grouping)
+   * @returns {Object} A proxy with the same shape as the client
+   *
+   * @example
+   *   import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+   *   const raw = new Client(...);
+   *   const client = os.wrapMcpClient(raw, { serverName: 'github' });
+   *   await client.callTool({ name: 'create_issue', arguments: {...} });
+   *   // → automatically captured as 'mcp_tool_call' observation
+   */
+  wrapMcpClient(client, { serverName = 'mcp' } = {}) {
+    const sdk = this;
+    const instrument = (methodName, type) => async (...args) => {
+      const start = Date.now();
+      const toolName = args[0]?.name || args[0]?.uri || 'unknown';
+      try {
+        const result = await client[methodName].apply(client, args);
+        const durationMs = Date.now() - start;
+        await sdk.capture({
+          type: 'agent_run',
+          title: `[mcp:${serverName}] ${type}: ${toolName} (${durationMs}ms)`,
+          agent: `mcp:${serverName}`,
+          metadata: {
+            mcp: true,
+            server: serverName,
+            method: methodName,
+            tool: toolName,
+            args: args[0]?.arguments || args[0] || null,
+            duration_ms: durationMs,
+            success: true,
+          },
+        });
+        return result;
+      } catch (error) {
+        const durationMs = Date.now() - start;
+        await sdk.capture({
+          type: 'error',
+          title: `[mcp:${serverName}] ❌ ${type} failed: ${toolName} — ${error.message}`,
+          content: error.stack || error.message,
+          agent: `mcp:${serverName}`,
+          metadata: {
+            mcp: true,
+            server: serverName,
+            method: methodName,
+            tool: toolName,
+            duration_ms: durationMs,
+            success: false,
+            error: error.message,
+          },
+        });
+        throw error;
+      }
+    };
+
+    return new Proxy(client, {
+      get(target, prop) {
+        if (prop === 'callTool') return instrument('callTool', 'tool');
+        if (prop === 'readResource') return instrument('readResource', 'resource');
+        if (prop === 'listTools') return instrument('listTools', 'list_tools');
+        if (prop === 'listResources') return instrument('listResources', 'list_resources');
+        if (prop === 'getPrompt') return instrument('getPrompt', 'prompt');
+        const value = target[prop];
+        return typeof value === 'function' ? value.bind(target) : value;
+      },
+    });
+  }
+
+  /**
+   * Manually log an MCP tool call (use when you can't proxy the client).
+   * @param {Object} call - { server, tool, args, result, error, durationMs }
+   */
+  async captureMcpCall({ server = 'mcp', tool, args, result, error, durationMs }) {
+    return this.capture({
+      type: error ? 'error' : 'agent_run',
+      title: error
+        ? `[mcp:${server}] ❌ ${tool} — ${error.message || error}`
+        : `[mcp:${server}] tool: ${tool}${durationMs != null ? ` (${durationMs}ms)` : ''}`,
+      agent: `mcp:${server}`,
+      metadata: {
+        mcp: true,
+        server,
+        tool,
+        args: args || null,
+        result_summary: typeof result === 'string' ? result.slice(0, 500) : null,
+        duration_ms: durationMs,
+        success: !error,
+        error: error ? (error.message || String(error)) : null,
+      },
+    });
+  }
+
+  /**
    * Get dashboard stats
    */
   async getStats() {
