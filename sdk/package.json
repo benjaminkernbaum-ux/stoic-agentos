@@ -1,19 +1,49 @@
 {
   "name": "@stoic/agentos-sdk",
-  "version": "0.1.0",
-  "description": "Official SDK for Stoic AgentOS — AI Agent Operations Platform",
+  "version": "1.0.0",
+  "description": "Official SDK for Stoic AgentOS — AI Agent Operations Platform. Monitor, orchestrate, and persist knowledge across your AI agent fleet.",
   "main": "src/index.js",
+  "types": "src/index.d.ts",
   "type": "module",
+  "exports": {
+    ".": {
+      "import": "./src/index.js",
+      "types": "./src/index.d.ts"
+    }
+  },
   "bin": {
     "agentos": "./src/cli.js"
   },
-  "keywords": ["ai", "agents", "monitoring", "observability", "agent-ops", "llm", "orchestration"],
+  "files": [
+    "src/",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "ai",
+    "agents",
+    "monitoring",
+    "observability",
+    "agent-ops",
+    "llm",
+    "orchestration",
+    "ai-agents",
+    "agent-monitoring",
+    "knowledge-base",
+    "stoic"
+  ],
   "author": "Benjamin Kernbaum <benjamin@stoicagentos.com>",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/benjaminkernbaum-ux/stoic-agentos-sdk"
+    "url": "https://github.com/benjaminkernbaum-ux/stoic-agentos"
   },
-  "homepage": "https://agentos.dev",
+  "homepage": "https://stoic-agentos.vercel.app",
+  "bugs": {
+    "url": "https://github.com/benjaminkernbaum-ux/stoic-agentos/issues"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "dependencies": {}
 }

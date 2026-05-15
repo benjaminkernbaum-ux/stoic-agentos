@@ -31,7 +31,7 @@ function initProject() {
   const config = {
     api_key: apiKey,
     workspace: workspace,
-    api_url: 'https://api.agentos.dev/api/v1',
+    api_url: 'https://stoic-agentos-api-production.up.railway.app/api/v1',
     auto_capture: true,
     git_hooks: true,
   };
@@ -78,7 +78,7 @@ if [ -f .agentos.json ]; then
   AUTHOR=$(git log -1 --pretty=%an)
 
   if [ -n "$API_KEY" ]; then
-    curl -s -X POST "https://api.agentos.dev/api/v1/webhooks/git" \\
+    curl -s -X POST "https://stoic-agentos-api-production.up.railway.app/api/v1/webhooks/git" \\
       -H "Content-Type: application/json" \\
       -d "{\\"api_key\\":\\"$API_KEY\\",\\"repo\\":\\"$REPO\\",\\"branch\\":\\"$BRANCH\\",\\"commit_hash\\":\\"$HASH\\",\\"commit_message\\":\\"$MSG\\",\\"author\\":\\"$AUTHOR\\"}" \\
       > /dev/null 2>&1 &
@@ -105,7 +105,7 @@ function testConnection() {
     return;
   }
 
-  fetch('https://api.agentos.dev/api/v1/stats', {
+  fetch('https://stoic-agentos-api-production.up.railway.app/api/v1/stats', {
     headers: { 'Authorization': `Bearer ${apiKey}` },
   })
     .then(r => r.json())
@@ -134,8 +134,8 @@ Environment:
   AGENTOS_API_KEY             — Your API key (from agentos.dev/settings)
   AGENTOS_API_URL             — Custom API URL (default: https://api.agentos.dev/api/v1)
 
-Website: https://agentos.dev
-Docs:    https://agentos.dev/docs
+Website: https://stoic-agentos.vercel.app
+Docs:    https://stoic-agentos.vercel.app/docs
 `);
 }
 

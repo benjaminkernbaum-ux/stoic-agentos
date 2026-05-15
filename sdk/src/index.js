@@ -13,7 +13,7 @@
  *   os.capture({ type: 'decision', title: 'Switched model', content: '...' });
  */
 
-const DEFAULT_API_URL = 'https://api.agentos.dev/api/v1';
+const DEFAULT_API_URL = 'https://stoic-agentos-api-production.up.railway.app/api/v1';
 
 export class AgentOS {
   constructor(options = {}) {
