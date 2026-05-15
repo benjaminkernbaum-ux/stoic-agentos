@@ -39,19 +39,19 @@ export function AuthProvider({ children }) {
 
   async function loadOrg(userId) {
     try {
-      // Check if user has an org via agentos_org_members
+      // Check if user has an org via org_members
       const { data: membership } = await supabase
-        .from('agentos_org_members')
-        .select('org_id, role, agentos_organizations(*)')
+        .from('org_members')
+        .select('org_id, role, organizations(*)')
         .eq('user_id', userId)
         .single();
 
-      if (membership?.agentos_organizations) {
+      if (membership?.organizations) {
         setOrg({
-          id: membership.agentos_organizations.id,
-          name: membership.agentos_organizations.name,
-          slug: membership.agentos_organizations.slug,
-          plan: membership.agentos_organizations.plan,
+          id: membership.organizations.id,
+          name: membership.organizations.name,
+          slug: membership.organizations.slug,
+          plan: membership.organizations.plan,
           role: membership.role,
         });
       } else {
