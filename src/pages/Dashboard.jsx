@@ -38,9 +38,10 @@ export default function Dashboard() {
   const [usage, setUsage] = useState({ count: 0, limit: 10000 });
   const [dataLoading, setDataLoading] = useState(true);
 
-  // Quick Capture form
   const [captureForm, setCaptureForm] = useState({ type: 'note', title: '', content: '' });
   const [captureLoading, setCaptureLoading] = useState(false);
+  const [apiKey, setApiKey] = useState(null);
+  const [upgradeLoading, setUpgradeLoading] = useState(false);
 
   const fetchData = useCallback(async () => {
     if (!org?.id) return;
@@ -75,6 +76,25 @@ export default function Dashboard() {
     setDataLoading(false);
   }, [org?.id]);
 
+  // Fetch API key on mount
+  useEffect(() => {
+    if (!org?.id) return;
+    (async () => {
+      try {
+        const token = (await supabase.auth.getSession()).data.session?.access_token;
+        const res = await fetch(`${API_BASE}/api/v1/auth/setup-org`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({}),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.api_key) setApiKey(data.api_key);
+        }
+      } catch {}
+    })();
+  }, [org?.id]);
+
   useEffect(() => {
     if (org?.id) fetchData();
   }, [org?.id, fetchData]);
@@ -107,6 +127,28 @@ export default function Dashboard() {
   const handleLogout = async () => {
     await signOut();
     navigate('/');
+  };
+
+  const handleUpgrade = async (plan = 'pro') => {
+    setUpgradeLoading(true);
+    try {
+      const token = (await supabase.auth.getSession()).data.session?.access_token;
+      const res = await fetch(`${API_BASE}/api/v1/billing/checkout`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan }),
+      });
+      if (res.ok) {
+        const { url } = await res.json();
+        if (url) window.location.href = url;
+      } else {
+        const err = await res.json();
+        alert(err.error || 'Failed to start checkout');
+      }
+    } catch {
+      alert('Checkout unavailable. Please try again later.');
+    }
+    setUpgradeLoading(false);
   };
 
   if (authLoading) return null;
@@ -433,7 +475,9 @@ export default function Dashboard() {
               <div style={{ fontSize: 48, marginBottom: 16 }}>🕸️</div>
               <h3>Knowledge Graph</h3>
               <p style={{ color: 'var(--text-dim)', marginTop: 8 }}>Interactive visualization coming in Pro plan</p>
-              <button className="btn btn-primary" style={{ marginTop: 20 }}>Upgrade to Pro — $49/mo</button>
+              <button className="btn btn-primary" style={{ marginTop: 20 }} onClick={() => handleUpgrade('pro')} disabled={upgradeLoading}>
+                {upgradeLoading ? 'Loading...' : 'Upgrade to Pro — $49/mo'}
+              </button>
             </div>
           </div>
         )}
@@ -455,7 +499,7 @@ export default function Dashboard() {
                 <label>Plan</label>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                   <span className="dash-plan-badge" style={{ margin: 0 }}>{planName}</span>
-                  {planName === 'FREE' && <button className="btn btn-primary btn-sm">Upgrade</button>}
+                  {planName === 'FREE' && <button className="btn btn-primary btn-sm" onClick={() => handleUpgrade('pro')} disabled={upgradeLoading}>{upgradeLoading ? '...' : 'Upgrade'}</button>}
                 </div>
               </div>
             </div>
@@ -464,7 +508,13 @@ export default function Dashboard() {
               <div className="dash-settings-row">
                 <label>Your API Key</label>
                 <div className="dash-api-key">
-                  <code>Install SDK to generate a key</code>
+                  {apiKey ? (
+                    <code style={{ cursor: 'pointer' }} onClick={() => { navigator.clipboard.writeText(apiKey); alert('API key copied!'); }}>
+                      {apiKey.slice(0, 12)}...{apiKey.slice(-6)} 📋
+                    </code>
+                  ) : (
+                    <code>Loading API key...</code>
+                  )}
                 </div>
               </div>
             </div>

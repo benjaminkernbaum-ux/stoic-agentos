@@ -496,6 +496,156 @@ app.post(`/api/${API_VERSION}/webhooks/git`, async (req, res) => {
 });
 
 // ══════════════════════════════════
+// STRIPE BILLING
+// ══════════════════════════════════
+
+const STRIPE_PRICES = {
+  pro: process.env.STRIPE_PRO_PRICE_ID || 'price_pro_monthly',
+  team: process.env.STRIPE_TEAM_PRICE_ID || 'price_team_monthly',
+};
+
+// Create Checkout Session (upgrade to Pro/Team)
+app.post(`/api/${API_VERSION}/billing/checkout`, authenticate, async (req, res) => {
+  if (!STRIPE_SECRET) return res.status(503).json({ error: 'Stripe not configured' });
+
+  try {
+    const Stripe = (await import('stripe')).default;
+    const stripe = new Stripe(STRIPE_SECRET);
+    const { plan = 'pro' } = req.body;
+    const priceId = STRIPE_PRICES[plan];
+    if (!priceId) return res.status(400).json({ error: 'Invalid plan' });
+
+    // Get or create Stripe customer
+    let customerId = req.org.stripe_customer_id;
+    if (!customerId) {
+      const customer = await stripe.customers.create({
+        email: req.user.email,
+        metadata: { org_id: req.org.id, org_name: req.org.name },
+      });
+      customerId = customer.id;
+      await supabase.from('organizations')
+        .update({ stripe_customer_id: customerId })
+        .eq('id', req.org.id);
+    }
+
+    const session = await stripe.checkout.sessions.create({
+      customer: customerId,
+      mode: 'subscription',
+      line_items: [{ price: priceId, quantity: 1 }],
+      success_url: `${req.headers.origin || 'https://stoic-agentos.vercel.app'}/dashboard?upgraded=true`,
+      cancel_url: `${req.headers.origin || 'https://stoic-agentos.vercel.app'}/dashboard?cancelled=true`,
+      metadata: { org_id: req.org.id },
+    });
+
+    res.json({ url: session.url, sessionId: session.id });
+  } catch (err) {
+    console.error('Stripe checkout error:', err.message);
+    res.status(500).json({ error: 'Failed to create checkout session' });
+  }
+});
+
+// Customer Portal (manage subscription)
+app.post(`/api/${API_VERSION}/billing/portal`, authenticate, async (req, res) => {
+  if (!STRIPE_SECRET) return res.status(503).json({ error: 'Stripe not configured' });
+
+  try {
+    const Stripe = (await import('stripe')).default;
+    const stripe = new Stripe(STRIPE_SECRET);
+    const customerId = req.org.stripe_customer_id;
+    if (!customerId) return res.status(400).json({ error: 'No billing account. Upgrade first.' });
+
+    const portal = await stripe.billingPortal.sessions.create({
+      customer: customerId,
+      return_url: `${req.headers.origin || 'https://stoic-agentos.vercel.app'}/dashboard`,
+    });
+
+    res.json({ url: portal.url });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to create portal session' });
+  }
+});
+
+// Stripe Webhook
+app.post('/webhooks/stripe', express.raw({ type: 'application/json' }), async (req, res) => {
+  if (!STRIPE_SECRET) return res.status(503).send('Stripe not configured');
+
+  try {
+    const Stripe = (await import('stripe')).default;
+    const stripe = new Stripe(STRIPE_SECRET);
+    const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+    let event;
+    if (endpointSecret) {
+      const sig = req.headers['stripe-signature'];
+      event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
+    } else {
+      event = req.body;
+    }
+
+    switch (event.type) {
+      case 'checkout.session.completed': {
+        const session = event.data.object;
+        const orgId = session.metadata?.org_id;
+        if (orgId) {
+          await supabase.from('organizations').update({
+            plan: 'pro',
+            stripe_customer_id: session.customer,
+            stripe_subscription_id: session.subscription,
+            updated_at: new Date().toISOString(),
+          }).eq('id', orgId);
+          console.log(`✅ Org ${orgId} upgraded to PRO`);
+        }
+        break;
+      }
+
+      case 'customer.subscription.updated': {
+        const sub = event.data.object;
+        const customerId = sub.customer;
+        const { data: org } = await supabase.from('organizations')
+          .select('id')
+          .eq('stripe_customer_id', customerId)
+          .single();
+        if (org) {
+          const plan = sub.status === 'active' ? 'pro' : 'free';
+          await supabase.from('organizations').update({
+            plan,
+            stripe_subscription_id: sub.id,
+            updated_at: new Date().toISOString(),
+          }).eq('id', org.id);
+          console.log(`📋 Org ${org.id} subscription updated → ${plan}`);
+        }
+        break;
+      }
+
+      case 'customer.subscription.deleted': {
+        const sub = event.data.object;
+        const { data: org } = await supabase.from('organizations')
+          .select('id')
+          .eq('stripe_customer_id', sub.customer)
+          .single();
+        if (org) {
+          await supabase.from('organizations').update({
+            plan: 'free',
+            stripe_subscription_id: null,
+            updated_at: new Date().toISOString(),
+          }).eq('id', org.id);
+          console.log(`⬇️ Org ${org.id} downgraded to FREE`);
+        }
+        break;
+      }
+
+      default:
+        break;
+    }
+
+    res.json({ received: true });
+  } catch (err) {
+    console.error('Webhook error:', err.message);
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// ══════════════════════════════════
 // START
 // ══════════════════════════════════
 app.listen(PORT, () => {
@@ -504,3 +654,4 @@ app.listen(PORT, () => {
   console.log(`   Supabase: ${supabase ? '✅ Connected' : '⚠️  No URL or Service Key (demo mode)'}`);
   console.log(`   Stripe: ${STRIPE_SECRET ? '✅ Ready' : '⚠️  Not configured'}\n`);
 });
+
