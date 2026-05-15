@@ -51,14 +51,16 @@ async function authenticate(req, res, next) {
   if (token.startsWith('sk_')) {
     if (!supabase) return res.status(500).json({ error: 'Database not configured' });
     const { data: apiKey } = await supabase
-      .from('agentos_api_keys')
-      .select('*, agentos_organizations(*)')
+      .from('api_keys')
+      .select('*, organizations(*)')
       .eq('key', token)
       .eq('active', true)
       .single();
     if (!apiKey) return res.status(401).json({ error: 'Invalid API key' });
     req.org = apiKey.organizations;
     req.apiKey = apiKey;
+    // Fire-and-forget last_used_at update
+    supabase.from('api_keys').update({ last_used_at: new Date().toISOString() }).eq('id', apiKey.id).then(() => {});
     return next();
   }
 
@@ -156,7 +158,7 @@ app.post(`/api/${API_VERSION}/auth/setup-org`, async (req, res) => {
 
     // Add user as owner
     const { error: memberErr } = await supabase
-      .from('agentos_org_members')
+      .from('org_members')
       .insert({ org_id: org.id, user_id: user.id, role: 'owner' });
     if (memberErr) throw memberErr;
 
@@ -286,6 +288,59 @@ app.get(`/api/${API_VERSION}/agents`, authenticate, async (req, res) => {
       .order('name');
     if (error) throw error;
     res.json(data || []);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Heartbeat: upsert by (org_id, name) so SDKs can update without knowing the agent UUID
+app.post(`/api/${API_VERSION}/agents/heartbeat`, authenticate, async (req, res) => {
+  try {
+    const { name, status, module, last_heartbeat } = req.body || {};
+    if (!name) return res.status(400).json({ error: 'name required' });
+
+    const { data: existing } = await supabase
+      .from('agents')
+      .select('id, total_runs, total_errors')
+      .eq('org_id', req.org.id)
+      .eq('name', name)
+      .maybeSingle();
+
+    const now = new Date().toISOString();
+    if (existing) {
+      const updates = {
+        status: status || 'idle',
+        last_heartbeat: last_heartbeat || now,
+        updated_at: now,
+        total_runs: (existing.total_runs || 0) + 1,
+      };
+      if (status === 'error') updates.total_errors = (existing.total_errors || 0) + 1;
+      const { data, error } = await supabase
+        .from('agents').update(updates).eq('id', existing.id).select().single();
+      if (error) throw error;
+      return res.json(data);
+    }
+
+    const { count } = await supabase
+      .from('agents').select('*', { count: 'exact', head: true }).eq('org_id', req.org.id);
+    if (!checkLimit(req.org.plan, 'agents', count)) {
+      return res.status(429).json({ error: 'Agent limit reached', limit: PLAN_LIMITS[req.org.plan]?.agents });
+    }
+
+    const { data, error } = await supabase
+      .from('agents')
+      .insert({
+        org_id: req.org.id,
+        name,
+        module: module || 'standalone',
+        status: status || 'idle',
+        last_heartbeat: last_heartbeat || now,
+        total_runs: 1,
+        total_errors: status === 'error' ? 1 : 0,
+      })
+      .select().single();
+    if (error) throw error;
+    res.status(201).json(data);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -446,18 +501,48 @@ app.get(`/api/${API_VERSION}/stats`, authenticate, async (req, res) => {
 app.get(`/api/${API_VERSION}/api-keys`, authenticate, async (req, res) => {
   try {
     const { data, error } = await supabase
-      .from('agentos_api_keys')
+      .from('api_keys')
       .select('id, name, key, active, created_at, last_used_at')
       .eq('org_id', req.org.id)
       .order('created_at', { ascending: false });
     if (error) throw error;
-    // Mask keys for security
+    // Mask keys for security — full key is only returned on creation
     const masked = (data || []).map(k => ({
       ...k,
       key: k.key.slice(0, 12) + '...' + k.key.slice(-4),
-      full_key: undefined,
     }));
     res.json(masked);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post(`/api/${API_VERSION}/api-keys`, authenticate, async (req, res) => {
+  try {
+    const { name } = req.body || {};
+    const key = `sk_live_${crypto.randomBytes(24).toString('hex')}`;
+    const { data, error } = await supabase
+      .from('api_keys')
+      .insert({ org_id: req.org.id, key, name: name || 'Default' })
+      .select('id, name, key, active, created_at')
+      .single();
+    if (error) throw error;
+    // Return the full key once — clients must store it
+    res.status(201).json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete(`/api/${API_VERSION}/api-keys/:id`, authenticate, async (req, res) => {
+  try {
+    const { error } = await supabase
+      .from('api_keys')
+      .update({ active: false })
+      .eq('id', req.params.id)
+      .eq('org_id', req.org.id);
+    if (error) throw error;
+    res.json({ revoked: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -472,8 +557,8 @@ app.post(`/api/${API_VERSION}/webhooks/git`, async (req, res) => {
     if (!supabase) return res.status(500).json({ error: 'Database not configured' });
 
     const { data: key } = await supabase
-      .from('agentos_api_keys')
-      .select('*, agentos_organizations(*)')
+      .from('api_keys')
+      .select('*, organizations(*)')
       .eq('key', api_key)
       .eq('active', true)
       .single();

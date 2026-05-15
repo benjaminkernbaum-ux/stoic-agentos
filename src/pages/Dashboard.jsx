@@ -42,6 +42,12 @@ export default function Dashboard() {
   const [captureForm, setCaptureForm] = useState({ type: 'note', title: '', content: '' });
   const [captureLoading, setCaptureLoading] = useState(false);
 
+  // API Keys (Settings tab)
+  const [apiKeys, setApiKeys] = useState([]);
+  const [apiKeysLoading, setApiKeysLoading] = useState(false);
+  const [newKey, setNewKey] = useState(null); // full key shown once after creation
+  const [creatingKey, setCreatingKey] = useState(false);
+
   const fetchData = useCallback(async () => {
     if (!org?.id) return;
     setDataLoading(true);
@@ -102,6 +108,60 @@ export default function Dashboard() {
       console.error('Capture failed:', err);
     }
     setCaptureLoading(false);
+  };
+
+  const authHeaders = useCallback(async () => {
+    const token = (await supabase.auth.getSession()).data.session?.access_token;
+    return { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+  }, []);
+
+  const fetchApiKeys = useCallback(async () => {
+    if (!org?.id) return;
+    setApiKeysLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/api-keys?org_id=${org.id}`, { headers: await authHeaders() });
+      if (res.ok) setApiKeys(await res.json());
+    } catch (err) {
+      console.error('Failed to load API keys:', err);
+    }
+    setApiKeysLoading(false);
+  }, [org?.id, authHeaders]);
+
+  useEffect(() => {
+    if (activeTab === 'settings' && org?.id) fetchApiKeys();
+  }, [activeTab, org?.id, fetchApiKeys]);
+
+  const handleCreateKey = async () => {
+    if (!org?.id) return;
+    setCreatingKey(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/api-keys?org_id=${org.id}`, {
+        method: 'POST',
+        headers: await authHeaders(),
+        body: JSON.stringify({ name: 'Generated from dashboard' }),
+      });
+      if (res.ok) {
+        const created = await res.json();
+        setNewKey(created.key);
+        fetchApiKeys();
+      }
+    } catch (err) {
+      console.error('Create key failed:', err);
+    }
+    setCreatingKey(false);
+  };
+
+  const handleRevokeKey = async (id) => {
+    if (!org?.id) return;
+    try {
+      await fetch(`${API_BASE}/api/v1/api-keys/${id}?org_id=${org.id}`, {
+        method: 'DELETE',
+        headers: await authHeaders(),
+      });
+      fetchApiKeys();
+    } catch (err) {
+      console.error('Revoke failed:', err);
+    }
   };
 
   const handleLogout = async () => {
@@ -460,13 +520,48 @@ export default function Dashboard() {
               </div>
             </div>
             <div className="dash-panel" style={{ marginTop: 20 }}>
-              <div className="dash-panel-header"><h3>API Keys</h3></div>
-              <div className="dash-settings-row">
-                <label>Your API Key</label>
-                <div className="dash-api-key">
-                  <code>Install SDK to generate a key</code>
-                </div>
+              <div className="dash-panel-header">
+                <h3>API Keys</h3>
+                <button className="btn btn-primary btn-sm" onClick={handleCreateKey} disabled={creatingKey}>
+                  {creatingKey ? 'Creating…' : '+ New Key'}
+                </button>
               </div>
+
+              {newKey && (
+                <div className="dash-settings-row" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 8, background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.3)', padding: 12, borderRadius: 8 }}>
+                  <strong style={{ color: 'var(--accent-green)' }}>⚠ Copy this key now — it won&apos;t be shown again</strong>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <code style={{ flex: 1, padding: 8, background: 'rgba(0,0,0,0.4)', borderRadius: 4, fontFamily: 'monospace', overflowX: 'auto' }}>{newKey}</code>
+                    <button className="btn btn-ghost btn-sm" onClick={() => { navigator.clipboard?.writeText(newKey); }}>Copy</button>
+                    <button className="btn btn-ghost btn-sm" onClick={() => setNewKey(null)}>Dismiss</button>
+                  </div>
+                </div>
+              )}
+
+              {apiKeysLoading && <div className="dash-settings-row"><span style={{ color: 'var(--text-dim)' }}>Loading…</span></div>}
+
+              {!apiKeysLoading && apiKeys.length === 0 && (
+                <div className="dash-empty-state" style={{ padding: 32 }}>
+                  <div className="dash-empty-icon">🔑</div>
+                  <p>No API keys yet. Click &quot;+ New Key&quot; to generate one for the SDK.</p>
+                </div>
+              )}
+
+              {apiKeys.map(k => (
+                <div key={k.id} className="dash-settings-row" style={{ alignItems: 'center' }}>
+                  <label>{k.name}</label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1 }}>
+                    <code style={{ flex: 1, padding: 6, background: 'rgba(0,0,0,0.3)', borderRadius: 4, fontFamily: 'monospace', opacity: k.active ? 1 : 0.4 }}>{k.key}</code>
+                    <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>
+                      {k.last_used_at ? `Used ${new Date(k.last_used_at).toLocaleDateString()}` : 'Never used'}
+                    </span>
+                    {k.active && (
+                      <button className="btn btn-ghost btn-sm" onClick={() => handleRevokeKey(k.id)}>Revoke</button>
+                    )}
+                    {!k.active && <span style={{ fontSize: 12, color: 'var(--accent-red)' }}>Revoked</span>}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         )}

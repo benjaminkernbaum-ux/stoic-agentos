@@ -13,7 +13,7 @@
  *   os.capture({ type: 'decision', title: 'Switched model', content: '...' });
  */
 
-const DEFAULT_API_URL = 'https://api.agentos.dev/api/v1';
+const DEFAULT_API_URL = 'https://stoic-agentos-api-production.up.railway.app/api/v1';
 
 export class AgentOS {
   constructor(options = {}) {
@@ -123,8 +123,7 @@ export class AgentOS {
           metadata: { event: 'success', duration_ms: durationMs },
         });
 
-        // Update agent heartbeat
-        await sdk._send('/agents', { name: agentName, status: 'success', last_heartbeat: new Date().toISOString() }, 'PATCH').catch(() => {});
+        await sdk._send('/agents/heartbeat', { name: agentName, status: 'success', last_heartbeat: new Date().toISOString() }).catch(() => {});
 
         return result;
       } catch (error) {
@@ -138,7 +137,9 @@ export class AgentOS {
           metadata: { event: 'error', duration_ms: durationMs, error_name: error.name },
         });
 
-        throw error; // Re-throw
+        await sdk._send('/agents/heartbeat', { name: agentName, status: 'error', last_heartbeat: new Date().toISOString() }).catch(() => {});
+
+        throw error;
       }
     };
   }
