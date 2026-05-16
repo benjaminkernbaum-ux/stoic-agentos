@@ -369,6 +369,23 @@
   margin-left: auto;
 }
 
+/* ── Waiting-for-action button ── */
+.ob-btn-waiting {
+  opacity: 0.55; cursor: default !important;
+  animation: ob-btn-pulse 2s ease-in-out infinite;
+}
+@keyframes ob-btn-pulse {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 0.8; }
+}
+
+/* ── Highlight ring on capture form when tour waits ── */
+.ob-capture-active {
+  border-color: var(--accent-purple) !important;
+  box-shadow: 0 0 0 3px rgba(155,89,255,0.2), 0 0 20px rgba(155,89,255,0.12) !important;
+  transition: all 0.4s !important;
+}
+
 /* ── Animated arrow pointing to target ── */
 .ob-arrow {
   position: absolute;

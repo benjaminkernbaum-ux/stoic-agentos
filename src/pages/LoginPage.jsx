@@ -1,34 +1,29 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Navigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import './Auth.css';
 
 export default function LoginPage() {
-  const navigate = useNavigate();
   const { signIn, signInWithOAuth, isAuthenticated } = useAuth();
   const [form, setForm] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Redirect if already logged in
-  if (isAuthenticated) {
-    navigate('/dashboard');
-    return null;
-  }
+  if (isAuthenticated) return <Navigate to="/dashboard" replace />;
+
+  const handleChange = (field) => (e) => {
+    setForm(f => ({ ...f, [field]: e.target.value }));
+    if (error) setError('');
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
-
     const { error: authError } = await signIn(form.email, form.password);
     setLoading(false);
-
-    if (authError) {
-      setError(authError.message);
-    } else {
-      navigate('/dashboard');
-    }
+    if (authError) setError(authError.message);
+    // success: onAuthStateChange fires SIGNED_IN → AuthContext → ProtectedRoute redirects
   };
 
   const handleOAuth = async (provider) => {
@@ -63,23 +58,23 @@ export default function LoginPage() {
         <form onSubmit={handleSubmit} className="auth-form">
           <div className="auth-field">
             <label htmlFor="login-email">Email</label>
-            <input 
+            <input
               id="login-email"
-              type="email" 
-              placeholder="you@company.com" 
+              type="email"
+              placeholder="you@company.com"
               value={form.email}
-              onChange={e => setForm({...form, email: e.target.value})}
+              onChange={handleChange('email')}
               required
             />
           </div>
           <div className="auth-field">
             <label htmlFor="login-password">Password</label>
-            <input 
+            <input
               id="login-password"
-              type="password" 
-              placeholder="Your password" 
+              type="password"
+              placeholder="Your password"
               value={form.password}
-              onChange={e => setForm({...form, password: e.target.value})}
+              onChange={handleChange('password')}
               required
             />
           </div>

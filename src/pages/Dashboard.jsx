@@ -1,9 +1,42 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase, API_BASE } from '../lib/supabase';
 import OnboardingTour from '../components/OnboardingTour';
 import './Dashboard.css';
+
+// ── Toast system ──────────────────────────────────────────────
+let _toastId = 0;
+function useToast() {
+  const [toasts, setToasts] = useState([]);
+  const show = useCallback((msg, type = 'info') => {
+    const id = ++_toastId;
+    setToasts(t => [...t, { id, msg, type }]);
+    setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), 3500);
+  }, []);
+  return { toasts, show };
+}
+
+function ToastContainer({ toasts }) {
+  if (!toasts.length) return null;
+  return (
+    <div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 9999, display: 'flex', flexDirection: 'column', gap: 8 }}>
+      {toasts.map(t => (
+        <div key={t.id} style={{
+          padding: '12px 18px', borderRadius: 10, fontSize: 13, fontWeight: 600,
+          background: t.type === 'error' ? 'rgba(255,71,87,0.15)' : t.type === 'success' ? 'rgba(0,230,138,0.15)' : 'rgba(155,89,255,0.15)',
+          border: `1px solid ${t.type === 'error' ? 'rgba(255,71,87,0.4)' : t.type === 'success' ? 'rgba(0,230,138,0.4)' : 'rgba(155,89,255,0.4)'}`,
+          color: t.type === 'error' ? 'var(--accent-red)' : t.type === 'success' ? 'var(--accent-green)' : 'var(--accent-purple)',
+          backdropFilter: 'blur(12px)',
+          animation: 'float-up 0.3s ease',
+          maxWidth: 320,
+        }}>
+          {t.type === 'error' ? '✕ ' : t.type === 'success' ? '✓ ' : 'ℹ '}{t.msg}
+        </div>
+      ))}
+    </div>
+  );
+}
 
 const STATUS_COLORS = {
   running: 'var(--accent-green)',
@@ -27,9 +60,11 @@ const TYPE_ICONS = {
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user, org, signOut, loading: authLoading } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const { toasts, show: toast } = useToast();
 
   // Real data states
   const [agents, setAgents] = useState([]);
@@ -44,9 +79,21 @@ export default function Dashboard() {
   const [apiKey, setApiKey] = useState(null);
   const [apiKeys, setApiKeys] = useState([]);
   const [upgradeLoading, setUpgradeLoading] = useState(false);
+  const [keyGenLoading, setKeyGenLoading] = useState(false);
 
   // Onboarding
   const onCaptureRef = useRef(null);
+
+  // Handle post-upgrade/cancel redirects from Stripe
+  useEffect(() => {
+    if (searchParams.get('upgraded') === 'true') {
+      toast('Plan upgraded successfully! Welcome to Pro.', 'success');
+      window.history.replaceState({}, '', '/dashboard');
+    } else if (searchParams.get('cancelled') === 'true') {
+      toast('Upgrade cancelled — you are still on the free plan.', 'info');
+      window.history.replaceState({}, '', '/dashboard');
+    }
+  }, []);
 
   const fetchData = useCallback(async () => {
     if (!org?.id) return;
@@ -81,28 +128,20 @@ export default function Dashboard() {
     setDataLoading(false);
   }, [org?.id]);
 
-  // Fetch API key and key list on mount
+  // Fetch API key list on mount
   useEffect(() => {
     if (!org?.id) return;
     (async () => {
       try {
         const token = (await supabase.auth.getSession()).data.session?.access_token;
-        // Setup org (creates default key if needed)
-        const res = await fetch(`${API_BASE}/api/v1/auth/setup-org`, {
-          method: 'POST',
-          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({}),
-        });
-        if (res.ok) {
-          const data = await res.json();
-          if (data.api_key) setApiKey(data.api_key);
-        }
-        // Fetch API key list
+        if (!token) return;
         const keysRes = await fetch(`${API_BASE}/api/v1/api-keys?org_id=${org.id}`, {
           headers: { 'Authorization': `Bearer ${token}` },
         });
         if (keysRes.ok) setApiKeys(await keysRes.json());
-      } catch {}
+      } catch (err) {
+        console.error('Failed to load API keys:', err);
+      }
     })();
   }, [org?.id]);
 
@@ -133,6 +172,7 @@ export default function Dashboard() {
       }
     } catch (err) {
       console.error('Capture failed:', err);
+      toast('Failed to capture observation. Try again.', 'error');
     }
     setCaptureLoading(false);
   };
@@ -155,11 +195,11 @@ export default function Dashboard() {
         const { url } = await res.json();
         if (url) window.location.href = url;
       } else {
-        const err = await res.json();
-        alert(err.error || 'Failed to start checkout');
+        const body = await res.json().catch(() => ({}));
+        toast(body.error || 'Failed to start checkout', 'error');
       }
     } catch {
-      alert('Checkout unavailable. Please try again later.');
+      toast('Checkout unavailable. Please try again later.', 'error');
     }
     setUpgradeLoading(false);
   };
@@ -523,9 +563,11 @@ export default function Dashboard() {
             <div className="dash-panel" style={{ marginTop: 20 }}>
               <div className="dash-panel-header">
                 <h3>API Keys</h3>
-                <button className="btn btn-primary btn-sm" onClick={async () => {
+                <button className="btn btn-primary btn-sm" disabled={keyGenLoading} onClick={async () => {
+                  setKeyGenLoading(true);
                   try {
                     const token = (await supabase.auth.getSession()).data.session?.access_token;
+                    if (!token) { toast('Session expired — please sign in again', 'error'); return; }
                     const res = await fetch(`${API_BASE}/api/v1/api-keys`, {
                       method: 'POST',
                       headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
@@ -533,23 +575,37 @@ export default function Dashboard() {
                     });
                     if (res.ok) {
                       const newKey = await res.json();
-                      setApiKey(newKey.key); // Show full key once
-                      // Refresh key list
+                      setApiKey(newKey.key);
+                      toast('API key generated — copy it now, it won\'t be shown again', 'success');
                       const listRes = await fetch(`${API_BASE}/api/v1/api-keys?org_id=${org.id}`, {
                         headers: { 'Authorization': `Bearer ${token}` },
                       });
                       if (listRes.ok) setApiKeys(await listRes.json());
+                    } else {
+                      const body = await res.json().catch(() => ({}));
+                      toast(body.error || 'Failed to generate key', 'error');
                     }
-                  } catch {}
-                }}>+ Generate Key</button>
+                  } catch (err) {
+                    toast('Failed to generate key — check your connection', 'error');
+                  } finally {
+                    setKeyGenLoading(false);
+                  }
+                }}>{keyGenLoading ? 'Generating...' : '+ Generate Key'}</button>
               </div>
               {apiKey && (
-                <div className="dash-settings-row" style={{ background: 'rgba(155,89,255,0.08)', borderRadius: 8, padding: 16, marginBottom: 16 }}>
-                  <label style={{ color: 'var(--accent-green)', fontWeight: 600 }}>🔑 New Key Created — Copy now! (shown once)</label>
+                <div className="dash-settings-row" style={{ background: 'rgba(0,230,138,0.06)', borderRadius: 8, padding: 16, marginBottom: 4 }}>
+                  <label style={{ color: 'var(--accent-green)', fontWeight: 700, marginBottom: 10 }}>🔑 New Key — Copy now! Shown only once.</label>
                   <div className="dash-api-key">
-                    <code style={{ cursor: 'pointer', fontSize: 13, wordBreak: 'break-all' }} onClick={() => { navigator.clipboard.writeText(apiKey); alert('API key copied!'); }}>
-                      {apiKey} 📋
+                    <code style={{ flex: 1, cursor: 'pointer', fontSize: 12, wordBreak: 'break-all' }} onClick={() => {
+                      navigator.clipboard.writeText(apiKey).catch(() => {});
+                      toast('API key copied to clipboard', 'success');
+                    }}>
+                      {apiKey}
                     </code>
+                    <button className="btn btn-ghost btn-sm" onClick={() => {
+                      navigator.clipboard.writeText(apiKey).catch(() => {});
+                      toast('API key copied to clipboard', 'success');
+                    }}>Copy 📋</button>
                   </div>
                 </div>
               )}
@@ -569,15 +625,22 @@ export default function Dashboard() {
                         <td>
                           {k.active && (
                             <button className="btn btn-ghost btn-sm" style={{ color: 'var(--accent-red)' }} onClick={async () => {
-                              if (!confirm('Revoke this API key? This cannot be undone.')) return;
+                              if (!window.confirm('Revoke this API key? Agents using it will stop working.')) return;
                               try {
                                 const token = (await supabase.auth.getSession()).data.session?.access_token;
-                                await fetch(`${API_BASE}/api/v1/api-keys/${k.id}`, {
+                                const res = await fetch(`${API_BASE}/api/v1/api-keys/${k.id}`, {
                                   method: 'DELETE',
                                   headers: { 'Authorization': `Bearer ${token}` },
                                 });
-                                setApiKeys(prev => prev.map(key => key.id === k.id ? { ...key, active: false } : key));
-                              } catch {}
+                                if (res.ok) {
+                                  setApiKeys(prev => prev.map(key => key.id === k.id ? { ...key, active: false } : key));
+                                  toast('API key revoked', 'info');
+                                } else {
+                                  toast('Failed to revoke key', 'error');
+                                }
+                              } catch {
+                                toast('Failed to revoke key — check your connection', 'error');
+                              }
                             }}>Revoke</button>
                           )}
                         </td>
@@ -601,9 +664,12 @@ export default function Dashboard() {
         observations={observations}
         apiKey={apiKey}
         userName={userName}
+        planName={org?.plan || 'free'}
         setActiveTab={setActiveTab}
         onCaptureRef={onCaptureRef}
       />
+
+      <ToastContainer toasts={toasts} />
     </div>
   );
 }

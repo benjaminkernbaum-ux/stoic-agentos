@@ -1,21 +1,21 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Navigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import './Auth.css';
 
 export default function SignupPage() {
-  const navigate = useNavigate();
   const { signUp, signInWithOAuth, isAuthenticated } = useAuth();
   const [form, setForm] = useState({ name: '', email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 
-  // Redirect if already logged in
-  if (isAuthenticated) {
-    navigate('/dashboard');
-    return null;
-  }
+  if (isAuthenticated) return <Navigate to="/dashboard" replace />;
+
+  const handleChange = (field) => (e) => {
+    setForm(f => ({ ...f, [field]: e.target.value }));
+    if (error) setError('');
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -89,34 +89,34 @@ export default function SignupPage() {
         <form onSubmit={handleSubmit} className="auth-form">
           <div className="auth-field">
             <label htmlFor="signup-name">Full name</label>
-            <input 
+            <input
               id="signup-name"
-              type="text" 
-              placeholder="Benjamin Kernbaum" 
+              type="text"
+              placeholder="Benjamin Kernbaum"
               value={form.name}
-              onChange={e => setForm({...form, name: e.target.value})}
+              onChange={handleChange('name')}
               required
             />
           </div>
           <div className="auth-field">
             <label htmlFor="signup-email">Work email</label>
-            <input 
+            <input
               id="signup-email"
-              type="email" 
-              placeholder="you@company.com" 
+              type="email"
+              placeholder="you@company.com"
               value={form.email}
-              onChange={e => setForm({...form, email: e.target.value})}
+              onChange={handleChange('email')}
               required
             />
           </div>
           <div className="auth-field">
             <label htmlFor="signup-password">Password</label>
-            <input 
+            <input
               id="signup-password"
-              type="password" 
-              placeholder="Minimum 6 characters" 
+              type="password"
+              placeholder="Minimum 6 characters"
               value={form.password}
-              onChange={e => setForm({...form, password: e.target.value})}
+              onChange={handleChange('password')}
               required
               minLength={6}
             />

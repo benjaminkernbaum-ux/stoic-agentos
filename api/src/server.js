@@ -561,6 +561,7 @@ app.post(`/api/${API_VERSION}/webhooks/git`, async (req, res) => {
   try {
     const { api_key, repo, branch, commit_hash, commit_message, author } = req.body;
     if (!api_key || !repo) return res.status(400).json({ error: 'api_key and repo required' });
+    if (!api_key.startsWith('sk_')) return res.status(400).json({ error: 'Invalid API key format' });
 
     if (!supabase) return res.status(500).json({ error: 'Database not configured' });
 
@@ -597,7 +598,7 @@ const STRIPE_PRICES = {
   team: process.env.STRIPE_TEAM_PRICE_ID || 'price_team_monthly',
 };
 
-// Create Checkout Session (upgrade to Pro/Team)
+// ── Billing: Checkout Session (upgrade to Pro/Team)
 app.post(`/api/${API_VERSION}/billing/checkout`, authenticate, async (req, res) => {
   if (!STRIPE_SECRET) return res.status(503).json({ error: 'Stripe not configured' });
 
@@ -612,7 +613,8 @@ app.post(`/api/${API_VERSION}/billing/checkout`, authenticate, async (req, res) 
     let customerId = req.org.stripe_customer_id;
     if (!customerId) {
       const customer = await stripe.customers.create({
-        email: req.user.email,
+        // req.user is undefined when authenticated via API key — guard it
+        email: req.user?.email || undefined,
         metadata: { org_id: req.org.id, org_name: req.org.name },
       });
       customerId = customer.id;
@@ -621,18 +623,19 @@ app.post(`/api/${API_VERSION}/billing/checkout`, authenticate, async (req, res) 
         .eq('id', req.org.id);
     }
 
+    const origin = req.headers.origin || 'https://stoic-agentos.vercel.app';
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       mode: 'subscription',
       line_items: [{ price: priceId, quantity: 1 }],
-      success_url: `${req.headers.origin || 'https://stoic-agentos.vercel.app'}/dashboard?upgraded=true`,
-      cancel_url: `${req.headers.origin || 'https://stoic-agentos.vercel.app'}/dashboard?cancelled=true`,
+      success_url: `${origin}/dashboard?upgraded=true`,
+      cancel_url: `${origin}/dashboard?cancelled=true`,
       metadata: { org_id: req.org.id },
     });
 
     res.json({ url: session.url, sessionId: session.id });
   } catch (err) {
-    console.error('Stripe checkout error:', err.message, err.stack);
+    console.error('Stripe checkout error:', err.message);
     res.status(500).json({ error: 'Failed to create checkout session', detail: err.message });
   }
 });
@@ -699,7 +702,14 @@ app.post('/webhooks/stripe', express.raw({ type: 'application/json' }), async (r
           .eq('stripe_customer_id', customerId)
           .single();
         if (org) {
-          const plan = sub.status === 'active' ? 'pro' : 'free';
+          // Detect plan from the subscribed price ID
+          let plan = 'free';
+          if (sub.status === 'active' || sub.status === 'trialing') {
+            const priceId = sub.items?.data?.[0]?.price?.id;
+            if (priceId === STRIPE_PRICES.team) plan = 'team';
+            else if (priceId === STRIPE_PRICES.pro) plan = 'pro';
+            else plan = 'pro'; // fallback for any paid sub
+          }
           await supabase.from('organizations').update({
             plan,
             stripe_subscription_id: sub.id,
