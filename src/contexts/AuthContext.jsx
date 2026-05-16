@@ -13,24 +13,22 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Hard failsafe — loading can never be infinite
-    const failsafe = setTimeout(() => setLoading(false), 5000);
+    // Failsafe — never let loading spin forever
+    const failsafe = setTimeout(() => setLoading(false), 6000);
 
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
+    // INITIAL_SESSION fires after Supabase processes any OAuth redirect (?code=...)
+    // Safe replacement for getSession() which races with PKCE code exchange.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'INITIAL_SESSION') {
+        if (session?.user) {
+          setUser(session.user);
+          loadOrg(session.user.id);
+        } else {
+          setLoading(false);
+        }
+      } else if (event === 'SIGNED_IN' && session?.user) {
         setUser(session.user);
         loadOrg(session.user.id);
-      } else {
-        setLoading(false);
-      }
-    });
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' && session?.user) {
-        setUser(session.user);
-        await loadOrg(session.user.id);
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
         setOrg(null);
