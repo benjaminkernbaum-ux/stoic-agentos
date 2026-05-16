@@ -1147,10 +1147,25 @@
   :root { --sidebar-w: 60px; }
   .dash-brand-name, .dash-brand-version,
   .dash-nav-label, .dash-nav-badge,
-  .dash-plan-text, .dash-kbd-hint { display: none; }
+  .dash-plan-text, .dash-kbd-hint,
+  .dash-nav-section,
+  .dash-collapse-btn { display: none; }
+  .dash-brand { justify-content: center; }
+  .dash-nav-btn { justify-content: center; padding: 10px; }
+  .dash-nav-btn.active::before { top: 8px; bottom: 8px; }
+  .dash-plan-chip { justify-content: center; padding: 8px; }
+  .dash-sidebar-foot { padding: 8px 6px; }
   .dash-content { padding: 14px; }
   .dash-metrics { grid-template-columns: 1fr 1fr; }
   .dash-topbar { padding: 0 14px; gap: 8px; }
   .dash-search-btn { display: none; }
   .dash-time { display: none; }
+  .dash-topbar-sub { display: none; }
+  .dash-topbar-divider { display: none; }
+  .dash-grid-2 { grid-template-columns: 1fr; }
+  .dash-ws-grid { grid-template-columns: 1fr; }
+  .dash-agent-grid { grid-template-columns: 1fr; }
+  .dash-metric-value { font-size: 28px; }
+  .dash-usage { flex-direction: column; gap: 12px; }
+  .dash-usage-pct { text-align: left; }
 }
