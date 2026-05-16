@@ -1,0 +1,13 @@
+{
+  "name": "stoic-agentos-mcp",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "MCP Server for Stoic AgentOS — exposes infrastructure ops as AI-callable tools",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.1"
+  }
+}
