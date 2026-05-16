@@ -31,6 +31,7 @@ export function AuthProvider({ children }) {
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
         setOrg(null);
+        setLoading(false);
       }
     });
 
@@ -39,7 +40,6 @@ export function AuthProvider({ children }) {
 
   async function loadOrg(userId) {
     try {
-      // Check if user has an org via org_members
       const { data: membership } = await supabase
         .from('org_members')
         .select('org_id, role, organizations(*)')
@@ -54,15 +54,16 @@ export function AuthProvider({ children }) {
           plan: membership.organizations.plan,
           role: membership.role,
         });
+        setLoading(false);
       } else {
-        // Auto-create org for new users
-        await createDefaultOrg(userId);
+        // No org yet — unblock the UI immediately, create org in background
+        setLoading(false);
+        createDefaultOrg(userId);
       }
     } catch {
-      // No org found — create one
-      await createDefaultOrg(userId);
+      setLoading(false);
+      createDefaultOrg(userId);
     }
-    setLoading(false);
   }
 
   async function createDefaultOrg(userId) {
@@ -71,7 +72,9 @@ export function AuthProvider({ children }) {
       const name = userMeta?.user_metadata?.full_name || userMeta?.email?.split('@')[0] || 'My Organization';
       const slug = name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').slice(0, 40) + '-' + Date.now().toString(36);
 
-      // Use service-role via API to bypass RLS for initial org creation
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 10000);
+
       const res = await fetch(`${import.meta.env.VITE_API_URL || 'https://stoic-agentos-api-production.up.railway.app'}/api/v1/auth/setup-org`, {
         method: 'POST',
         headers: {
@@ -79,7 +82,10 @@ export function AuthProvider({ children }) {
           'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
         },
         body: JSON.stringify({ name, slug, userId }),
+        signal: controller.signal,
       });
+
+      clearTimeout(timeout);
 
       if (res.ok) {
         const orgData = await res.json();
