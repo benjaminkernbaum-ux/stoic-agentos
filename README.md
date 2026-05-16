@@ -5,6 +5,7 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/benjaminkernbaum-ux/stoic-agentos/stargazers"><img src="https://img.shields.io/github/stars/benjaminkernbaum-ux/stoic-agentos?style=social" alt="GitHub Stars" /></a>
   <a href="https://www.npmjs.com/package/stoic-agentos-sdk"><img src="https://img.shields.io/npm/v/stoic-agentos-sdk?color=blue&label=npm" alt="npm version" /></a>
   <a href="https://www.npmjs.com/package/stoic-agentos-sdk"><img src="https://img.shields.io/npm/dm/stoic-agentos-sdk?color=green" alt="npm downloads" /></a>
   <a href="https://stoic-agentos.vercel.app"><img src="https://img.shields.io/badge/dashboard-live-brightgreen" alt="Dashboard" /></a>
@@ -13,9 +14,14 @@
 
 <p align="center">
   <a href="https://stoic-agentos.vercel.app">Dashboard</a> · 
+  <a href="https://stoic-agentos.vercel.app/docs">Docs</a> · 
   <a href="https://stoic-agentos.vercel.app/signup">Get Started Free</a> · 
   <a href="https://www.npmjs.com/package/stoic-agentos-sdk">npm</a> · 
   <a href="#quick-start">Quick Start</a>
+</p>
+
+<p align="center">
+  <strong>⭐ If this helps you ship AI agents faster, give us a star — it helps a lot!</strong>
 </p>
 
 ---
