@@ -1,0 +1,9 @@
+[build]
+dockerfilePath = "mcp-server/Dockerfile"
+
+[deploy]
+startCommand = "node index.js"
+healthcheckPath = "/health"
+healthcheckTimeout = 15
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3

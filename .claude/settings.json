@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "stoic-ops": {
+      "command": "node",
+      "args": ["c:/Users/benja/Comunidade stoic/stoic-agentos/mcp-server/index.js"],
+      "env": {
+        "AGENTOS_API_KEY": "${AGENTOS_API_KEY}",
+        "INFRA_AGENT_PATH": "c:/Users/benja/Nouveau dossier",
+        "GITHUB_TOKEN": "${GITHUB_TOKEN}"
+      }
+    },
+    "stoic-ops-remote": {
+      "url": "https://stoic-agentos-mcp.up.railway.app/mcp"
+    }
+  }
+}

@@ -228,25 +228,45 @@ npm run supabase:audit         # Data quality audit
 
 ## MCP Server
 
-An MCP (Model Context Protocol) server is available at `mcp-server/` for remote AI access to Stoic infrastructure operations. Configure in Claude Code settings:
+An MCP (Model Context Protocol) server is available at `mcp-server/` for remote AI access to Stoic infrastructure operations.
 
+**Two modes — both configured in `.claude/settings.json`:**
+
+### Local (stdio)
+Runs as a subprocess. Requires the repo cloned locally.
 ```json
 {
   "mcpServers": {
     "stoic-ops": {
       "command": "node",
-      "args": ["<path-to-repo>/mcp-server/index.js"],
+      "args": ["c:/Users/benja/Comunidade stoic/stoic-agentos/mcp-server/index.js"],
       "env": {
-        "GITHUB_TOKEN": "...",
-        "RAILWAY_TOKEN": "...",
-        "SUPABASE_URL": "...",
-        "SUPABASE_SERVICE_KEY": "...",
-        "AGENTOS_API_KEY": "sk_live_..."
+        "AGENTOS_API_KEY": "sk_live_...",
+        "INFRA_AGENT_PATH": "c:/Users/benja/Nouveau dossier",
+        "GITHUB_TOKEN": "ghp_..."
       }
     }
   }
 }
 ```
+
+### Remote (HTTP — Railway deployed)
+Connect from anywhere — no local repo needed. Works in Claude Code on the web.
+```json
+{
+  "mcpServers": {
+    "stoic-ops-remote": {
+      "url": "https://stoic-agentos-mcp.up.railway.app/mcp"
+    }
+  }
+}
+```
+
+**Deploy MCP server to Railway:**
+1. New service → "Deploy from GitHub repo" → root: `stoic-agentos`, Dockerfile: `mcp-server/Dockerfile`
+2. Set env vars: `AGENTOS_API_KEY=sk_live_...`, `GITHUB_TOKEN=ghp_...`
+3. Railway auto-sets `PORT` — server starts in HTTP mode automatically
+4. Health check: `GET https://stoic-agentos-mcp.up.railway.app/health`
 
 ---
 
