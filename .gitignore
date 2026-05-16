@@ -22,3 +22,5 @@ npm-debug.log*
 .agentos.json
 
 .vercel
+
+supabase/.temp/
