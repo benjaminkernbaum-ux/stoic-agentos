@@ -256,7 +256,7 @@ app.post(`/api/${API_VERSION}/agents`, authenticate, async (req, res) => {
       .eq('org_id', req.org.id);
 
     if (!checkLimit(req.org.plan, 'agents', count)) {
-      return res.status(429).json({ error: 'Agent limit reached', limit: PLAN_LIMITS[req.org.plan]?.agents });
+      return res.status(429).json({ error: 'Agent limit reached', limit: PLAN_LIMITS[req.org.plan]?.agents, current: count, upgrade_url: 'https://stoic-agentos.vercel.app/#pricing' });
     }
 
     const { data, error } = await supabase
@@ -329,7 +329,7 @@ app.post(`/api/${API_VERSION}/workspaces`, authenticate, async (req, res) => {
       .eq('org_id', req.org.id);
 
     if (!checkLimit(req.org.plan, 'workspaces', count)) {
-      return res.status(429).json({ error: 'Workspace limit reached' });
+      return res.status(429).json({ error: 'Workspace limit reached', limit: PLAN_LIMITS[req.org.plan]?.workspaces, current: count, upgrade_url: 'https://stoic-agentos.vercel.app/#pricing' });
     }
 
     const { data, error } = await supabase
@@ -392,7 +392,7 @@ app.post(`/api/${API_VERSION}/knowledge-items`, authenticate, async (req, res) =
       .eq('org_id', req.org.id);
 
     if (!checkLimit(req.org.plan, 'knowledge_items', count)) {
-      return res.status(429).json({ error: 'Knowledge item limit reached' });
+      return res.status(429).json({ error: 'Knowledge item limit reached', limit: PLAN_LIMITS[req.org.plan]?.knowledge_items, current: count, upgrade_url: 'https://stoic-agentos.vercel.app/#pricing' });
     }
 
     const { data, error } = await supabase

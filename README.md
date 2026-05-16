@@ -1,65 +1,219 @@
-# ⚡ Stoic AgentOS
+<p align="center">
+  <h1 align="center">⚡ Stoic AgentOS</h1>
+  <p align="center"><strong>The Operating System for AI Agent Fleets</strong></p>
+  <p align="center">Monitor, orchestrate, and persist knowledge across your AI agents — from a single dashboard.</p>
+</p>
 
-**The Operating System for AI Agent Fleets**
+<p align="center">
+  <a href="https://www.npmjs.com/package/stoic-agentos-sdk"><img src="https://img.shields.io/npm/v/stoic-agentos-sdk?color=blue&label=npm" alt="npm version" /></a>
+  <a href="https://www.npmjs.com/package/stoic-agentos-sdk"><img src="https://img.shields.io/npm/dm/stoic-agentos-sdk?color=green" alt="npm downloads" /></a>
+  <a href="https://stoic-agentos.vercel.app"><img src="https://img.shields.io/badge/dashboard-live-brightgreen" alt="Dashboard" /></a>
+  <a href="https://github.com/benjaminkernbaum-ux/stoic-agentos/blob/master/LICENSE"><img src="https://img.shields.io/badge/license-MIT-purple" alt="License" /></a>
+</p>
 
-Monitor, orchestrate, and scale your AI agents from a single premium dashboard. Knowledge persistence, auto-capture, and multi-workspace management — built for teams shipping AI.
+<p align="center">
+  <a href="https://stoic-agentos.vercel.app">Dashboard</a> · 
+  <a href="https://stoic-agentos.vercel.app/signup">Get Started Free</a> · 
+  <a href="https://www.npmjs.com/package/stoic-agentos-sdk">npm</a> · 
+  <a href="#quick-start">Quick Start</a>
+</p>
 
-![License](https://img.shields.io/badge/license-MIT-purple)
-![Version](https://img.shields.io/badge/version-0.1.0-blue)
+---
 
-## 🚀 Quick Start
+## The Problem
 
-```bash
-# Install the SDK
-npm install @stoic/agentos-sdk
+You're running AI agents in production — coding assistants, data pipelines, customer support bots, trading bots, content generators. Each one makes autonomous decisions, but:
 
-# Initialize in your project
-npx agentos init YOUR_API_KEY my-workspace
+- **No visibility** → Agent fails at 3 AM, you find out Monday
+- **No memory** → Same agent rediscovers the same bug every session
+- **No coordination** → 5 agents, 5 silos, zero shared knowledge
+
+## The Solution
+
+AgentOS gives your AI fleet a **command center** — real-time monitoring, persistent knowledge that survives across sessions, and usage-based billing that scales with you.
+
+```
+Your Agent Fleet          →  AgentOS SDK  →  Dashboard
+├── Coding Assistant           3 lines       📊 Real-time status
+├── Data Pipeline              of code       🧠 Shared knowledge
+├── Support Bot                              📈 Usage analytics
+└── Content Generator                        🔑 API key management
 ```
 
+## Quick Start
+
+### 1. Install
+
+```bash
+npm install stoic-agentos-sdk
+```
+
+### 2. Get Your API Key
+
+Sign up at [stoic-agentos.vercel.app](https://stoic-agentos.vercel.app/signup) → Dashboard → Settings → Generate Key
+
+### 3. Monitor Your First Agent
+
 ```javascript
-import { AgentOS } from '@stoic/agentos-sdk';
+import { AgentOS } from 'stoic-agentos-sdk';
 
 const os = new AgentOS({
-  apiKey: 'sk_live_xxx',
-  workspace: 'my-saas-backend',
+  apiKey: 'sk_live_your_key_here',
+  workspace: 'my-project',
 });
 
-// Wrap any agent — auto-captures start/end/errors
+// Wrap any function → auto-captures start, success, and errors
 const myAgent = os.wrapAgent('invoice-processor', async (input) => {
   const result = await processInvoice(input);
   return result;
 });
 
-// Manual capture
+// Run it — AgentOS tracks everything
+await myAgent({ invoiceId: 'INV-001' });
+```
+
+### 4. Capture Decisions & Knowledge
+
+```javascript
+// Capture important observations
 os.capture({
   type: 'decision',
-  title: 'Switched to GPT-4o-mini',
-  content: 'Reduced cost by 40% with no quality loss',
+  title: 'Switched to GPT-4o-mini for summarization',
+  content: 'Reduced cost by 40% with no quality loss on BLEU benchmark',
+});
+
+// Persist knowledge across sessions
+os.capture({
+  type: 'architecture',
+  title: 'Payment service uses idempotency keys',
+  content: 'Always include X-Idempotency-Key header to prevent double charges',
 });
 ```
 
-## ✨ Features
+## Features
 
-- 🤖 **Agent Fleet Monitoring** — Track 100+ agents across departments
-- 🧠 **Knowledge Brain** — Persistent memory across all AI sessions
-- 🕸️ **Knowledge Graph** — Interactive codebase visualization
-- 📦 **Multi-Workspace** — Manage 50+ repos from one dashboard
-- ⚡ **Auto-Capture** — Git hooks auto-log every change
-- 🏛 **Financial Department** — 8 AI agents replacing $184K/yr
+| Feature | Description |
+|---------|-------------|
+| 🤖 **Agent Monitoring** | Real-time status, heartbeats, error tracking for your entire fleet |
+| 🧠 **Knowledge Persistence** | Agents remember decisions across sessions — no more re-learning |
+| 📊 **Usage Analytics** | Observations/month, agent runs, error rates at a glance |
+| 📦 **Multi-Workspace** | Group agents by project, repo, or team |
+| ⚡ **Auto-Capture** | `wrapAgent()` logs start, success, and errors automatically |
+| 🔑 **API Key Management** | Generate, list, and revoke keys from the dashboard |
+| 💳 **Usage-Based Billing** | Free tier with real limits, upgrade when you need more |
+| 🔒 **Row-Level Security** | Full RLS on Supabase — your data is isolated per org |
 
-## 💎 Pricing
+## Why AgentOS?
 
-| | Free | Pro ($49/mo) | Team ($299/mo) | Enterprise |
+| | **Stoic AgentOS** | Langfuse | AgentOps | CrewAI |
+|---|---|---|---|---|
+| **Agent monitoring** | ✅ | ✅ | ✅ | ⚠️ Orchestration only |
+| **Knowledge persistence** | ✅ | ❌ | ❌ | ❌ |
+| **Auto-capture SDK** | ✅ 3 lines | ⚠️ Decorator-based | ✅ | ❌ |
+| **Multi-workspace** | ✅ | ⚠️ Projects | ❌ | ❌ |
+| **Self-serve dashboard** | ✅ | ✅ | ✅ | ❌ |
+| **Usage limits + billing** | ✅ Built-in | ✅ | ❌ | ❌ |
+| **Open-source core** | ✅ MIT | ✅ MIT | Partial | ✅ |
+| **Setup time** | 3 min | 10 min | 5 min | 30 min |
+
+## Pricing
+
+| | Free | Pro — $49/mo | Team — $299/mo | Enterprise |
 |---|------|-------------|----------------|------------|
 | Workspaces | 2 | 10 | Unlimited | Unlimited |
 | Agents | 5 | 25 | 100 | Unlimited |
 | Observations/mo | 10,000 | 100,000 | Unlimited | Unlimited |
+| Knowledge items | 5 | 25 | Unlimited | Unlimited |
+| Members | 1 | 5 | 15 | Unlimited |
 
-## 📚 Documentation
+[**Start Free →**](https://stoic-agentos.vercel.app/signup)
 
-Visit [agentos.dev/docs](https://agentos.dev/docs) for full documentation.
+## Architecture
 
-## 📄 License
+```
+┌────────────────────────────────┐
+│  Your Application              │
+│  ├── Agent 1                   │
+│  ├── Agent 2                   │─── stoic-agentos-sdk (npm)
+│  └── Agent N                   │         │
+└────────────────────────────────┘         │
+                                           ▼
+┌──────────────────────────────────────────────────┐
+│  AgentOS API (Railway)                            │
+│  ├── Auth (Supabase JWT + API Keys)               │
+│  ├── Observations → /api/v1/observations          │
+│  ├── Agents → /api/v1/agents                      │
+│  ├── Knowledge → /api/v1/knowledge-items          │
+│  ├── Billing → /api/v1/billing (Stripe)           │
+│  └── Webhooks → /webhooks/stripe, /webhooks/git   │
+└──────────────────────────────────────────────────┘
+         │                    │
+         ▼                    ▼
+┌─────────────┐    ┌─────────────────┐
+│  Supabase   │    │  Stripe         │
+│  (Postgres) │    │  (Billing)      │
+│  8 tables   │    │  Checkout +     │
+│  RLS on all │    │  Portal +       │
+│             │    │  Webhooks       │
+└─────────────┘    └─────────────────┘
+```
 
-MIT © 2026 Benjamin Kernbaum
+## API Reference
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| `POST` | `/api/v1/observations` | API Key | Create observation |
+| `GET` | `/api/v1/observations` | API Key | List observations |
+| `POST` | `/api/v1/agents` | API Key | Register agent |
+| `GET` | `/api/v1/agents` | API Key | List agents |
+| `POST` | `/api/v1/agents/heartbeat` | API Key | Agent heartbeat (upsert) |
+| `POST` | `/api/v1/knowledge-items` | API Key | Create knowledge item |
+| `POST` | `/api/v1/workspaces` | API Key | Create workspace |
+| `GET` | `/api/v1/stats` | API Key | Dashboard stats |
+| `POST` | `/api/v1/api-keys` | JWT | Generate API key |
+| `DELETE` | `/api/v1/api-keys/:id` | JWT | Revoke API key |
+| `POST` | `/api/v1/billing/checkout` | JWT | Start Stripe checkout |
+| `POST` | `/api/v1/billing/portal` | JWT | Open customer portal |
+
+## SDK Reference
+
+```javascript
+import { AgentOS } from 'stoic-agentos-sdk';
+
+// Initialize
+const os = new AgentOS({ apiKey: 'sk_live_xxx', workspace: 'my-app' });
+
+// Core methods
+os.capture({ type, title, content, metadata })     // Log observation
+os.wrapAgent(name, fn)                              // Auto-monitor function
+os.addKnowledge({ name, summary, content })         // Persist knowledge
+os.listAgents()                                     // Get all agents
+os.listObservations({ limit, type })                // Query observations
+```
+
+## Contributing
+
+We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+```bash
+# Clone the repo
+git clone https://github.com/benjaminkernbaum-ux/stoic-agentos.git
+cd stoic-agentos
+
+# Install dependencies
+npm install
+
+# Start dev server
+npm run dev
+```
+
+## License
+
+MIT © 2026 [Benjamin Kernbaum](https://github.com/benjaminkernbaum-ux)
+
+---
+
+<p align="center">
+  <strong>Built with conviction.</strong><br/>
+  <a href="https://stoic-agentos.vercel.app">stoic-agentos.vercel.app</a>
+</p>
