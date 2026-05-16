@@ -2,9 +2,9 @@
 /**
  * AgentOS CLI
  * Usage:
- *   npx @stoic/agentos-sdk init         — Initialize AgentOS in current project
- *   npx @stoic/agentos-sdk init-hooks   — Install git post-commit hooks
- *   npx @stoic/agentos-sdk test         — Test API connection
+ *   npx stoic-agentos-sdk init         — Initialize AgentOS in current project
+ *   npx stoic-agentos-sdk init-hooks   — Install git post-commit hooks
+ *   npx stoic-agentos-sdk test         — Test API connection
  */
 
 import { writeFileSync, mkdirSync, existsSync, readFileSync } from 'fs';

@@ -1,6 +1,6 @@
 {
   "name": "stoic-agentos-sdk",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Official SDK for Stoic AgentOS — AI Agent Operations Platform. Monitor, orchestrate, and persist knowledge across your AI agent fleet.",
   "main": "src/index.js",
   "types": "src/index.d.ts",
@@ -12,7 +12,7 @@
     }
   },
   "bin": {
-    "agentos": "./src/cli.js"
+    "agentos": "src/cli.js"
   },
   "files": [
     "src/",
