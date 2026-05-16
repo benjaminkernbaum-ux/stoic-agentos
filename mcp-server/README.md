@@ -33,9 +33,13 @@ cd mcp-server
 npm install
 ```
 
-### 2. Configure Claude Code
+### 2. Choose a connection mode
 
-Add to your Claude Code MCP settings (`~/.claude/settings.json` or project `.claude/settings.json`):
+#### Option A — Local (stdio)
+
+Claude Code / Cursor / Windsurf run the server as a subprocess over stdin/stdout.
+
+Add to your MCP settings (`~/.claude/settings.json` or project `.claude/settings.json`):
 
 ```json
 {
@@ -53,14 +57,53 @@ Add to your Claude Code MCP settings (`~/.claude/settings.json` or project `.cla
 }
 ```
 
+#### Option B — Remote (HTTP / StreamableHTTP)
+
+Deploy the server to Railway (or any Node host) and connect any MCP client over HTTP.
+
+**Start the server:**
+```bash
+# Local test
+npm run start:http          # listens on :3100
+
+# Production (set PORT in Railway env vars)
+PORT=3100 node index.js
+```
+
+**Health check:**
+```bash
+curl http://localhost:3100/health
+# {"status":"ok","mode":"http","sessions":0}
+```
+
+**Connect from Claude Code (remote URL):**
+```json
+{
+  "mcpServers": {
+    "stoic-ops-remote": {
+      "url": "https://your-mcp-server.railway.app/mcp",
+      "headers": {
+        "Authorization": "Bearer sk_live_YOUR_KEY_HERE"
+      }
+    }
+  }
+}
+```
+
+**Deploy to Railway:**
+1. Add the `mcp-server/` directory as a Railway service
+2. Set env vars: `AGENTOS_API_KEY`, `PORT` (Railway sets this automatically)
+3. Optionally set `AGENTOS_API_URL`, `INFRA_AGENT_PATH`, `GITHUB_TOKEN`
+
 ### 3. Test
 
 ```bash
-# Test the MCP server starts (should hang waiting for stdio)
+# Stdio mode (hangs waiting for input — that's correct)
 node index.js
-# Ctrl+C to exit
 
-# Or test via Claude Code — just open a session and the tools appear automatically
+# HTTP mode
+npm run start:http
+curl http://localhost:3100/health
 ```
 
 ## Environment Variables
@@ -71,10 +114,12 @@ node index.js
 | `AGENTOS_API_URL` | ❌ | API URL (default: production Railway) |
 | `INFRA_AGENT_PATH` | ❌ | Path to `stoic-github-agent` workspace for infra commands |
 | `GITHUB_TOKEN` | ❌ | GitHub PAT for repo status (used by infra agent) |
+| `PORT` | ❌ | If set, starts HTTP server on this port instead of stdio |
 
 ## Security
 
 - Infrastructure commands are **whitelisted** — only known npm scripts can run
 - API calls use your `sk_live_` key — scoped to your organization
 - No shell injection possible — arguments are sanitized
-- MCP communicates via stdio (local only, no network exposure)
+- Stdio mode: local only, no network exposure
+- HTTP mode: sessions are isolated per connection; deploy behind a reverse proxy with TLS in production
