@@ -72,7 +72,7 @@ export default function LandingPage() {
             <span>Stoic <span style={{ color: 'var(--accent-purple)' }}>AgentOS</span></span>
           </div>
           <div className="nav-links">
-            {NAV_LINKS.map(l => <a key={l} className="nav-link" href={`#${l.toLowerCase()}`}>{l}</a>)}
+            {NAV_LINKS.map(l => <a key={l} className="nav-link" href={l === 'Docs' ? '/docs' : `#${l.toLowerCase()}`}>{l}</a>)}
             <a className="nav-link" href="/login">Sign In</a>
             <button className="btn btn-primary btn-sm" onClick={() => window.location.href = '/signup'}>Get Started Free</button>
           </div>
