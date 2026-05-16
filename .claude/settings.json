@@ -10,7 +10,7 @@
       }
     },
     "stoic-ops-remote": {
-      "url": "https://stoic-agentos-mcp.up.railway.app/mcp"
+      "url": "https://stoic-agentos.vercel.app/api/mcp"
     }
   }
 }
