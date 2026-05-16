@@ -10,7 +10,10 @@
       }
     },
     "stoic-ops-remote": {
-      "url": "https://stoic-agentos.vercel.app/api/mcp"
+      "url": "https://stoic-agentos.vercel.app/api/mcp",
+      "headers": {
+        "Authorization": "Bearer sk_live_YOUR_KEY_HERE"
+      }
     }
   }
 }

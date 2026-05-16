@@ -3,15 +3,22 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import { z } from 'zod';
 
 const API_URL = process.env.AGENTOS_API_URL || 'https://stoic-agentos-api-production.up.railway.app';
-const API_KEY = process.env.AGENTOS_API_KEY || '';
 
-async function apiCall(method, path, body = null) {
+// API key read per-request from Authorization header (passed by MCP client config)
+// Falls back to server env var if set
+function getApiKey(req) {
+  const header = req?.headers?.authorization || '';
+  if (header.startsWith('Bearer ')) return header.slice(7);
+  return process.env.AGENTOS_API_KEY || '';
+}
+
+async function apiCall(method, path, body = null, apiKey = '') {
   const url = `${API_URL}/api/v1${path}`;
   const opts = {
     method,
     headers: {
       'Content-Type': 'application/json',
-      ...(API_KEY ? { Authorization: `Bearer ${API_KEY}` } : {}),
+      ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
     },
   };
   if (body) opts.body = JSON.stringify(body);
@@ -24,26 +31,27 @@ async function apiCall(method, path, body = null) {
   }
 }
 
-function createServer() {
+function createServer(apiKey = '') {
+  const call = (method, path, body = null) => apiCall(method, path, body, apiKey);
   const server = new McpServer({ name: 'stoic-agentos-ops', version: '1.1.0' });
 
   server.tool('agentos_health', 'Check AgentOS API health — status, version, uptime, DB connectivity', {}, async () => {
-    const { status, data } = await apiCall('GET', '/health');
+    const { status, data } = await call('GET', '/health');
     return { content: [{ type: 'text', text: JSON.stringify({ http_status: status, ...data }, null, 2) }] };
   });
 
   server.tool('agentos_stats', 'Get AgentOS dashboard stats — agents, workspaces, observations, plan info', {}, async () => {
-    const { status, data } = await apiCall('GET', '/stats');
+    const { status, data } = await call('GET', '/stats');
     return { content: [{ type: 'text', text: JSON.stringify({ http_status: status, ...data }, null, 2) }] };
   });
 
   server.tool('agentos_list_agents', 'List all registered AI agents in the organization', {}, async () => {
-    const { data } = await apiCall('GET', '/agents');
+    const { data } = await call('GET', '/agents');
     return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
   });
 
   server.tool('agentos_list_workspaces', 'List all registered workspaces (monitored codebases)', {}, async () => {
-    const { data } = await apiCall('GET', '/workspaces');
+    const { data } = await call('GET', '/workspaces');
     return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
   });
 
@@ -57,7 +65,7 @@ function createServer() {
     if (type) params.set('type', type);
     if (agent) params.set('agent', agent);
     if (workspace) params.set('workspace', workspace);
-    const { data } = await apiCall('GET', `/observations?${params}`);
+    const { data } = await call('GET', `/observations?${params}`);
     return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
   });
 
@@ -69,7 +77,7 @@ function createServer() {
     workspace: z.string().optional().describe('Workspace UUID'),
     metadata: z.record(z.any()).optional().describe('Additional metadata'),
   }, async ({ type, title, content, agent, workspace, metadata }) => {
-    const { status, data } = await apiCall('POST', '/observations', { type, title, content, agent, workspace, metadata });
+    const { status, data } = await call('POST', '/observations', { type, title, content, agent, workspace, metadata });
     return { content: [{ type: 'text', text: JSON.stringify({ http_status: status, ...data }, null, 2) }] };
   });
 
@@ -79,12 +87,12 @@ function createServer() {
     description: z.string().optional(),
     module: z.string().optional().describe('content, gtm, crm, financial, standalone'),
   }, async ({ name, status, description, module }) => {
-    const { status: httpStatus, data } = await apiCall('POST', '/agents/heartbeat', { name, status, description, module });
+    const { status: httpStatus, data } = await call('POST', '/agents/heartbeat', { name, status, description, module });
     return { content: [{ type: 'text', text: JSON.stringify({ http_status: httpStatus, ...data }, null, 2) }] };
   });
 
   server.tool('agentos_list_knowledge', 'List all knowledge items in the organization', {}, async () => {
-    const { data } = await apiCall('GET', '/knowledge-items');
+    const { data } = await call('GET', '/knowledge-items');
     return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
   });
 
@@ -93,12 +101,12 @@ function createServer() {
     summary: z.string().optional().default('').describe('Short summary'),
     content: z.string().describe('Full content (markdown)'),
   }, async ({ name, summary, content }) => {
-    const { status, data } = await apiCall('POST', '/knowledge-items', { name, summary, content });
+    const { status, data } = await call('POST', '/knowledge-items', { name, summary, content });
     return { content: [{ type: 'text', text: JSON.stringify({ http_status: status, ...data }, null, 2) }] };
   });
 
   server.tool('railway_health', 'Check Railway AgentOS API health', {}, async () => {
-    const { status, data } = await apiCall('GET', '/health');
+    const { status, data } = await call('GET', '/health');
     return { content: [{ type: 'text', text: JSON.stringify({ api_endpoint: `${API_URL}/health`, http_status: status, ...data }, null, 2) }] };
   });
 
@@ -117,8 +125,9 @@ export default async function handler(req, res) {
   }
 
   try {
+    const apiKey = getApiKey(req);
     const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
-    const server = createServer();
+    const server = createServer(apiKey);
     await server.connect(transport);
     await transport.handleRequest(req, res, req.body);
   } catch (err) {
