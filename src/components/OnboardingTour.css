@@ -1,0 +1,385 @@
+/* ═══ ONBOARDING TOUR ═══ */
+
+/* ── Overlay ── */
+.ob-overlay {
+  position: fixed; inset: 0;
+  z-index: 9990;
+  pointer-events: all;
+}
+
+/* ── Spotlight cutout ── */
+.ob-spotlight {
+  position: fixed;
+  box-shadow: 0 0 0 9999px rgba(5, 5, 18, 0.88);
+  border-radius: 14px;
+  pointer-events: none;
+  z-index: 9991;
+  border: 1.5px solid rgba(155,89,255,0.5);
+  transition: top 0.45s cubic-bezier(0.4, 0, 0.2, 1),
+              left 0.45s cubic-bezier(0.4, 0, 0.2, 1),
+              width 0.45s cubic-bezier(0.4, 0, 0.2, 1),
+              height 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: ob-glow-pulse 2.5s ease-in-out infinite;
+}
+
+@keyframes ob-glow-pulse {
+  0%, 100% { box-shadow: 0 0 0 9999px rgba(5,5,18,0.88), 0 0 20px rgba(155,89,255,0.2); }
+  50% { box-shadow: 0 0 0 9999px rgba(5,5,18,0.88), 0 0 40px rgba(155,89,255,0.45); }
+}
+
+/* ── Tooltip Card ── */
+.ob-tooltip {
+  position: fixed;
+  width: 320px;
+  background: var(--bg-card);
+  border: 1px solid rgba(155,89,255,0.35);
+  border-radius: 16px;
+  padding: 22px 24px;
+  z-index: 9995;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.6), 0 0 0 1px rgba(155,89,255,0.08), inset 0 1px 0 rgba(255,255,255,0.04);
+  animation: ob-card-in 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes ob-card-in {
+  from { opacity: 0; transform: scale(0.9) translateY(8px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.ob-tooltip-step {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
+  color: var(--accent-purple); text-transform: uppercase;
+  margin-bottom: 10px;
+}
+.ob-tooltip-step-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--accent-purple);
+  animation: pulse-dot 2s infinite;
+}
+
+.ob-tooltip h3 {
+  font-size: 16px; font-weight: 800;
+  margin-bottom: 8px; line-height: 1.3;
+  color: var(--text-primary);
+}
+.ob-tooltip p {
+  font-size: 13px; color: var(--text-secondary);
+  line-height: 1.6; margin-bottom: 18px;
+}
+
+.ob-tooltip-actions {
+  display: flex; gap: 8px; align-items: center;
+}
+
+.ob-btn-primary {
+  flex: 1; padding: 9px 16px;
+  background: var(--gradient-cta); color: #fff;
+  border: none; border-radius: 8px;
+  font-size: 13px; font-weight: 700;
+  cursor: pointer; transition: all 0.2s;
+  font-family: var(--font-body);
+}
+.ob-btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(77,124,255,0.35); }
+
+.ob-btn-ghost {
+  padding: 9px 14px;
+  background: transparent; color: var(--text-dim);
+  border: 1px solid var(--border); border-radius: 8px;
+  font-size: 12px; cursor: pointer; transition: all 0.2s;
+  font-family: var(--font-body);
+}
+.ob-btn-ghost:hover { color: var(--text-secondary); border-color: var(--border-glow); }
+
+/* ── Progress Dots ── */
+.ob-progress {
+  display: flex; gap: 6px; align-items: center;
+  margin-bottom: 16px;
+}
+.ob-progress-dot {
+  height: 4px; border-radius: 2px;
+  background: var(--border-glow);
+  transition: all 0.3s;
+}
+.ob-progress-dot.active {
+  background: var(--accent-purple); width: 20px;
+}
+.ob-progress-dot.done {
+  background: var(--accent-green);
+}
+.ob-progress-dot:not(.active):not(.done) { width: 8px; }
+
+/* ══════════════════════════════════
+   WELCOME MODAL
+   ══════════════════════════════════ */
+.ob-welcome-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(5, 5, 18, 0.92);
+  backdrop-filter: blur(16px);
+  z-index: 9990;
+  display: flex; align-items: center; justify-content: center;
+  animation: ob-fade-in 0.4s ease;
+}
+
+@keyframes ob-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.ob-welcome-card {
+  width: 100%; max-width: 520px;
+  background: var(--bg-card);
+  border: 1px solid rgba(155,89,255,0.25);
+  border-radius: 24px;
+  padding: 48px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  animation: ob-card-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 40px 100px rgba(0,0,0,0.7), 0 0 80px rgba(155,89,255,0.08);
+  margin: 16px;
+}
+
+.ob-welcome-glow {
+  position: absolute; top: -100px; left: 50%; transform: translateX(-50%);
+  width: 400px; height: 300px; border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(155,89,255,0.15) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.ob-welcome-icon {
+  width: 72px; height: 72px;
+  background: var(--gradient-cta);
+  border-radius: 20px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 32px; margin: 0 auto 24px;
+  box-shadow: 0 12px 30px rgba(77,124,255,0.3);
+  animation: ob-icon-float 3s ease-in-out infinite;
+}
+
+@keyframes ob-icon-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+.ob-welcome-card h1 {
+  font-size: 28px; font-weight: 900;
+  margin-bottom: 8px; line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+
+.ob-welcome-name {
+  background: var(--gradient-hero); -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent; background-clip: text;
+}
+
+.ob-welcome-card > p {
+  font-size: 15px; color: var(--text-secondary);
+  line-height: 1.6; margin-bottom: 32px; max-width: 360px; margin-left: auto; margin-right: auto;
+}
+
+.ob-welcome-features {
+  list-style: none;
+  display: flex; flex-direction: column; gap: 12px;
+  margin-bottom: 36px; text-align: left;
+}
+.ob-welcome-features li {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 16px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 13px; color: var(--text-secondary);
+  transition: border-color 0.2s;
+}
+.ob-welcome-features li:hover { border-color: rgba(155,89,255,0.3); }
+.ob-welcome-feature-icon {
+  width: 32px; height: 32px; min-width: 32px;
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px;
+}
+.ob-welcome-feature-icon.purple { background: rgba(155,89,255,0.15); }
+.ob-welcome-feature-icon.cyan   { background: rgba(0,212,255,0.12); }
+.ob-welcome-feature-icon.green  { background: rgba(0,230,138,0.12); }
+.ob-welcome-feature-text strong { display: block; font-weight: 700; color: var(--text-primary); font-size: 13px; margin-bottom: 2px; }
+.ob-welcome-feature-text span   { font-size: 12px; color: var(--text-dim); }
+
+.ob-welcome-actions {
+  display: flex; flex-direction: column; gap: 10px;
+}
+.ob-welcome-actions .ob-btn-primary {
+  padding: 14px 28px; font-size: 15px; border-radius: 10px;
+}
+.ob-welcome-skip {
+  font-size: 12px; color: var(--text-dim);
+  background: none; border: none; cursor: pointer;
+  font-family: var(--font-body); transition: color 0.2s;
+}
+.ob-welcome-skip:hover { color: var(--text-secondary); }
+
+/* ══════════════════════════════════
+   SDK STEP MODAL
+   ══════════════════════════════════ */
+.ob-sdk-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(5, 5, 18, 0.92);
+  backdrop-filter: blur(16px);
+  z-index: 9990;
+  display: flex; align-items: center; justify-content: center;
+}
+
+.ob-sdk-card {
+  width: 100%; max-width: 560px;
+  background: var(--bg-card);
+  border: 1px solid rgba(155,89,255,0.25);
+  border-radius: 20px;
+  overflow: hidden;
+  animation: ob-card-in 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 40px 100px rgba(0,0,0,0.7);
+  margin: 16px;
+}
+
+.ob-sdk-header {
+  padding: 28px 28px 0;
+  text-align: center;
+}
+.ob-sdk-header h2 { font-size: 22px; font-weight: 800; margin-bottom: 8px; }
+.ob-sdk-header p { font-size: 14px; color: var(--text-secondary); line-height: 1.6; }
+
+.ob-sdk-commands {
+  padding: 24px 28px;
+  display: flex; flex-direction: column; gap: 12px;
+}
+
+.ob-cmd-block {
+  background: var(--bg-deep);
+  border: 1px solid var(--border);
+  border-radius: 10px; overflow: hidden;
+}
+.ob-cmd-header {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 8px 14px;
+  background: rgba(255,255,255,0.02);
+  border-bottom: 1px solid var(--border);
+}
+.ob-cmd-label { font-size: 11px; color: var(--text-dim); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
+.ob-cmd-copy {
+  font-size: 11px; color: var(--text-dim);
+  background: none; border: 1px solid var(--border);
+  padding: 3px 10px; border-radius: 4px;
+  cursor: pointer; transition: all 0.2s;
+  font-family: var(--font-body);
+}
+.ob-cmd-copy:hover { color: var(--accent-cyan); border-color: var(--accent-cyan); }
+.ob-cmd-copy.copied { color: var(--accent-green); border-color: var(--accent-green); }
+.ob-cmd-body {
+  padding: 14px 16px;
+  font-family: var(--font-mono); font-size: 13px;
+  color: var(--accent-cyan); line-height: 1.6;
+}
+.ob-cmd-body .kw { color: var(--accent-purple); }
+.ob-cmd-body .str { color: var(--accent-green); }
+.ob-cmd-body .cm { color: var(--text-dim); font-style: italic; }
+
+.ob-sdk-footer {
+  padding: 0 28px 28px;
+  display: flex; gap: 8px;
+}
+
+/* ══════════════════════════════════
+   DONE MODAL
+   ══════════════════════════════════ */
+.ob-done-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(5, 5, 18, 0.92);
+  backdrop-filter: blur(16px);
+  z-index: 9990;
+  display: flex; align-items: center; justify-content: center;
+}
+
+.ob-done-card {
+  width: 100%; max-width: 460px;
+  background: var(--bg-card);
+  border: 1px solid rgba(0,230,138,0.25);
+  border-radius: 24px;
+  padding: 48px 40px;
+  text-align: center;
+  animation: ob-card-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 40px 100px rgba(0,0,0,0.7), 0 0 80px rgba(0,230,138,0.06);
+  position: relative; overflow: hidden;
+  margin: 16px;
+}
+
+.ob-done-particles {
+  position: absolute; inset: 0; pointer-events: none;
+  overflow: hidden;
+}
+.ob-particle {
+  position: absolute;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  animation: ob-particle-float 3s ease-in-out infinite;
+}
+
+@keyframes ob-particle-float {
+  0% { transform: translateY(100%) rotate(0deg); opacity: 0; }
+  20% { opacity: 1; }
+  80% { opacity: 0.6; }
+  100% { transform: translateY(-100px) rotate(360deg); opacity: 0; }
+}
+
+.ob-done-checkmark {
+  width: 80px; height: 80px;
+  background: linear-gradient(135deg, rgba(0,230,138,0.2), rgba(0,212,255,0.2));
+  border: 2px solid var(--accent-green);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 36px; margin: 0 auto 24px;
+  animation: ob-done-pop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.1s both;
+}
+
+@keyframes ob-done-pop {
+  from { transform: scale(0); opacity: 0; }
+  to   { transform: scale(1); opacity: 1; }
+}
+
+.ob-done-card h2 { font-size: 26px; font-weight: 900; margin-bottom: 10px; }
+.ob-done-card p { font-size: 14px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 28px; max-width: 320px; margin-left: auto; margin-right: auto; }
+
+.ob-done-stats {
+  display: flex; gap: 12px; justify-content: center; margin-bottom: 32px;
+}
+.ob-done-stat {
+  flex: 1; padding: 14px 10px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.ob-done-stat-value {
+  font-size: 22px; font-weight: 900; margin-bottom: 2px;
+}
+.ob-done-stat-label { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.06em; }
+
+.ob-done-actions { display: flex; flex-direction: column; gap: 10px; }
+.ob-done-actions .ob-btn-primary { padding: 13px; font-size: 14px; border-radius: 10px; }
+
+/* ── Step counter in tooltip ── */
+.ob-step-counter {
+  font-size: 11px; color: var(--text-dim);
+  margin-left: auto;
+}
+
+/* ── Animated arrow pointing to target ── */
+.ob-arrow {
+  position: absolute;
+  width: 0; height: 0;
+  pointer-events: none;
+}
+
+/* ── Mobile ── */
+@media (max-width: 640px) {
+  .ob-welcome-card, .ob-sdk-card, .ob-done-card { padding: 32px 20px; }
+  .ob-tooltip { width: calc(100vw - 32px); max-width: 320px; }
+  .ob-welcome-card h1 { font-size: 22px; }
+  .ob-done-stat-value { font-size: 18px; }
+}

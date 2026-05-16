@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase, API_BASE } from '../lib/supabase';
+import OnboardingTour from '../components/OnboardingTour';
 import './Dashboard.css';
 
 const STATUS_COLORS = {
@@ -43,6 +44,9 @@ export default function Dashboard() {
   const [apiKey, setApiKey] = useState(null);
   const [apiKeys, setApiKeys] = useState([]);
   const [upgradeLoading, setUpgradeLoading] = useState(false);
+
+  // Onboarding
+  const onCaptureRef = useRef(null);
 
   const fetchData = useCallback(async () => {
     if (!org?.id) return;
@@ -124,6 +128,8 @@ export default function Dashboard() {
         setStats(prev => ({ ...prev, observations: (prev.observations || 0) + 1 }));
         setUsage(prev => ({ ...prev, count: prev.count + 1 }));
         setCaptureForm({ type: 'note', title: '', content: '' });
+        // Advance onboarding tour if it's waiting for a capture
+        onCaptureRef.current?.();
       }
     } catch (err) {
       console.error('Capture failed:', err);
@@ -168,6 +174,9 @@ export default function Dashboard() {
   const orgName = org?.name || 'My Organization';
   const planName = (org?.plan || 'free').toUpperCase();
 
+  // Show onboarding for brand-new users (empty dashboard, data loaded)
+  const isNewUser = !dataLoading && agents.length === 0 && observations.length === 0 && workspaces.length === 0;
+
   return (
     <div className="dash">
       {/* ── Sidebar ── */}
@@ -193,6 +202,7 @@ export default function Dashboard() {
           ].map(item => (
             <button
               key={item.id}
+              id={item.id === 'settings' ? 'ob-nav-settings' : undefined}
               className={`dash-nav-item ${activeTab === item.id ? 'active' : ''}`}
               onClick={() => setActiveTab(item.id)}
             >
@@ -245,7 +255,7 @@ export default function Dashboard() {
         {activeTab === 'overview' && (
           <div className="dash-content">
             {/* Stats Grid */}
-            <div className="dash-stats-grid">
+            <div id="ob-stats" className="dash-stats-grid">
               <div className="dash-stat-card">
                 <div className="dash-stat-value purple">{stats.agents || agents.length}</div>
                 <div className="dash-stat-label">Total Agents</div>
@@ -340,7 +350,7 @@ export default function Dashboard() {
             </div>
 
             {/* Quick Capture */}
-            <div className="dash-panel">
+            <div id="ob-capture" className="dash-panel">
               <div className="dash-panel-header"><h3>Quick Capture</h3></div>
               <form onSubmit={handleCapture} className="dash-capture-form">
                 <select 
@@ -584,6 +594,16 @@ export default function Dashboard() {
           </div>
         )}
       </main>
+
+      <OnboardingTour
+        isNewUser={isNewUser}
+        agents={agents}
+        observations={observations}
+        apiKey={apiKey}
+        userName={userName}
+        setActiveTab={setActiveTab}
+        onCaptureRef={onCaptureRef}
+      />
     </div>
   );
 }
