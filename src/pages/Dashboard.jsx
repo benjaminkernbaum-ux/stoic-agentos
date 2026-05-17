@@ -109,8 +109,10 @@ export default function Dashboard() {
   // New: modals & UI state
   const [showAgentModal, setShowAgentModal] = useState(false);
   const [showWsModal, setShowWsModal] = useState(false);
+  const [showKiModal, setShowKiModal] = useState(false);
   const [agentForm, setAgentForm] = useState({ name: '', module: '', description: '' });
   const [wsForm, setWsForm] = useState({ name: '', branch: 'main', stack: '' });
+  const [kiForm, setKiForm] = useState({ name: '', summary: '', content: '' });
   const [expandedObs, setExpandedObs] = useState(null);
   const [seedLoading, setSeedLoading] = useState(false);
   const [knowledgeItems, setKnowledgeItems] = useState([]);
@@ -417,6 +419,50 @@ export default function Dashboard() {
     } catch { toast('Failed to delete', 'error'); }
   };
 
+  // ── Toggle Agent Status ──
+  const AGENT_STATUSES = ['running', 'idle', 'paused', 'disabled'];
+  const toggleAgentStatus = async (agentId, currentStatus) => {
+    const currentIdx = AGENT_STATUSES.indexOf(currentStatus || 'idle');
+    const nextStatus = AGENT_STATUSES[(currentIdx + 1) % AGENT_STATUSES.length];
+    try {
+      const token = (await supabase.auth.getSession()).data.session?.access_token;
+      const res = await fetch(`${API_BASE}/api/v1/agents/${agentId}`, {
+        method: 'PATCH',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: nextStatus }),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setAgents(prev => prev.map(a => a.id === agentId ? updated : a));
+        setSelectedAgent(prev => prev?.id === agentId ? updated : prev);
+        toast(`Agent → ${nextStatus}`, 'success');
+      }
+    } catch { toast('Failed to update status', 'error'); }
+  };
+
+  // ── Create Knowledge Item ──
+  const handleCreateKI = async (e) => {
+    e.preventDefault();
+    if (!kiForm.name.trim()) return;
+    try {
+      const token = (await supabase.auth.getSession()).data.session?.access_token;
+      const res = await fetch(`${API_BASE}/api/v1/knowledge-items`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...kiForm, org_id: org.id }),
+      });
+      if (res.ok) {
+        const newKI = await res.json();
+        setKnowledgeItems(prev => [newKI, ...prev]);
+        setKiForm({ name: '', summary: '', content: '' });
+        setShowKiModal(false);
+        toast('Knowledge item created!', 'success');
+      } else {
+        const body = await res.json().catch(() => ({}));
+        toast(body.error || 'Failed to create knowledge item', 'error');
+      }
+    } catch { toast('Failed to create knowledge item', 'error'); }
+  };
   // ── Fetch Knowledge Items ──
   const fetchKnowledge = useCallback(async () => {
     if (!org?.id) return;
@@ -953,21 +999,24 @@ export default function Dashboard() {
                   Knowledge Items
                   {knowledgeItems.length > 0 && <span style={{ marginLeft: 6, fontSize: 12, opacity: 0.4 }}>({knowledgeItems.length})</span>}
                 </span>
+                <button className="dash-panel-action" onClick={() => setShowKiModal(true)}>+ Create</button>
               </div>
               {knowledgeItems.length > 0 ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '12px 16px' }}>
                   {knowledgeItems.map(ki => (
-                    <div key={ki.id} style={{ padding: '14px 16px', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)', borderRadius: 10 }}>
-                      <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>{ki.title || ki.key}</div>
-                      {ki.content && <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', lineHeight: 1.5 }}>{ki.content.substring(0, 200)}{ki.content.length > 200 ? '...' : ''}</div>}
-                      <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.2)', marginTop: 6 }}>{new Date(ki.created_at).toLocaleDateString()}</div>
+                    <div key={ki.id} style={{ padding: '14px 16px', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--line-mid)', borderRadius: 10, transition: 'border-color 0.15s' }}>
+                      <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>{ki.name || ki.title || ki.key}</div>
+                      {ki.summary && <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)', marginBottom: 4 }}>{ki.summary}</div>}
+                      {ki.content && <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', lineHeight: 1.5 }}>{ki.content.substring(0, 200)}{ki.content.length > 200 ? '...' : ''}</div>}
+                      <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.15)', marginTop: 6 }}>{new Date(ki.created_at).toLocaleDateString()}</div>
                     </div>
                   ))}
                 </div>
               ) : (
                 <div className="dash-empty">
                   <div className="dash-empty-icon">💡</div>
-                  <p>Knowledge items from your agents will appear here. Use the SDK to persist decisions and discoveries.</p>
+                  <p>Persist decisions, architecture choices, and discoveries.</p>
+                  <button className="btn btn-primary btn-sm" style={{ marginTop: 8 }} onClick={() => setShowKiModal(true)}>+ Create Knowledge Item</button>
                 </div>
               )}
             </div>
@@ -1212,8 +1261,47 @@ export default function Dashboard() {
             </div>
             <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.2)' }}>ID: {selectedAgent.id}</div>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 16 }}>
+              <button className="btn btn-ghost btn-sm" onClick={() => toggleAgentStatus(selectedAgent.id, selectedAgent.status)}>
+                ⚡ Toggle Status → {AGENT_STATUSES[(AGENT_STATUSES.indexOf(selectedAgent.status || 'idle') + 1) % AGENT_STATUSES.length]}
+              </button>
               <button className="btn btn-ghost btn-sm" onClick={() => setSelectedAgent(null)}>Close</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Knowledge Item Modal ── */}
+      {showKiModal && (
+        <div className="cmd-backdrop" onClick={() => setShowKiModal(false)}>
+          <div className="cmd-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 480, padding: 28 }}>
+            <h3 style={{ fontSize: 18, fontWeight: 800, marginBottom: 4 }}>Create Knowledge Item</h3>
+            <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginBottom: 16 }}>Persist important decisions, patterns, and discoveries for your team.</p>
+            <form onSubmit={handleCreateKI} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <input
+                placeholder="Name (e.g. API Rate Limiting Strategy)"
+                required
+                value={kiForm.name}
+                onChange={e => setKiForm({...kiForm, name: e.target.value})}
+                style={{ padding: '10px 14px', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--line-mid)', borderRadius: 8, color: '#fff', fontSize: 13, outline: 'none' }}
+              />
+              <input
+                placeholder="Summary (one-liner)"
+                value={kiForm.summary}
+                onChange={e => setKiForm({...kiForm, summary: e.target.value})}
+                style={{ padding: '10px 14px', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--line-mid)', borderRadius: 8, color: '#fff', fontSize: 13, outline: 'none' }}
+              />
+              <textarea
+                placeholder="Content / details (markdown supported)"
+                value={kiForm.content}
+                onChange={e => setKiForm({...kiForm, content: e.target.value})}
+                rows={5}
+                style={{ padding: '10px 14px', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--line-mid)', borderRadius: 8, color: '#fff', fontSize: 13, outline: 'none', resize: 'vertical', fontFamily: "'SF Mono', 'JetBrains Mono', monospace" }}
+              />
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                <button type="button" className="btn btn-ghost btn-sm" onClick={() => setShowKiModal(false)}>Cancel</button>
+                <button type="submit" className="btn btn-primary btn-sm">Create Item</button>
+              </div>
+            </form>
           </div>
         </div>
       )}

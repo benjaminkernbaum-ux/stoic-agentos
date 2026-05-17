@@ -1109,4 +1109,49 @@
   .dash-usage { flex-direction: column; gap: 10px; }
   .dash-usage-pct { text-align: left; }
   .dash-metric-value { font-size: 30px; }
+
+  /* Modals */
+  .cmd-modal { max-width: calc(100vw - 32px) !important; margin: 16px; }
+  .cmd-modal input,
+  .cmd-modal textarea,
+  .cmd-modal select { font-size: 16px !important; } /* prevent iOS zoom */
+
+  /* Agent cards */
+  .dash-agent-card { padding: 14px; }
+  .dash-agent-card-name { font-size: 12px; }
+  .dash-agent-stat-val { font-size: 18px; }
+
+  /* Capture */
+  .dash-capture-body { flex-direction: column; }
+  .dash-capture-select { border-right: none; border-bottom: 1px solid var(--line); }
+  .dash-capture-submit { border-radius: 0 0 0 0; }
+
+  /* Observation rows */
+  .dash-obs-row { padding: 10px 14px; gap: 10px; }
+  .dash-obs-icon-wrap { width: 24px; height: 24px; font-size: 11px; }
+  .dash-obs-title { font-size: 12px; }
+
+  /* Filter bar */
+  .dash-filter-bar { padding: 10px 14px; gap: 4px; }
+  .dash-filter-pill { padding: 3px 8px; font-size: 10px; }
+
+  /* Workspace cards */
+  .dash-ws-card { padding: 14px; }
+
+  /* Topbar capture */
+  .dash-topbar-capture span:not(.dash-search-icon) { display: none; }
+  .dash-topbar-capture { padding: 6px 10px; }
+}
+
+@media (max-width: 480px) {
+  .dash-metrics { grid-template-columns: 1fr; gap: 8px; }
+  .dash-metric { padding: 14px; }
+  .dash-metric-value { font-size: 26px; }
+  .dash-metric-label { font-size: 10px; }
+  .dash-metric-top { margin-bottom: 10px; }
+  .dash-agent-card-stats { gap: 12px; }
+  .dash-panel-head { padding: 10px 14px; }
+  .dash-panel-title { font-size: 12px; }
+  .dash-agent-feed { max-height: 250px; }
+  .dash-timeline { max-height: 250px; }
 }

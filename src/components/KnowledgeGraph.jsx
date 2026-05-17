@@ -288,6 +288,31 @@ export default function KnowledgeGraph({ observations, agents, onUpgrade, upgrad
           </g>
         ))}
       </svg>
+
+      {/* Pro upsell banner */}
+      <div style={{
+        position: 'absolute', bottom: 16, left: '50%', transform: 'translateX(-50%)',
+        background: 'rgba(10,10,25,0.92)', border: '1px solid rgba(155,89,255,0.25)',
+        borderRadius: 12, padding: '10px 20px', display: 'flex', alignItems: 'center', gap: 14,
+        backdropFilter: 'blur(16px)', boxShadow: '0 4px 24px rgba(0,0,0,0.5)', zIndex: 3,
+        maxWidth: '90%',
+      }}>
+        <span style={{ fontSize: 16 }}>⚡</span>
+        <div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: '#fff', marginBottom: 2 }}>Unlock Pro Graph</div>
+          <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', lineHeight: 1.4 }}>
+            Temporal clustering · Cross-repo analysis · SVG export · Unlimited nodes
+          </div>
+        </div>
+        <button
+          className="btn btn-primary btn-sm"
+          onClick={() => onUpgrade('pro')}
+          disabled={upgradeLoading}
+          style={{ fontSize: 11, padding: '5px 12px', whiteSpace: 'nowrap', flexShrink: 0 }}
+        >
+          {upgradeLoading ? '...' : 'Upgrade — $29/mo'}
+        </button>
+      </div>
     </div>
   );
 }
