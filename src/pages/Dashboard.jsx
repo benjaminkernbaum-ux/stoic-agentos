@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { supabase, API_BASE } from '../lib/supabase';
 import OnboardingTour from '../components/OnboardingTour';
 import KnowledgeGraph from '../components/KnowledgeGraph';
+import TraceTimeline from '../components/TraceTimeline';
 import './Dashboard.css';
 
 // ── Toast system ──────────────────────────────────────────────
@@ -73,6 +74,7 @@ const TAB_TITLES = {
   workspaces: 'Workspaces',
   brain:      'Knowledge Brain',
   graph:      'Knowledge Graph',
+  traces:     'Agent Traces',
   settings:   'Settings',
 };
 
@@ -463,6 +465,30 @@ export default function Dashboard() {
       }
     } catch { toast('Failed to create knowledge item', 'error'); }
   };
+
+  // ── Stripe Upgrade ──
+  const handleUpgrade = async (plan = 'pro') => {
+    setUpgradeLoading(true);
+    try {
+      const token = (await supabase.auth.getSession()).data.session?.access_token;
+      const res = await fetch(`${API_BASE}/api/v1/billing/checkout`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan }),
+      });
+      const data = await res.json();
+      if (res.ok && data.url) {
+        window.location.href = data.url; // Redirect to Stripe Checkout
+      } else {
+        toast(data.error || 'Failed to create checkout session', 'error');
+      }
+    } catch (err) {
+      console.error('Upgrade error:', err);
+      toast('Failed to start upgrade. Please try again.', 'error');
+    }
+    setUpgradeLoading(false);
+  };
+
   // ── Fetch Knowledge Items ──
   const fetchKnowledge = useCallback(async () => {
     if (!org?.id) return;
@@ -562,6 +588,7 @@ export default function Dashboard() {
             { id: 'workspaces', icon: '📦', label: 'Workspaces', badge: null },
             { id: 'brain',      icon: '🧠', label: 'Brain',      badge: null },
             { id: 'graph',      icon: '🕸️', label: 'Graph',      badge: null },
+            { id: 'traces',     icon: '📊', label: 'Traces',     badge: null },
           ].map(item => (
             <button
               key={item.id}
@@ -1053,6 +1080,30 @@ export default function Dashboard() {
                   agents={agents}
                   onUpgrade={handleUpgrade}
                   upgradeLoading={upgradeLoading}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Traces Tab ── */}
+        {activeTab === 'traces' && (
+          <div className="dash-content">
+            <div className="dash-panel" style={{ minHeight: 'calc(100vh - 140px)' }}>
+              <div className="dash-panel-head">
+                <span className="dash-panel-title">
+                  <span className="dash-panel-title-icon">📊</span>
+                  Agent Traces
+                  <span style={{ fontSize: 11, opacity: 0.4, marginLeft: 8 }}>
+                    Execution timeline
+                  </span>
+                </span>
+              </div>
+              <div style={{ padding: '16px 20px' }}>
+                <TraceTimeline
+                  observations={observations}
+                  agents={agents}
+                  plan={planName?.toLowerCase() || 'free'}
                 />
               </div>
             </div>
