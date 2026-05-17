@@ -466,28 +466,7 @@ export default function Dashboard() {
     } catch { toast('Failed to create knowledge item', 'error'); }
   };
 
-  // ── Stripe Upgrade ──
-  const handleUpgrade = async (plan = 'pro') => {
-    setUpgradeLoading(true);
-    try {
-      const token = (await supabase.auth.getSession()).data.session?.access_token;
-      const res = await fetch(`${API_BASE}/api/v1/billing/checkout`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan }),
-      });
-      const data = await res.json();
-      if (res.ok && data.url) {
-        window.location.href = data.url; // Redirect to Stripe Checkout
-      } else {
-        toast(data.error || 'Failed to create checkout session', 'error');
-      }
-    } catch (err) {
-      console.error('Upgrade error:', err);
-      toast('Failed to start upgrade. Please try again.', 'error');
-    }
-    setUpgradeLoading(false);
-  };
+  
 
   // ── Fetch Knowledge Items ──
   const fetchKnowledge = useCallback(async () => {
