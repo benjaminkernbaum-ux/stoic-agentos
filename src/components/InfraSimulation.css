@@ -1,0 +1,380 @@
+/* ═══════════════════════════════════════════
+   INFRA SIMULATION — Railway-Style Canvas
+   ═══════════════════════════════════════════ */
+
+.infra-sim {
+  position: relative;
+  background: #08080c;
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 20px;
+  overflow: hidden;
+  margin-top: 48px;
+  min-height: 520px;
+}
+
+/* ── Canvas ── */
+.infra-canvas {
+  position: relative;
+  width: 100%;
+  height: 440px;
+  overflow: hidden;
+}
+.infra-canvas svg.infra-lines {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+.infra-canvas svg.infra-lines line {
+  stroke: rgba(155,89,255,0.25);
+  stroke-width: 1.5;
+  stroke-dasharray: 6 4;
+  animation: dash-flow 1.5s linear infinite;
+}
+@keyframes dash-flow { to { stroke-dashoffset: -20; } }
+
+/* ── Service Nodes ── */
+.infra-node {
+  position: absolute;
+  background: rgba(22,22,31,0.9);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  padding: 16px 20px;
+  min-width: 160px;
+  z-index: 2;
+  backdrop-filter: blur(10px);
+  transition: all 0.4s cubic-bezier(0.16,1,0.3,1);
+  cursor: default;
+}
+.infra-node:hover {
+  border-color: rgba(155,89,255,0.3);
+  box-shadow: 0 8px 32px rgba(155,89,255,0.1);
+  transform: translateY(-2px);
+}
+.infra-node-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.infra-node-icon {
+  width: 28px; height: 28px;
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+.infra-node-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #e8e8f0;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+}
+.infra-node-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.infra-node-status .dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  animation: pulse-dot 2s infinite;
+}
+.infra-node-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 600;
+  font-family: 'JetBrains Mono', monospace;
+  margin-top: 6px;
+}
+
+/* ── Tab Bar ── */
+.infra-tabs {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 12px 16px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  background: rgba(10,10,15,0.6);
+}
+.infra-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.4);
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid transparent;
+  background: transparent;
+  font-family: inherit;
+}
+.infra-tab:hover { color: rgba(255,255,255,0.7); background: rgba(255,255,255,0.03); }
+.infra-tab.active {
+  color: #fff;
+  background: rgba(155,89,255,0.12);
+  border-color: rgba(155,89,255,0.2);
+}
+.infra-tab-icon { font-size: 14px; }
+
+/* ── Alert Banners ── */
+.infra-alert {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 10;
+  background: rgba(22,22,31,0.95);
+  border: 1px solid rgba(255,159,67,0.25);
+  border-radius: 10px;
+  padding: 12px 16px;
+  max-width: 240px;
+  backdrop-filter: blur(10px);
+  animation: slide-in-right 0.4s cubic-bezier(0.16,1,0.3,1);
+}
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+.infra-alert-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 4px;
+}
+.infra-alert-body {
+  font-size: 12px;
+  color: rgba(255,255,255,0.6);
+  line-height: 1.5;
+}
+.infra-alert-chart {
+  height: 32px;
+  margin-top: 8px;
+  background: rgba(255,255,255,0.03);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.infra-alert-chart svg { width: 100%; height: 100%; }
+
+/* ── Fleet View ── */
+.infra-fleet {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
+  padding: 24px;
+  height: 440px;
+  overflow-y: auto;
+  align-content: start;
+}
+.infra-agent-card {
+  background: rgba(22,22,31,0.7);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 10px;
+  padding: 12px;
+  transition: all 0.2s;
+}
+.infra-agent-card:hover { border-color: rgba(155,89,255,0.2); }
+.infra-agent-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.infra-agent-name {
+  font-size: 11px;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+  color: #e8e8f0;
+  text-transform: uppercase;
+}
+.infra-agent-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+}
+.infra-agent-type {
+  font-size: 10px;
+  color: rgba(255,255,255,0.35);
+}
+.infra-agent-bar {
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(255,255,255,0.06);
+  margin-top: 8px;
+  overflow: hidden;
+}
+.infra-agent-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 1s ease;
+}
+
+/* ── Monitor View ── */
+.infra-monitor {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  padding: 20px 24px;
+  height: 440px;
+}
+.infra-metric-card {
+  background: rgba(16,16,22,0.8);
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 10px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+}
+.infra-metric-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.infra-metric-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.5);
+}
+.infra-metric-value {
+  font-size: 12px;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+}
+.infra-metric-chart {
+  flex: 1;
+  min-height: 0;
+}
+.infra-metric-chart svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* ── Scale View ── */
+.infra-scale {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 440px;
+  gap: 40px;
+  padding: 24px;
+}
+.infra-scale-node {
+  background: rgba(22,22,31,0.9);
+  border: 1px solid rgba(255,71,87,0.3);
+  border-radius: 14px;
+  padding: 20px 28px;
+  text-align: center;
+}
+.infra-scale-node-name {
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: center;
+}
+.infra-scale-warning {
+  font-size: 11px;
+  color: #ff9f43;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.infra-scale-panel {
+  background: rgba(22,22,31,0.9);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 14px;
+  padding: 20px 24px;
+  min-width: 220px;
+}
+.infra-scale-label {
+  font-size: 11px;
+  color: rgba(255,255,255,0.35);
+  margin-bottom: 12px;
+}
+.infra-scale-option {
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  color: rgba(255,255,255,0.6);
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.infra-scale-option:hover { background: rgba(255,255,255,0.04); color: #fff; }
+.infra-scale-option.active {
+  background: rgba(155,89,255,0.1);
+  color: #fff;
+  font-weight: 600;
+}
+.infra-scale-confirm {
+  font-size: 10px;
+  padding: 2px 8px;
+  background: rgba(0,230,138,0.15);
+  color: #00e68a;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+/* ── Knowledge View ── */
+.infra-knowledge {
+  position: relative;
+  height: 440px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.infra-k-node {
+  position: absolute;
+  background: rgba(22,22,31,0.85);
+  border: 1px solid rgba(155,89,255,0.15);
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #e8e8f0;
+  z-index: 2;
+  backdrop-filter: blur(8px);
+  transition: all 0.3s;
+  cursor: default;
+}
+.infra-k-node:hover {
+  border-color: rgba(155,89,255,0.4);
+  transform: scale(1.05);
+}
+.infra-k-node.center {
+  font-size: 14px;
+  padding: 14px 20px;
+  background: rgba(155,89,255,0.1);
+  border-color: rgba(155,89,255,0.3);
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .infra-canvas { height: 360px; }
+  .infra-fleet, .infra-monitor, .infra-scale { height: 360px; }
+  .infra-monitor { grid-template-columns: 1fr; overflow-y: auto; }
+  .infra-fleet { grid-template-columns: repeat(2, 1fr); }
+  .infra-tabs { gap: 2px; padding: 8px; }
+  .infra-tab { padding: 6px 10px; font-size: 11px; }
+  .infra-tab span:not(.infra-tab-icon) { display: none; }
+  .infra-scale { flex-direction: column; gap: 16px; }
+  .infra-node { min-width: 130px; padding: 12px 14px; }
+  .infra-node-name { font-size: 11px; }
+  .infra-alert { max-width: 180px; }
+}

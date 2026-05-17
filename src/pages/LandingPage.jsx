@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import './LandingPage.css';
+import InfraSimulation from '../components/InfraSimulation';
 
 const NAV_LINKS = ['Features', 'SDK', 'Pricing', 'Docs'];
 
@@ -123,52 +124,10 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── DASHBOARD PREVIEW ── */}
+      {/* ── INFRASTRUCTURE SIMULATION (Railway-style) ── */}
       <section className="section" style={{ paddingTop: 0 }}>
         <div className="container-wide">
-          <div className="preview-frame animate-in">
-            <div className="preview-bar">
-              <div className="preview-dot red" /><div className="preview-dot yellow" /><div className="preview-dot green" />
-              <div className="preview-url">app.stoicagentos.com/dashboard</div>
-            </div>
-            <div className="preview-content">
-              <div className="dashboard-preview">
-                <div className="dp-sidebar">
-                  <div className="dp-logo">⚡ AgentOS</div>
-                  <div className="dp-nav-item active">📊 Overview</div>
-                  <div className="dp-nav-item">🤖 Agents</div>
-                  <div className="dp-nav-item">📦 Workspaces</div>
-                  <div className="dp-nav-item">🧠 Brain</div>
-                  <div className="dp-nav-item">🕸️ Graph</div>
-                  <div className="dp-nav-item">⚙️ Settings</div>
-                </div>
-                <div className="dp-main">
-                  <div className="dp-header">
-                    <div className="dp-title">Agent Fleet Overview</div>
-                    <div className="dp-badges">
-                      <span className="dp-badge green">15 Live</span>
-                      <span className="dp-badge purple">5 Deployed</span>
-                      <span className="dp-badge orange">3 Pending</span>
-                    </div>
-                  </div>
-                  <div className="dp-stats">
-                    <div className="dp-stat"><div className="dp-stat-val">23</div><div className="dp-stat-label">Total Agents</div></div>
-                    <div className="dp-stat"><div className="dp-stat-val">17</div><div className="dp-stat-label">Repos</div></div>
-                    <div className="dp-stat"><div className="dp-stat-val">324</div><div className="dp-stat-label">Observations</div></div>
-                    <div className="dp-stat"><div className="dp-stat-val">7</div><div className="dp-stat-label">Knowledge Items</div></div>
-                  </div>
-                  <div className="dp-agents-row">
-                    {['AUTO', 'WIRE', 'STOICBOT', 'FINCFO', 'LEDGER', 'SCRAPE', 'ADGEN', 'REPLY'].map((a, i) => (
-                      <div key={a} className="dp-agent">
-                        <div className="dp-agent-dot" style={{ background: i < 5 ? 'var(--accent-green)' : 'var(--accent-orange)' }} />
-                        <span>{a}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+          <InfraSimulation />
         </div>
       </section>
 
