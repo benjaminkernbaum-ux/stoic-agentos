@@ -4,6 +4,7 @@
  * Usage:
  *   npx stoic-agentos-sdk init         — Initialize AgentOS in current project
  *   npx stoic-agentos-sdk init-hooks   — Install git post-commit hooks
+ *   npx stoic-agentos-sdk instrument   — Check instrumentation setup
  *   npx stoic-agentos-sdk test         — Test API connection
  */
 
@@ -14,6 +15,7 @@ import { execSync } from 'child_process';
 const COMMANDS = {
   init: initProject,
   'init-hooks': initGitHooks,
+  instrument: checkInstrumentation,
   test: testConnection,
   help: showHelp,
 };
@@ -35,6 +37,11 @@ function initProject() {
     api_url: 'https://stoic-agentos-api-production.up.railway.app/api/v1',
     auto_capture: true,
     git_hooks: true,
+    instrument: {
+      openai: true,
+      anthropic: true,
+      capturePrompts: false,
+    },
   };
 
   writeFileSync('.agentos.json', JSON.stringify(config, null, 2));
@@ -54,6 +61,11 @@ function initProject() {
 
   console.log(`\n  🎉 AgentOS initialized for workspace: ${workspace}`);
   console.log('  Run your agents — observations will auto-capture.\n');
+  console.log('  📊 Auto-Instrumentation:');
+  console.log('     Add this to your entry file:\n');
+  console.log('     import { AgentOS } from "stoic-agentos-sdk";');
+  console.log('     const os = new AgentOS({ apiKey: "YOUR_KEY" });');
+  console.log('     os.instrument();\n');
 }
 
 function initGitHooks() {
@@ -92,6 +104,73 @@ fi
   console.log('  ✅ Git post-commit hook installed');
 }
 
+function checkInstrumentation() {
+  console.log('\n⚡ Stoic AgentOS — Instrumentation Check\n');
+
+  // Check for OpenAI
+  let hasOpenAI = false;
+  try {
+    require.resolve('openai');
+    hasOpenAI = true;
+  } catch {
+    // Not installed
+  }
+
+  // Check for Anthropic
+  let hasAnthropic = false;
+  try {
+    require.resolve('@anthropic-ai/sdk');
+    hasAnthropic = true;
+  } catch {
+    // Not installed
+  }
+
+  console.log('  SDK Detection:');
+  console.log(`    ${hasOpenAI ? '✅' : '⬚'}  OpenAI     ${hasOpenAI ? '(installed — will auto-instrument)' : '(not found)'}`);
+  console.log(`    ${hasAnthropic ? '✅' : '⬚'}  Anthropic  ${hasAnthropic ? '(installed — will auto-instrument)' : '(not found)'}`);
+
+  if (!hasOpenAI && !hasAnthropic) {
+    console.log('\n  ⚠️  No supported LLM SDKs detected.');
+    console.log('  Install one of:');
+    console.log('    npm install openai');
+    console.log('    npm install @anthropic-ai/sdk\n');
+    return;
+  }
+
+  console.log('\n  📊 Setup (add to your entry file):\n');
+  console.log('  import { AgentOS } from "stoic-agentos-sdk";');
+  console.log('  const os = new AgentOS({ apiKey: process.env.AGENTOS_API_KEY });');
+  console.log('  os.instrument();\n');
+  console.log('  // All LLM calls are now auto-captured! 🚀');
+
+  if (hasOpenAI) {
+    console.log('\n  OpenAI example:');
+    console.log('  ─────────────────────────────────────');
+    console.log('  import OpenAI from "openai";');
+    console.log('  const openai = new OpenAI();');
+    console.log('  const res = await openai.chat.completions.create({');
+    console.log('    model: "gpt-4o",');
+    console.log('    messages: [{ role: "user", content: "Hello" }],');
+    console.log('  });');
+    console.log('  // ↑ Automatically captured: model, tokens, latency, cost');
+  }
+
+  if (hasAnthropic) {
+    console.log('\n  Anthropic example:');
+    console.log('  ─────────────────────────────────────');
+    console.log('  import Anthropic from "@anthropic-ai/sdk";');
+    console.log('  const anthropic = new Anthropic();');
+    console.log('  const res = await anthropic.messages.create({');
+    console.log('    model: "claude-sonnet-4-20250514",');
+    console.log('    max_tokens: 1024,');
+    console.log('    messages: [{ role: "user", content: "Hello" }],');
+    console.log('  });');
+    console.log('  // ↑ Automatically captured: model, tokens, latency, cost');
+  }
+
+  console.log('');
+}
+
 function testConnection() {
   console.log('\n⚡ Testing AgentOS connection...\n');
 
@@ -123,20 +202,25 @@ function testConnection() {
 
 function showHelp() {
   console.log(`
-⚡ Stoic AgentOS CLI
+⚡ Stoic AgentOS CLI v2.0.0
 
 Commands:
   init [API_KEY] [WORKSPACE]  — Initialize AgentOS in current project
   init-hooks                  — Install git post-commit hooks
+  instrument                  — Check LLM SDK instrumentation setup
   test                        — Test API connection
   help                        — Show this message
 
-Environment:
-  AGENTOS_API_KEY             — Your API key (from agentos.dev/settings)
-  AGENTOS_API_URL             — Custom API URL (default: https://api.agentos.dev/api/v1)
+Auto-Instrumentation:
+  Supported SDKs: OpenAI, Anthropic
+  One-line setup: os.instrument() — patches all LLM calls automatically
 
-Website: https://stoic-agentos.vercel.app
-Docs:    https://stoic-agentos.vercel.app/docs
+Environment:
+  AGENTOS_API_KEY             — Your API key (from stoicagentos.com/settings)
+  AGENTOS_API_URL             — Custom API URL (default: production)
+
+Website: https://stoicagentos.com
+Docs:    https://stoicagentos.com/docs
 `);
 }
 

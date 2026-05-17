@@ -17,6 +17,22 @@ export interface AgentOSOptions {
   flushInterval?: number;
 }
 
+export interface InstrumentOptions {
+  /** Instrument OpenAI SDK (default: true) */
+  openai?: boolean;
+  /** Instrument Anthropic SDK (default: true) */
+  anthropic?: boolean;
+  /** Include prompt metadata in spans (default: false) */
+  capturePrompts?: boolean;
+}
+
+export interface InstrumentResult {
+  /** Whether OpenAI SDK was successfully instrumented */
+  openai: boolean;
+  /** Whether Anthropic SDK was successfully instrumented */
+  anthropic: boolean;
+}
+
 export type ObservationType =
   | 'note'
   | 'decision'
@@ -66,8 +82,60 @@ export interface Stats {
   observationLimit: number;
 }
 
+export interface Span {
+  span_id: string;
+  provider: 'openai' | 'anthropic';
+  model: string;
+  type: string;
+  prompt_tokens: number;
+  completion_tokens: number;
+  total_tokens: number;
+  latency_ms: number;
+  cost_usd: number;
+  status: 'success' | 'error';
+  error_message?: string;
+  started_at: string;
+  ended_at: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface Trace {
+  trace_id: string;
+  name: string;
+  agent?: string;
+  status: 'running' | 'success' | 'error';
+  duration_ms: number;
+  total_tokens: number;
+  total_cost_usd: number;
+  span_count: number;
+  started_at: string;
+  ended_at?: string;
+  spans?: Span[];
+}
+
+export interface TraceContextHandle {
+  traceId: string;
+  recordSpan: (span: Partial<Span>) => void;
+}
+
 export declare class AgentOS {
   constructor(options?: AgentOSOptions);
+
+  /**
+   * Auto-instrument OpenAI and Anthropic SDK calls.
+   * Call once at startup — all subsequent LLM calls are captured automatically.
+   */
+  instrument(options?: InstrumentOptions): InstrumentResult;
+
+  /**
+   * Execute a function within a named trace.
+   * All LLM calls made inside the function are grouped into one trace.
+   */
+  trace<T>(
+    name: string,
+    fn: (ctx: TraceContextHandle) => Promise<T>,
+    options?: { agent?: string }
+  ): Promise<T>;
 
   /** Capture an observation */
   capture(observation: Observation): Promise<void>;
@@ -75,7 +143,7 @@ export declare class AgentOS {
   /** Flush queued observations to the API */
   flush(): Promise<void>;
 
-  /** Wrap an agent function with auto-capture */
+  /** Wrap an agent function with auto-capture and auto-tracing */
   wrapAgent<T extends (...args: any[]) => Promise<any>>(
     agentName: string,
     fn: T
@@ -93,6 +161,16 @@ export declare class AgentOS {
     type?: ObservationType;
     workspace?: string;
   }): Promise<Observation[]>;
+
+  /** List traces */
+  getTraces(options?: {
+    limit?: number;
+    agent?: string;
+    status?: 'success' | 'error';
+  }): Promise<Trace[]>;
+
+  /** Graceful shutdown — flush all pending data */
+  shutdown(): Promise<void>;
 }
 
 /** Create an AgentOS instance */

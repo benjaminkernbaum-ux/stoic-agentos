@@ -1,16 +1,26 @@
 import { useState, useEffect, useRef } from 'react';
 
 const TRACE_TYPES = {
-  llm_call: { icon: '🧠', color: '#9b59ff', label: 'LLM Call' },
-  tool_use: { icon: '🔧', color: '#00b4d8', label: 'Tool Use' },
-  retrieval: { icon: '📚', color: '#ff8c42', label: 'Retrieval' },
-  decision: { icon: '⚖️', color: '#4ecdc4', label: 'Decision' },
-  output: { icon: '📤', color: '#00e68a', label: 'Output' },
-  error: { icon: '❌', color: '#ff4757', label: 'Error' },
+  'chat.completions':        { icon: '🧠', color: '#9b59ff', label: 'Chat' },
+  'chat.completions.stream': { icon: '🌊', color: '#7c3aed', label: 'Stream' },
+  'messages.create':         { icon: '🧠', color: '#ff8c42', label: 'Messages' },
+  'messages.create.stream':  { icon: '🌊', color: '#e07830', label: 'Stream' },
+  tool_use:                  { icon: '🔧', color: '#00b4d8', label: 'Tool Use' },
+  retrieval:                 { icon: '📚', color: '#ff8c42', label: 'Retrieval' },
+  decision:                  { icon: '⚖️', color: '#4ecdc4', label: 'Decision' },
+  output:                    { icon: '📤', color: '#00e68a', label: 'Output' },
+  error:                     { icon: '❌', color: '#ff4757', label: 'Error' },
+  llm_call:                  { icon: '🧠', color: '#9b59ff', label: 'LLM Call' },
 };
 
-// Generate realistic demo trace data from real observations
-function generateTraces(observations, agents) {
+const PROVIDER_BADGES = {
+  openai:    { label: 'OpenAI', color: '#10a37f', bg: 'rgba(16,163,127,0.12)' },
+  anthropic: { label: 'Anthropic', color: '#d97757', bg: 'rgba(217,119,87,0.12)' },
+  unknown:   { label: 'LLM', color: '#9b59ff', bg: 'rgba(155,89,255,0.12)' },
+};
+
+// Generate fallback demo trace data from observations (when no real traces exist)
+function generateDemoTraces(observations, agents) {
   if (!observations?.length) return [];
 
   const traces = [];
@@ -22,28 +32,29 @@ function generateTraces(observations, agents) {
     const baseTime = new Date(obs.created_at || Date.now());
     const agentName = obs.agent_id ? (agentMap[obs.agent_id]?.name || 'agent') : 'content-writer';
 
-    // Create a realistic span tree per observation
     const spans = [
       {
         id: `${traceId}-root`,
         name: `${obs.type || 'task'}:process`,
-        type: 'llm_call',
+        type: 'chat.completions',
+        provider: 'openai',
+        model: 'gpt-4o',
         startMs: 0,
         durationMs: 800 + Math.random() * 2000,
         depth: 0,
         tokens: { input: 120 + Math.floor(Math.random() * 500), output: 50 + Math.floor(Math.random() * 300) },
-        model: 'claude-3.5-sonnet',
         status: obs.type === 'error' ? 'error' : 'success',
       },
       {
         id: `${traceId}-retrieve`,
         name: 'memory:recall',
         type: 'retrieval',
+        provider: 'unknown',
+        model: null,
         startMs: 50,
         durationMs: 150 + Math.random() * 300,
         depth: 1,
         tokens: null,
-        model: null,
         status: 'success',
       },
       {
@@ -53,22 +64,24 @@ function generateTraces(observations, agents) {
               obs.type === 'decision' ? 'decision:evaluate' :
               'tool:execute',
         type: 'tool_use',
+        provider: 'unknown',
+        model: null,
         startMs: 200 + Math.random() * 200,
         durationMs: 200 + Math.random() * 600,
         depth: 1,
         tokens: null,
-        model: null,
         status: obs.type === 'error' ? 'error' : 'success',
       },
       {
         id: `${traceId}-output`,
         name: 'output:format',
-        type: 'output',
+        type: 'messages.create',
+        provider: 'anthropic',
+        model: 'claude-3.5-sonnet',
         startMs: 600 + Math.random() * 400,
         durationMs: 50 + Math.random() * 100,
         depth: 1,
         tokens: { input: 0, output: 30 + Math.floor(Math.random() * 80) },
-        model: 'claude-3.5-sonnet',
         status: 'success',
       },
     ];
@@ -84,52 +97,130 @@ function generateTraces(observations, agents) {
       cost: (Math.random() * 0.05 + 0.002).toFixed(4),
       spans,
       status: obs.type === 'error' ? 'error' : 'success',
+      isDemo: true,
     });
   });
 
   return traces;
 }
 
-export default function TraceTimeline({ observations, agents, plan }) {
-  const [traces, setTraces] = useState([]);
+// Transform real API traces into the format the UI expects
+function transformRealTraces(apiTraces) {
+  if (!apiTraces?.length) return [];
+
+  return apiTraces.map(t => {
+    const spans = (t.spans || []).map((sp, idx) => {
+      const traceStart = new Date(t.started_at);
+      const spanStart = new Date(sp.started_at);
+      const startMs = spanStart - traceStart;
+
+      return {
+        id: sp.span_id || sp.id,
+        name: `${sp.provider}:${sp.type || 'call'}`,
+        type: sp.type || 'chat.completions',
+        provider: sp.provider || 'unknown',
+        model: sp.model,
+        startMs: Math.max(0, startMs),
+        durationMs: sp.latency_ms || 0,
+        depth: idx === 0 ? 0 : 1,
+        tokens: { input: sp.prompt_tokens || 0, output: sp.completion_tokens || 0 },
+        status: sp.status || 'success',
+        error_message: sp.error_message,
+        cost_usd: sp.cost_usd,
+        metadata: sp.metadata,
+      };
+    });
+
+    return {
+      id: t.trace_id,
+      title: t.name || 'Untitled trace',
+      type: 'llm_call',
+      agent: t.agent || 'auto-instrumented',
+      timestamp: t.started_at || t.created_at,
+      totalDurationMs: t.duration_ms || spans.reduce((max, s) => Math.max(max, s.startMs + s.durationMs), 0),
+      totalTokens: t.total_tokens || 0,
+      cost: parseFloat(t.total_cost_usd || 0).toFixed(4),
+      spans,
+      status: t.status || 'success',
+      isDemo: false,
+    };
+  });
+}
+
+export default function TraceTimeline({ traces: apiTraces, traceStats, observations, agents, plan }) {
+  const [displayTraces, setDisplayTraces] = useState([]);
   const [selectedTrace, setSelectedTrace] = useState(null);
   const [filter, setFilter] = useState('all');
   const containerRef = useRef(null);
 
+  // Use real traces if available, otherwise fall back to demo data
   useEffect(() => {
-    setTraces(generateTraces(observations, agents));
-  }, [observations, agents]);
+    if (apiTraces?.length > 0) {
+      setDisplayTraces(transformRealTraces(apiTraces));
+    } else {
+      setDisplayTraces(generateDemoTraces(observations, agents));
+    }
+  }, [apiTraces, observations, agents]);
+
+  const hasRealData = apiTraces?.length > 0;
 
   const filteredTraces = filter === 'all'
-    ? traces
-    : traces.filter(t => t.status === filter);
+    ? displayTraces
+    : displayTraces.filter(t => t.status === filter);
 
-  const totalCost = traces.reduce((sum, t) => sum + parseFloat(t.cost), 0);
-  const totalTokens = traces.reduce((sum, t) => sum + t.totalTokens, 0);
-  const avgLatency = traces.length ? Math.round(traces.reduce((sum, t) => sum + t.totalDurationMs, 0) / traces.length) : 0;
+  // Use real stats if available
+  const totalCost = traceStats?.total_cost_usd ?? displayTraces.reduce((sum, t) => sum + parseFloat(t.cost), 0);
+  const totalTokens = traceStats?.total_tokens ?? displayTraces.reduce((sum, t) => sum + t.totalTokens, 0);
+  const avgLatency = traceStats?.avg_latency_ms ?? (displayTraces.length ? Math.round(displayTraces.reduce((sum, t) => sum + t.totalDurationMs, 0) / displayTraces.length) : 0);
+  const totalSpans = traceStats?.total_spans ?? displayTraces.reduce((sum, t) => sum + (t.spans?.length || 0), 0);
 
-  if (observations.length === 0) {
+  if (!observations?.length && !apiTraces?.length) {
     return (
       <div className="dash-empty" style={{ padding: 60 }}>
         <div className="dash-empty-icon">📊</div>
         <h4>Agent Traces</h4>
-        <p>Capture observations to see detailed agent execution traces with timing, token usage, and cost analytics.</p>
+        <p>Capture observations or instrument your LLM calls to see detailed traces with timing, token usage, and cost analytics.</p>
+        <div style={{
+          marginTop: 16, padding: '12px 16px', background: 'rgba(155,89,255,0.06)',
+          border: '1px solid rgba(155,89,255,0.15)', borderRadius: 10, fontSize: 12,
+          color: 'rgba(255,255,255,0.5)', fontFamily: 'monospace', textAlign: 'left',
+        }}>
+          <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 10, marginBottom: 4 }}>// Quick start — add to your entry file</div>
+          <div>import {'{'} AgentOS {'}'} from 'stoic-agentos-sdk';</div>
+          <div>const os = new AgentOS({'{'} apiKey: 'sk_live_xxx' {'}'});</div>
+          <div style={{ color: '#9b59ff' }}>os.instrument(); // ← patches OpenAI & Anthropic</div>
+        </div>
       </div>
     );
   }
 
   return (
     <div ref={containerRef} style={{ display: 'flex', flexDirection: 'column', gap: 16, height: '100%' }}>
+
+      {/* Demo mode banner */}
+      {!hasRealData && displayTraces.length > 0 && (
+        <div style={{
+          padding: '8px 14px', background: 'rgba(255,200,50,0.06)',
+          border: '1px solid rgba(255,200,50,0.15)', borderRadius: 8,
+          display: 'flex', alignItems: 'center', gap: 10, fontSize: 11,
+          color: 'rgba(255,255,255,0.5)',
+        }}>
+          <span>⚡</span>
+          <span>Showing simulated traces from observations. <strong style={{ color: 'rgba(255,255,255,0.7)' }}>Install the SDK</strong> for real LLM instrumentation data.</span>
+        </div>
+      )}
+
       {/* Stats Bar */}
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
         {[
-          { label: 'Total Traces', value: traces.length, icon: '📊', color: '#9b59ff' },
+          { label: 'Total Traces', value: displayTraces.length, icon: '📊', color: '#9b59ff' },
           { label: 'Avg Latency', value: `${avgLatency}ms`, icon: '⚡', color: '#00b4d8' },
           { label: 'Total Tokens', value: totalTokens.toLocaleString(), icon: '🔤', color: '#ff8c42' },
-          { label: 'Est. Cost', value: `$${totalCost.toFixed(3)}`, icon: '💰', color: '#00e68a' },
+          { label: 'Est. Cost', value: `$${parseFloat(totalCost).toFixed(3)}`, icon: '💰', color: '#00e68a' },
+          ...(hasRealData ? [{ label: 'Total Spans', value: totalSpans, icon: '🔗', color: '#4ecdc4' }] : []),
         ].map((s, i) => (
           <div key={i} style={{
-            flex: '1 1 140px', padding: '12px 16px', background: 'rgba(255,255,255,0.02)',
+            flex: '1 1 130px', padding: '12px 16px', background: 'rgba(255,255,255,0.02)',
             border: '1px solid rgba(255,255,255,0.06)', borderRadius: 10,
             display: 'flex', alignItems: 'center', gap: 10,
           }}>
@@ -141,6 +232,26 @@ export default function TraceTimeline({ observations, agents, plan }) {
           </div>
         ))}
       </div>
+
+      {/* Provider breakdown (real data only) */}
+      {hasRealData && traceStats?.providers && Object.keys(traceStats.providers).length > 0 && (
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {Object.entries(traceStats.providers).map(([provider, data]) => {
+            const badge = PROVIDER_BADGES[provider] || PROVIDER_BADGES.unknown;
+            return (
+              <div key={provider} style={{
+                padding: '6px 12px', background: badge.bg,
+                border: `1px solid ${badge.color}25`, borderRadius: 8,
+                display: 'flex', alignItems: 'center', gap: 8,
+              }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: badge.color }}>{badge.label}</span>
+                <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)' }}>{data.calls} calls</span>
+                <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)' }}>${data.cost.toFixed(3)}</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Filter bar */}
       <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
@@ -182,6 +293,18 @@ export default function TraceTimeline({ observations, agents, plan }) {
                 background: trace.status === 'error' ? '#ff4757' : '#00e68a',
               }} />
               <span style={{ fontSize: 13, fontWeight: 700, flex: 1 }}>{trace.title}</span>
+
+              {/* Provider badges on spans */}
+              {trace.spans?.slice(0, 3).map(sp => {
+                const badge = PROVIDER_BADGES[sp.provider] || PROVIDER_BADGES.unknown;
+                return sp.provider && sp.provider !== 'unknown' ? (
+                  <span key={sp.id} style={{
+                    fontSize: 9, padding: '2px 6px', borderRadius: 4, fontWeight: 700,
+                    background: badge.bg, color: badge.color,
+                  }}>{badge.label}</span>
+                ) : null;
+              })}
+
               <span style={{
                 fontSize: 10, padding: '2px 8px', borderRadius: 4,
                 background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.4)',
@@ -194,13 +317,13 @@ export default function TraceTimeline({ observations, agents, plan }) {
             {/* Mini waterfall preview */}
             <div style={{ height: 18, position: 'relative', background: 'rgba(255,255,255,0.02)', borderRadius: 4, overflow: 'hidden' }}>
               {trace.spans.map(span => {
-                const left = (span.startMs / trace.totalDurationMs) * 100;
-                const width = Math.max((span.durationMs / trace.totalDurationMs) * 100, 2);
-                const cfg = TRACE_TYPES[span.type] || TRACE_TYPES.tool_use;
+                const left = trace.totalDurationMs > 0 ? (span.startMs / trace.totalDurationMs) * 100 : 0;
+                const width = trace.totalDurationMs > 0 ? Math.max((span.durationMs / trace.totalDurationMs) * 100, 2) : 10;
+                const cfg = TRACE_TYPES[span.type] || TRACE_TYPES.llm_call;
                 return (
                   <div
                     key={span.id}
-                    title={`${span.name} — ${span.durationMs.toFixed(0)}ms`}
+                    title={`${span.name} — ${span.durationMs.toFixed(0)}ms${span.model ? ` (${span.model})` : ''}`}
                     style={{
                       position: 'absolute', left: `${left}%`, width: `${width}%`,
                       top: span.depth * 9, height: 8, borderRadius: 2,
@@ -220,24 +343,44 @@ export default function TraceTimeline({ observations, agents, plan }) {
                   Execution Waterfall
                 </div>
                 {trace.spans.map(span => {
-                  const cfg = TRACE_TYPES[span.type] || TRACE_TYPES.tool_use;
+                  const cfg = TRACE_TYPES[span.type] || TRACE_TYPES.llm_call;
+                  const badge = PROVIDER_BADGES[span.provider] || PROVIDER_BADGES.unknown;
                   return (
                     <div key={span.id} style={{
                       display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0',
                       paddingLeft: span.depth * 20,
                     }}>
                       <span style={{ fontSize: 12 }}>{cfg.icon}</span>
+
+                      {/* Provider badge */}
+                      {span.provider && span.provider !== 'unknown' && (
+                        <span style={{
+                          fontSize: 8, padding: '1px 5px', borderRadius: 3, fontWeight: 700,
+                          background: badge.bg, color: badge.color,
+                        }}>{badge.label}</span>
+                      )}
+
                       <span style={{ fontSize: 11, fontWeight: 600, color: cfg.color, minWidth: 120, fontFamily: 'monospace' }}>
                         {span.name}
                       </span>
+
+                      {/* Model tag */}
+                      {span.model && (
+                        <span style={{
+                          fontSize: 9, padding: '1px 5px', borderRadius: 3,
+                          background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.35)',
+                          fontFamily: 'monospace',
+                        }}>{span.model}</span>
+                      )}
+
                       <div style={{
                         flex: 1, height: 12, position: 'relative', background: 'rgba(255,255,255,0.03)',
                         borderRadius: 3, overflow: 'hidden',
                       }}>
                         <div style={{
                           position: 'absolute',
-                          left: `${(span.startMs / trace.totalDurationMs) * 100}%`,
-                          width: `${Math.max((span.durationMs / trace.totalDurationMs) * 100, 3)}%`,
+                          left: trace.totalDurationMs > 0 ? `${(span.startMs / trace.totalDurationMs) * 100}%` : '0%',
+                          width: trace.totalDurationMs > 0 ? `${Math.max((span.durationMs / trace.totalDurationMs) * 100, 3)}%` : '100%',
                           height: '100%', borderRadius: 3,
                           background: span.status === 'error' ? '#ff4757' : cfg.color,
                           opacity: 0.8,
@@ -251,6 +394,11 @@ export default function TraceTimeline({ observations, agents, plan }) {
                           {span.tokens.input + span.tokens.output} tok
                         </span>
                       )}
+                      {span.cost_usd > 0 && (
+                        <span style={{ fontSize: 9, color: '#00e68a', fontFamily: 'monospace' }}>
+                          ${parseFloat(span.cost_usd).toFixed(4)}
+                        </span>
+                      )}
                       <span style={{
                         width: 6, height: 6, borderRadius: '50%',
                         background: span.status === 'error' ? '#ff4757' : '#00e68a',
@@ -259,19 +407,39 @@ export default function TraceTimeline({ observations, agents, plan }) {
                   );
                 })}
 
+                {/* Error detail */}
+                {trace.spans.some(s => s.error_message) && (
+                  <div style={{
+                    marginTop: 8, padding: '6px 10px', background: 'rgba(255,71,87,0.08)',
+                    border: '1px solid rgba(255,71,87,0.15)', borderRadius: 6,
+                  }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: '#ff4757', marginBottom: 2 }}>Error</div>
+                    <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>
+                      {trace.spans.find(s => s.error_message)?.error_message}
+                    </div>
+                  </div>
+                )}
+
                 {/* Metadata */}
                 <div style={{
                   marginTop: 10, padding: '8px 12px', background: 'rgba(0,0,0,0.2)', borderRadius: 6,
                   display: 'flex', gap: 16, flexWrap: 'wrap',
                 }}>
-                  <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)' }}>
-                    Model: <strong style={{ color: 'rgba(255,255,255,0.5)' }}>claude-3.5-sonnet</strong>
-                  </span>
+                  {trace.spans.some(s => s.model) && (
+                    <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)' }}>
+                      Models: <strong style={{ color: 'rgba(255,255,255,0.5)' }}>
+                        {[...new Set(trace.spans.filter(s => s.model).map(s => s.model))].join(', ')}
+                      </strong>
+                    </span>
+                  )}
                   <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)' }}>
                     Tokens: <strong style={{ color: 'rgba(255,255,255,0.5)' }}>{trace.totalTokens.toLocaleString()}</strong>
                   </span>
                   <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)' }}>
                     Cost: <strong style={{ color: '#00e68a' }}>${trace.cost}</strong>
+                  </span>
+                  <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)' }}>
+                    Spans: <strong style={{ color: 'rgba(255,255,255,0.5)' }}>{trace.spans.length}</strong>
                   </span>
                   <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)' }}>
                     {new Date(trace.timestamp).toLocaleString()}
@@ -292,9 +460,9 @@ export default function TraceTimeline({ observations, agents, plan }) {
         }}>
           <span style={{ fontSize: 14 }}>🔒</span>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.7)' }}>Pro: Real-Time Tracing</div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.7)' }}>Pro: Advanced Tracing</div>
             <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)' }}>
-              OpenTelemetry integration · Live streaming · Cost alerts · Prompt versioning
+              Auto-instrumentation · Cost alerts · Model comparison · Prompt versioning · Unlimited retention
             </div>
           </div>
           <span style={{

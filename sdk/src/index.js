@@ -1,17 +1,30 @@
 /**
- * @stoic/agentos-sdk
+ * @stoic/agentos-sdk v2.0.0
  * Official SDK for Stoic AgentOS — AI Agent Operations Platform
  * 
  * Usage:
- *   import { AgentOS } from '@stoic/agentos-sdk';
+ *   import { AgentOS } from 'stoic-agentos-sdk';
  *   const os = new AgentOS({ apiKey: 'sk_live_xxx', workspace: 'my-app' });
  *   
- *   // Wrap any agent function
- *   const myAgent = os.wrapAgent('processor', async (input) => { ... });
+ *   // Auto-instrument LLM providers (zero-config observability)
+ *   os.instrumentClient('openai', openaiClient);
+ *   os.instrumentClient('anthropic', anthropicClient);
+ *   
+ *   // All LLM calls are now auto-captured with tokens, cost, latency
+ *   
+ *   // Group related calls into a trace
+ *   const trace = os.startTrace('process-email');
+ *   const result = await myAgent(email);
+ *   await trace.end();
  *   
  *   // Manual capture
  *   os.capture({ type: 'decision', title: 'Switched model', content: '...' });
  */
+
+import { Trace, setActiveTrace, clearActiveTrace, getActiveTrace } from './trace.js';
+import { instrumentOpenAIClient } from './instrumentors/openai.js';
+import { instrumentAnthropicClient } from './instrumentors/anthropic.js';
+import { estimateCost, MODEL_PRICING } from './pricing.js';
 
 const DEFAULT_API_URL = 'https://stoic-agentos-api-production.up.railway.app/api/v1';
 
@@ -36,6 +49,67 @@ export class AgentOS {
       process.on('SIGINT', () => { this.flush(); process.exit(0); });
     }
   }
+
+  // ═══════════════════════════════════
+  // AUTO-INSTRUMENTATION (v2.0)
+  // ═══════════════════════════════════
+
+  /**
+   * Instrument an LLM client instance for automatic trace capture
+   * @param {'openai'|'anthropic'} provider - Provider name
+   * @param {object} client - The client instance (e.g., new OpenAI())
+   * 
+   * @example
+   *   import OpenAI from 'openai';
+   *   const openai = new OpenAI();
+   *   os.instrumentClient('openai', openai);
+   *   // All openai.chat.completions.create() calls now auto-captured
+   */
+  instrumentClient(provider, client) {
+    switch (provider) {
+      case 'openai':
+        instrumentOpenAIClient(client, this);
+        break;
+      case 'anthropic':
+        instrumentAnthropicClient(client, this);
+        break;
+      default:
+        console.warn(`[AgentOS] Unknown provider: ${provider}. Supported: openai, anthropic`);
+    }
+    return this; // Allow chaining
+  }
+
+  /**
+   * Start a new trace (groups related LLM calls)
+   * @param {string} name - Trace name (e.g., 'process-customer-email')
+   * @param {Object} [options] - { agent, metadata }
+   * @returns {Trace}
+   * 
+   * @example
+   *   const trace = os.startTrace('email-pipeline', { agent: 'email-processor' });
+   *   const result = await myAgent(input);
+   *   await trace.end(); // Sends trace + all captured spans
+   */
+  startTrace(name, options = {}) {
+    const trace = new Trace(this, name, options);
+    setActiveTrace(trace);
+    return trace;
+  }
+
+  /**
+   * End the active trace (if any) and send to API
+   */
+  async endTrace(status) {
+    const trace = getActiveTrace();
+    if (trace) {
+      clearActiveTrace();
+      return trace.end(status);
+    }
+  }
+
+  // ═══════════════════════════════════
+  // OBSERVATIONS (v1.0 — unchanged)
+  // ═══════════════════════════════════
 
   /**
    * Capture an observation
@@ -95,6 +169,7 @@ export class AgentOS {
   /**
    * Wrap an agent function with auto-capture
    * Automatically logs: agent_start, agent_success/agent_error
+   * Now also creates a trace for each agent run
    * @param {string} agentName - Human-readable agent name
    * @param {Function} fn - The agent function to wrap
    * @returns {Function} Wrapped function
@@ -103,6 +178,8 @@ export class AgentOS {
     const sdk = this;
 
     return async function wrappedAgent(...args) {
+      // Start a trace for this agent run
+      const trace = sdk.startTrace(`agent:${agentName}`, { agent: agentName });
       const startTime = Date.now();
 
       await sdk.capture({
@@ -123,7 +200,10 @@ export class AgentOS {
           metadata: { event: 'success', duration_ms: durationMs },
         });
 
-        // Update agent heartbeat via dedicated endpoint
+        // End trace with success
+        await trace.end('success');
+
+        // Update agent heartbeat
         await sdk._send('/agents/heartbeat', { name: agentName, status: 'success' }).catch(() => {});
 
         return result;
@@ -137,6 +217,9 @@ export class AgentOS {
           agent: agentName,
           metadata: { event: 'error', duration_ms: durationMs, error_name: error.name },
         });
+
+        // End trace with error
+        await trace.end('error');
 
         // Record error heartbeat
         await sdk._send('/agents/heartbeat', { name: agentName, status: 'error' }).catch(() => {});
@@ -178,6 +261,26 @@ export class AgentOS {
     return this._fetch(`/observations?${params}`);
   }
 
+  /**
+   * List traces
+   * @param {Object} [options] - { limit, agent, status }
+   */
+  async getTraces(options = {}) {
+    const params = new URLSearchParams();
+    if (options.limit) params.set('limit', options.limit);
+    if (options.agent) params.set('agent', options.agent);
+    if (options.status) params.set('status', options.status);
+    return this._fetch(`/traces?${params}`);
+  }
+
+  /**
+   * Get cost breakdown for current month
+   */
+  async getCosts(period) {
+    const params = period ? `?period=${period}` : '';
+    return this._fetch(`/costs${params}`);
+  }
+
   // ── Internal ──
 
   async _send(path, body, method = 'POST') {
@@ -215,9 +318,12 @@ export class AgentOS {
   }
 }
 
-// ── Convenience export ──
+// ── Convenience exports ──
 export function createAgentOS(options) {
   return new AgentOS(options);
 }
+
+export { Trace } from './trace.js';
+export { estimateCost, MODEL_PRICING } from './pricing.js';
 
 export default AgentOS;
