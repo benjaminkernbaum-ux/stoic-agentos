@@ -388,6 +388,22 @@ export default function OnboardingTour({
     };
   }); // intentionally no deps — always stays current
 
+  // Elevate capture panel above overlay when on the capture step
+  useEffect(() => {
+    const capIdx = SPOTLIGHT_STEPS.findIndex(s => s.waitForCapture);
+    const el = document.getElementById('ob-capture');
+    if (!el) return;
+    if (phase === 'spotlight' && spotlightIdx === capIdx) {
+      el.classList.add('ob-capture-active');
+      // Auto-focus the input inside the capture panel
+      const input = el.querySelector('input[type="text"]');
+      if (input) setTimeout(() => input.focus(), 300);
+    } else {
+      el.classList.remove('ob-capture-active');
+    }
+    return () => el.classList.remove('ob-capture-active');
+  }, [phase, spotlightIdx]);
+
   const skip = () => { lsSet(STORAGE_KEY, 'skip'); setPhase('hidden'); };
   const complete = () => { lsSet(STORAGE_KEY, 'done'); setPhase('hidden'); };
 

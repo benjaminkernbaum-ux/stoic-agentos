@@ -384,6 +384,8 @@
   border-color: var(--accent-purple) !important;
   box-shadow: 0 0 0 3px rgba(155,89,255,0.2), 0 0 20px rgba(155,89,255,0.12) !important;
   transition: all 0.4s !important;
+  position: relative;
+  z-index: 9992 !important;
 }
 
 /* ── Animated arrow pointing to target ── */
