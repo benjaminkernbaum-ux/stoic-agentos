@@ -216,6 +216,58 @@ app.post(`/api/${API_VERSION}/observations`, authenticate, async (req, res) => {
       .single();
 
     if (error) throw error;
+
+    // ── Auto-Memory Engine (Mem0-style) ──
+    // Extract entities from high-importance observations and auto-create knowledge items
+    const AUTO_MEMORY_TYPES = ['architecture', 'decision', 'error', 'deployment', 'discovery'];
+    if (AUTO_MEMORY_TYPES.includes(type) && data) {
+      try {
+        // Extract entity name from title (simple heuristic — Pro tier uses LLM)
+        const entityName = title
+          .replace(/^(Switched|Migrated|Deployed|Found|Fixed|Updated|Added|Removed)\s+/i, '')
+          .replace(/\s+(to|from|in|on|at|for|with)\s+.+$/i, '')
+          .trim()
+          .slice(0, 80);
+
+        // Check if entity already exists
+        const { data: existing } = await supabase
+          .from('knowledge_items')
+          .select('id, content')
+          .eq('org_id', req.org.id)
+          .ilike('name', `%${entityName.slice(0, 30)}%`)
+          .limit(1)
+          .single();
+
+        if (existing) {
+          // Append to existing knowledge item
+          const updated = `${existing.content}\n\n---\n**[${new Date().toISOString().slice(0, 10)}]** ${title}\n${content || ''}`.slice(0, 5000);
+          await supabase
+            .from('knowledge_items')
+            .update({ content: updated, updated_at: new Date().toISOString() })
+            .eq('id', existing.id);
+        } else {
+          // Check knowledge item limit
+          const { count: kiCount } = await supabase
+            .from('knowledge_items')
+            .select('*', { count: 'exact', head: true })
+            .eq('org_id', req.org.id);
+
+          if (checkLimit(req.org.plan, 'knowledge_items', kiCount || 0)) {
+            await supabase.from('knowledge_items').insert({
+              org_id: req.org.id,
+              name: entityName,
+              summary: `Auto-extracted from ${type}: ${title.slice(0, 100)}`,
+              content: `**Source:** ${type}\n**Date:** ${new Date().toISOString().slice(0, 10)}\n\n${content || title}`,
+            });
+            console.log(`🧠 Auto-memory: created "${entityName}" from ${type}`);
+          }
+        }
+      } catch (memErr) {
+        // Non-critical — don't fail the observation
+        console.error('Auto-memory error (non-fatal):', memErr.message);
+      }
+    }
+
     res.status(201).json(data);
   } catch (err) {
     res.status(500).json({ error: err.message });

@@ -5,6 +5,7 @@ import { supabase, API_BASE } from '../lib/supabase';
 import OnboardingTour from '../components/OnboardingTour';
 import KnowledgeGraph from '../components/KnowledgeGraph';
 import TraceTimeline from '../components/TraceTimeline';
+import WorkflowCanvas from '../components/WorkflowCanvas';
 import './Dashboard.css';
 
 // ── Toast system ──────────────────────────────────────────────
@@ -75,6 +76,7 @@ const TAB_TITLES = {
   brain:      'Knowledge Brain',
   graph:      'Knowledge Graph',
   traces:     'Agent Traces',
+  workflows:  'Workflows',
   settings:   'Settings',
 };
 
@@ -589,6 +591,7 @@ export default function Dashboard() {
             { id: 'brain',      icon: '🧠', label: 'Brain',      badge: null },
             { id: 'graph',      icon: '🕸️', label: 'Graph',      badge: null },
             { id: 'traces',     icon: '📊', label: 'Traces',     badge: null },
+            { id: 'workflows',  icon: '🔗', label: 'Workflows',  badge: null },
           ].map(item => (
             <button
               key={item.id}
@@ -1104,6 +1107,32 @@ export default function Dashboard() {
                   observations={observations}
                   agents={agents}
                   plan={planName?.toLowerCase() || 'free'}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Workflows Tab ── */}
+        {activeTab === 'workflows' && (
+          <div className="dash-content" style={{ height: 'calc(100vh - 80px)' }}>
+            <div className="dash-panel" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+              <div className="dash-panel-head">
+                <span className="dash-panel-title">
+                  <span className="dash-panel-title-icon">🔗</span>
+                  Agent Workflows
+                  <span style={{ fontSize: 11, opacity: 0.4, marginLeft: 8 }}>
+                    {agents.length} agents · {observations.length} observations
+                  </span>
+                </span>
+              </div>
+              <div style={{ flex: 1, minHeight: 0 }}>
+                <WorkflowCanvas
+                  agents={agents}
+                  observations={observations}
+                  workspaces={workspaces}
+                  plan={planName?.toLowerCase() || 'free'}
+                  onUpgrade={handleUpgrade}
                 />
               </div>
             </div>
