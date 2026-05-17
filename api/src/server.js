@@ -323,7 +323,7 @@ app.post(`/api/${API_VERSION}/agents`, authenticate, async (req, res) => {
       .eq('org_id', req.org.id);
 
     if (!checkLimit(req.org.plan, 'agents', count)) {
-      return res.status(429).json({ error: 'Agent limit reached', limit: PLAN_LIMITS[req.org.plan]?.agents, current: count, upgrade_url: 'https://stoic-agentos.vercel.app/#pricing' });
+      return res.status(429).json({ error: 'Agent limit reached', limit: PLAN_LIMITS[req.org.plan]?.agents, current: count, upgrade_url: 'https://stoicagentos.com/#pricing' });
     }
 
     const { data, error } = await supabase
@@ -396,7 +396,7 @@ app.post(`/api/${API_VERSION}/workspaces`, authenticate, async (req, res) => {
       .eq('org_id', req.org.id);
 
     if (!checkLimit(req.org.plan, 'workspaces', count)) {
-      return res.status(429).json({ error: 'Workspace limit reached', limit: PLAN_LIMITS[req.org.plan]?.workspaces, current: count, upgrade_url: 'https://stoic-agentos.vercel.app/#pricing' });
+      return res.status(429).json({ error: 'Workspace limit reached', limit: PLAN_LIMITS[req.org.plan]?.workspaces, current: count, upgrade_url: 'https://stoicagentos.com/#pricing' });
     }
 
     const { data, error } = await supabase
@@ -459,7 +459,7 @@ app.post(`/api/${API_VERSION}/knowledge-items`, authenticate, async (req, res) =
       .eq('org_id', req.org.id);
 
     if (!checkLimit(req.org.plan, 'knowledge_items', count)) {
-      return res.status(429).json({ error: 'Knowledge item limit reached', limit: PLAN_LIMITS[req.org.plan]?.knowledge_items, current: count, upgrade_url: 'https://stoic-agentos.vercel.app/#pricing' });
+      return res.status(429).json({ error: 'Knowledge item limit reached', limit: PLAN_LIMITS[req.org.plan]?.knowledge_items, current: count, upgrade_url: 'https://stoicagentos.com/#pricing' });
     }
 
     const { data, error } = await supabase
@@ -690,7 +690,7 @@ app.post(`/api/${API_VERSION}/billing/checkout`, authenticate, async (req, res) 
         .eq('id', req.org.id);
     }
 
-    const origin = req.headers.origin || 'https://stoic-agentos.vercel.app';
+    const origin = req.headers.origin || 'https://stoicagentos.com';
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       mode: 'subscription',
@@ -719,7 +719,7 @@ app.post(`/api/${API_VERSION}/billing/portal`, authenticate, async (req, res) =>
 
     const portal = await stripe.billingPortal.sessions.create({
       customer: customerId,
-      return_url: `${req.headers.origin || 'https://stoic-agentos.vercel.app'}/dashboard`,
+      return_url: `${req.headers.origin || 'https://stoicagentos.com'}/dashboard`,
     });
 
     res.json({ url: portal.url });
@@ -750,13 +750,26 @@ app.post('/webhooks/stripe', express.raw({ type: 'application/json' }), async (r
         const session = event.data.object;
         const orgId = session.metadata?.org_id;
         if (orgId) {
+          // Detect plan from subscription price_id
+          let detectedPlan = 'pro'; // default
+          if (session.subscription) {
+            try {
+              const sub = await stripe.subscriptions.retrieve(session.subscription);
+              const priceId = sub.items?.data?.[0]?.price?.id;
+              if (priceId === STRIPE_PRICES.team) detectedPlan = 'team';
+              else if (priceId === STRIPE_PRICES.pro) detectedPlan = 'pro';
+              console.log(`🔍 Detected price ${priceId} → plan: ${detectedPlan}`);
+            } catch (subErr) {
+              console.error('Could not retrieve subscription for plan detection:', subErr.message);
+            }
+          }
           await supabase.from('organizations').update({
-            plan: 'pro',
+            plan: detectedPlan,
             stripe_customer_id: session.customer,
             stripe_subscription_id: session.subscription,
             updated_at: new Date().toISOString(),
           }).eq('id', orgId);
-          console.log(`✅ Org ${orgId} upgraded to PRO`);
+          console.log(`✅ Org ${orgId} upgraded to ${detectedPlan.toUpperCase()}`);
         }
         break;
       }

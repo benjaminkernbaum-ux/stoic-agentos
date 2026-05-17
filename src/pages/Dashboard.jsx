@@ -277,6 +277,25 @@ export default function Dashboard() {
     setUpgradeLoading(false);
   };
 
+  const handleManageSubscription = async () => {
+    try {
+      const token = (await supabase.auth.getSession()).data.session?.access_token;
+      const res = await fetch(`${API_BASE}/api/v1/billing/portal`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      });
+      if (res.ok) {
+        const { url } = await res.json();
+        if (url) window.location.href = url;
+      } else {
+        const body = await res.json().catch(() => ({}));
+        toast(body.error || 'Failed to open billing portal', 'error');
+      }
+    } catch {
+      toast('Billing portal unavailable. Please try again later.', 'error');
+    }
+  };
+
   const handleGenerateKey = async () => {
     setKeyGenLoading(true);
     try {
@@ -1156,15 +1175,53 @@ export default function Dashboard() {
                   <div className="dash-settings-label">Plan</div>
                   <div className="dash-settings-value">{planName}</div>
                 </div>
-                {planName === 'FREE' && (
-                  <button
-                    className="btn btn-primary btn-sm"
-                    onClick={() => handleUpgrade('pro')}
-                    disabled={upgradeLoading}
-                  >
-                    {upgradeLoading ? '...' : 'Upgrade to Pro'}
-                  </button>
-                )}
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  {planName === 'FREE' && (
+                    <>
+                      <button
+                        className="btn btn-primary btn-sm"
+                        onClick={() => handleUpgrade('pro')}
+                        disabled={upgradeLoading}
+                      >
+                        {upgradeLoading ? '...' : 'Pro — $49/mo'}
+                      </button>
+                      <button
+                        className="btn btn-secondary btn-sm"
+                        onClick={() => handleUpgrade('team')}
+                        disabled={upgradeLoading}
+                        style={{ borderColor: 'rgba(0,212,255,0.5)', color: '#00d4ff' }}
+                      >
+                        {upgradeLoading ? '...' : 'Team — $299/mo'}
+                      </button>
+                    </>
+                  )}
+                  {planName === 'PRO' && (
+                    <>
+                      <button
+                        className="btn btn-secondary btn-sm"
+                        onClick={() => handleUpgrade('team')}
+                        disabled={upgradeLoading}
+                        style={{ borderColor: 'rgba(0,212,255,0.5)', color: '#00d4ff' }}
+                      >
+                        {upgradeLoading ? '...' : 'Upgrade to Team — $299/mo'}
+                      </button>
+                      <button
+                        className="btn btn-ghost btn-sm"
+                        onClick={handleManageSubscription}
+                      >
+                        Manage Subscription
+                      </button>
+                    </>
+                  )}
+                  {(planName === 'TEAM' || planName === 'ENTERPRISE') && (
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      onClick={handleManageSubscription}
+                    >
+                      Manage Subscription
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
 

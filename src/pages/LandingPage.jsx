@@ -10,13 +10,13 @@ const FEATURES = [
   { icon: '🕸️', color: 'rgba(0,212,255,0.12)', title: 'Knowledge Graph', desc: 'Interactive force-directed visualization of your codebase relationships. See how agents, files, and workflows connect.' },
   { icon: '📦', color: 'rgba(0,230,138,0.12)', title: 'Multi-Workspace', desc: 'Manage 50+ repos from a single pane of glass. Git status, branches, dirty files, and context routing across projects.' },
   { icon: '⚡', color: 'rgba(255,159,67,0.12)', title: 'Auto-Capture Hooks', desc: 'Git post-commit hooks auto-log every change. Scheduled brain refresh keeps knowledge items fresh without manual work.' },
-  { icon: '🏛', color: 'rgba(255,107,157,0.12)', title: 'Financial Department', desc: '8 AI agents replacing $184K/yr of manual work — CFO, Bookkeeper, Tax, Forecasting, Reconciliation, all automated.' },
+  { icon: '🔧', color: 'rgba(255,107,157,0.12)', title: 'SDK & API Access', desc: 'npm install @stoic/agentos-sdk — wrap any agent in 3 lines of code. Full REST API with API key management and webhook integrations.' },
 ];
 
 const PRICING = [
-  { name: 'Free', desc: 'For solo developers', price: '$0', period: '', features: ['2 workspaces', '5 agents', '10,000 obs/mo', '5 knowledge items', '3 git hook repos', 'Read-only API', 'Community support'], disabled: ['Knowledge Graph', 'Brand Vault', 'SSO/SAML'], cta: 'Get Started Free', style: 'default' },
-  { name: 'Pro', desc: 'For power users', price: '$49', period: '/mo', features: ['10 workspaces', '25 agents', '100,000 obs/mo', '25 knowledge items', '15 git hook repos', '5 team members', 'Knowledge Graph', 'Brand Vault', 'Full API access', 'Email support (48h)'], disabled: ['SSO/SAML', 'Self-hosted'], cta: 'Start 14-Day Trial', style: 'default' },
-  { name: 'Team', desc: 'For growing teams', price: '$299', period: '/mo', features: ['Unlimited workspaces', '100 agents', 'Unlimited observations', 'Unlimited knowledge items', 'Unlimited git hooks', '15 team members', 'Knowledge Graph', 'Brand Vault', 'Full API access', 'Priority support (4h)'], disabled: ['SSO/SAML', 'Self-hosted'], cta: 'Start 14-Day Trial', style: 'featured' },
+  { name: 'Free', desc: 'For solo developers', price: '$0', period: '', features: ['2 workspaces', '5 agents', '10,000 obs/mo', '5 knowledge items', '3 git hook repos', 'Read-only API', 'Community support'], disabled: ['Knowledge Graph', 'Trace Timeline', 'SSO/SAML'], cta: 'Get Started Free', style: 'default' },
+  { name: 'Pro', desc: 'For power users', price: '$49', period: '/mo', features: ['10 workspaces', '25 agents', '100,000 obs/mo', '25 knowledge items', '15 git hook repos', '5 team members', 'Knowledge Graph', 'Trace Timeline', 'Full API access', 'Email support (48h)'], disabled: ['SSO/SAML', 'Self-hosted'], cta: 'Start 14-Day Trial', style: 'default' },
+  { name: 'Team', desc: 'For growing teams', price: '$299', period: '/mo', features: ['Unlimited workspaces', '100 agents', 'Unlimited observations', 'Unlimited knowledge items', 'Unlimited git hooks', '15 team members', 'Knowledge Graph', 'Trace Timeline', 'Full API access', 'Priority support (4h)'], disabled: ['SSO/SAML', 'Self-hosted'], cta: 'Start 14-Day Trial', style: 'featured' },
   { name: 'Enterprise', desc: 'For organizations', price: 'Custom', period: '', features: ['Everything in Team', 'Unlimited agents', 'Unlimited observations', 'Unlimited members', 'SSO/SAML', 'Self-hosted (coming soon)', 'Custom integrations', 'Dedicated CSM', 'SLA guarantee', 'Audit logs'], disabled: [], cta: 'Contact Sales', style: 'default' },
 ];
 
@@ -27,7 +27,7 @@ const COMPARE = [
   { feature: 'Multi-Repo Workspace', us: '✅', crewai: '❌', langfuse: '❌', agentops: '❌' },
   { feature: 'Auto-Capture (Git Hooks)', us: '✅', crewai: '❌', langfuse: '🟡', agentops: '🟡' },
   { feature: 'Brand/Voice Vault', us: '✅', crewai: '❌', langfuse: '❌', agentops: '❌' },
-  { feature: 'Financial AI Agents', us: '✅', crewai: '❌', langfuse: '❌', agentops: '❌' },
+  { feature: 'Financial AI Agents', us: '🔜', crewai: '❌', langfuse: '❌', agentops: '❌' },
   { feature: 'Visual Dashboard', us: '✅', crewai: '🟡', langfuse: '✅', agentops: '🟡' },
   { feature: 'Open-Source Core', us: '✅', crewai: '✅', langfuse: '✅', agentops: '✅' },
 ];
@@ -229,7 +229,17 @@ export default function LandingPage() {
                   {p.features.map((f, j) => <li key={j}>{f}</li>)}
                   {p.disabled.map((f, j) => <li key={`d-${j}`} className="disabled">{f}</li>)}
                 </ul>
-                <button className={`btn ${p.style === 'featured' ? 'btn-primary' : 'btn-secondary'}`} style={{ width: '100%', justifyContent: 'center' }}>
+                <button
+                  className={`btn ${p.style === 'featured' ? 'btn-primary' : 'btn-secondary'}`}
+                  style={{ width: '100%', justifyContent: 'center' }}
+                  onClick={() => {
+                    if (p.name === 'Enterprise') {
+                      window.location.href = 'mailto:benjamin@stoicagentos.com?subject=AgentOS Enterprise Inquiry';
+                    } else {
+                      window.location.href = '/signup';
+                    }
+                  }}
+                >
                   {p.cta}
                 </button>
               </div>
@@ -246,8 +256,8 @@ export default function LandingPage() {
             Join the teams using AgentOS to ship AI faster, with full observability and zero knowledge loss.
           </p>
           <div className="hero-cta">
-            <button className="btn btn-primary btn-lg">🚀 Get Started Free</button>
-            <button className="btn btn-secondary btn-lg">📅 Book a Demo</button>
+            <button className="btn btn-primary btn-lg" onClick={() => window.location.href = '/signup'}>🚀 Get Started Free</button>
+            <button className="btn btn-secondary btn-lg" onClick={() => window.location.href = 'mailto:benjamin@stoicagentos.com?subject=AgentOS Demo Request'}>📅 Book a Demo</button>
           </div>
         </div>
       </section>
