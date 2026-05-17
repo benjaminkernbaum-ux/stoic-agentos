@@ -9,6 +9,7 @@
 
 import { writeFileSync, mkdirSync, existsSync, readFileSync } from 'fs';
 import { join } from 'path';
+import { execSync } from 'child_process';
 
 const COMMANDS = {
   init: initProject,
@@ -141,7 +142,6 @@ Docs:    https://stoic-agentos.vercel.app/docs
 
 function getRepoName() {
   try {
-    const { execSync } = require('child_process');
     return execSync('git rev-parse --show-toplevel', { encoding: 'utf-8' }).trim().split(/[\\/]/).pop();
   } catch {
     return null;

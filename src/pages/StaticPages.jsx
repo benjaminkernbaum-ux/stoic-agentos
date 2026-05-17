@@ -85,7 +85,7 @@ export function AboutPage() {
             </p>
             <div className="sp-founder-links">
               <a href="https://github.com/benjaminkernbaum-ux" target="_blank" rel="noreferrer">GitHub</a>
-              <a href="https://linkedin.com/company/stoic-crm" target="_blank" rel="noreferrer">LinkedIn</a>
+              <a href="https://www.linkedin.com/company/17224756/" target="_blank" rel="noreferrer">LinkedIn</a>
             </div>
           </div>
         </div>

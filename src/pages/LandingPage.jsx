@@ -273,7 +273,7 @@ export default function LandingPage() {
               <a href="/about">About</a>
               <a href="/blog">Blog</a>
               <a href="https://github.com/benjaminkernbaum-ux">GitHub</a>
-              <a href="https://linkedin.com/company/stoic-crm">LinkedIn</a>
+              <a href="https://www.linkedin.com/company/17224756/">LinkedIn</a>
             </div>
             <div className="footer-col">
               <h4>Legal</h4>
