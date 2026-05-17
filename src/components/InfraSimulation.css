@@ -11,13 +11,17 @@
   border-radius: 16px;
   overflow: hidden;
   margin-top: 48px;
+  display: flex;
+  flex-direction: column;
+  height: 580px;
 }
 
 /* ── Canvas (Architecture) ── */
 .infra-canvas {
   position: relative;
   width: 100%;
-  height: 480px;
+  flex: 1;
+  min-height: 0;
   overflow: hidden;
 }
 .infra-canvas svg.infra-lines {
@@ -87,7 +91,9 @@
   gap: 4px;
   padding: 12px 16px;
   border-top: 1px solid rgba(255,255,255,0.06);
-  background: rgba(10,10,15,0.6);
+  background: rgba(10,10,15,0.9);
+  flex-shrink: 0;
+  z-index: 5;
 }
 .infra-tab {
   display: flex; align-items: center; gap: 6px;
@@ -109,7 +115,8 @@
   grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
   gap: 10px;
   padding: 24px;
-  height: 480px;
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
   align-content: start;
 }
@@ -133,7 +140,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 480px;
+  flex: 1;
+  min-height: 0;
   gap: 40px;
   padding: 24px;
 }
@@ -170,8 +178,9 @@
 
 .mon-wrap {
   padding: 0;
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
-  max-height: 600px;
 }
 
 /* Toolbar: "Last 15 min" + "Edit" */
@@ -271,7 +280,7 @@
 .mon-log-col-msg { color: rgba(255,255,255,0.5); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* ── Knowledge View ── */
-.infra-knowledge { position: relative; height: 480px; display: flex; align-items: center; justify-content: center; }
+.infra-knowledge { position: relative; flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; }
 .infra-k-node {
   position: absolute;
   background: rgba(22,22,31,0.85);
@@ -296,9 +305,8 @@
 
 /* ── Responsive ── */
 @media (max-width: 768px) {
-  .infra-canvas, .infra-fleet, .infra-scale, .infra-knowledge { height: 360px; }
+  .infra-sim { height: 460px; }
   .mon-grid { grid-template-columns: 1fr; }
-  .mon-wrap { max-height: 500px; }
   .infra-fleet { grid-template-columns: repeat(2, 1fr); }
   .infra-tabs { gap: 2px; padding: 8px; }
   .infra-tab { padding: 6px 10px; font-size: 11px; }
