@@ -5,6 +5,15 @@ import SignupPage from './pages/SignupPage';
 import LoginPage from './pages/LoginPage';
 import Dashboard from './pages/Dashboard';
 import DocsPage from './pages/DocsPage';
+import {
+  AboutPage,
+  BlogPage,
+  ChangelogPage,
+  PrivacyPage,
+  TermsPage,
+  SecurityPage,
+  NotFoundPage,
+} from './pages/StaticPages';
 
 function ProtectedRoute({ children }) {
   const { isAuthenticated, loading } = useAuth();
@@ -33,11 +42,18 @@ function AppRoutes() {
       <Route path="/signup" element={<SignupPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/docs" element={<DocsPage />} />
+      <Route path="/about" element={<AboutPage />} />
+      <Route path="/blog" element={<BlogPage />} />
+      <Route path="/changelog" element={<ChangelogPage />} />
+      <Route path="/privacy" element={<PrivacyPage />} />
+      <Route path="/terms" element={<TermsPage />} />
+      <Route path="/security" element={<SecurityPage />} />
       <Route path="/dashboard" element={
         <ProtectedRoute>
           <Dashboard />
         </ProtectedRoute>
       } />
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );
 }
