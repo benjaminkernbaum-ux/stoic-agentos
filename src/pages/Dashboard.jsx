@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase, API_BASE } from '../lib/supabase';
 import OnboardingTour from '../components/OnboardingTour';
+import KnowledgeGraph from '../components/KnowledgeGraph';
 import './Dashboard.css';
 
 // ── Toast system ──────────────────────────────────────────────
@@ -975,27 +976,36 @@ export default function Dashboard() {
 
         {/* ── Graph Tab ── */}
         {activeTab === 'graph' && (
-          <div className="dash-content">
-            <div className="dash-upgrade-cta">
-              <span className="dash-upgrade-icon">🕸️</span>
-              <h3>Knowledge Graph</h3>
-              <p>
-                Visualize how your agents' decisions, code changes, and discoveries interconnect
-                across time and projects. Unlock the full intelligence layer.
-              </p>
-              <div className="dash-upgrade-features">
-                <span className="dash-upgrade-feat">Interactive graph visualization</span>
-                <span className="dash-upgrade-feat">Cross-agent relationships</span>
-                <span className="dash-upgrade-feat">Temporal clustering</span>
-                <span className="dash-upgrade-feat">Export as SVG / JSON</span>
+          <div className="dash-content" style={{ height: 'calc(100vh - 80px)' }}>
+            <div className="dash-panel" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+              <div className="dash-panel-head">
+                <span className="dash-panel-title">
+                  <span className="dash-panel-title-icon">🕸️</span>
+                  Knowledge Graph
+                  <span style={{ fontSize: 11, opacity: 0.4, marginLeft: 8 }}>
+                    {observations.length > 50 ? '50 / ' + observations.length + ' nodes (Free tier)' : observations.length + ' nodes'}
+                  </span>
+                </span>
+                {observations.length > 0 && (
+                  <button className="dash-panel-action" onClick={() => {
+                    const data = JSON.stringify(observations, null, 2);
+                    const blob = new Blob([data], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url; a.download = 'agentos-observations.json'; a.click();
+                    URL.revokeObjectURL(url);
+                    toast('Exported observations as JSON', 'success');
+                  }}>Export JSON →</button>
+                )}
               </div>
-              <button
-                className="btn btn-primary"
-                onClick={() => handleUpgrade('pro')}
-                disabled={upgradeLoading}
-              >
-                {upgradeLoading ? 'Loading...' : 'Upgrade to Pro — $29/mo'}
-              </button>
+              <div style={{ flex: 1, minHeight: 0 }}>
+                <KnowledgeGraph
+                  observations={observations}
+                  agents={agents}
+                  onUpgrade={handleUpgrade}
+                  upgradeLoading={upgradeLoading}
+                />
+              </div>
             </div>
           </div>
         )}
