@@ -244,6 +244,21 @@ app.get(`/api/${API_VERSION}/observations`, authenticate, async (req, res) => {
   }
 });
 
+// DELETE observation
+app.delete(`/api/${API_VERSION}/observations/:id`, authenticate, async (req, res) => {
+  try {
+    const { error } = await supabase
+      .from('observations')
+      .delete()
+      .eq('id', req.params.id)
+      .eq('org_id', req.org.id);
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ── Agents ──
 app.post(`/api/${API_VERSION}/agents`, authenticate, async (req, res) => {
   try {

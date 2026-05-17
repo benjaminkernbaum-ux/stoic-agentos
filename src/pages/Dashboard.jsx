@@ -105,12 +105,39 @@ export default function Dashboard() {
   const [upgradeLoading, setUpgradeLoading] = useState(false);
   const [keyGenLoading, setKeyGenLoading] = useState(false);
 
+  // New: modals & UI state
+  const [showAgentModal, setShowAgentModal] = useState(false);
+  const [showWsModal, setShowWsModal] = useState(false);
+  const [agentForm, setAgentForm] = useState({ name: '', module: '', description: '' });
+  const [wsForm, setWsForm] = useState({ name: '', branch: 'main', stack: '' });
+  const [expandedObs, setExpandedObs] = useState(null);
+  const [seedLoading, setSeedLoading] = useState(false);
+  const [knowledgeItems, setKnowledgeItems] = useState([]);
+  const [obsSearch, setObsSearch] = useState('');
+  const [selectedAgent, setSelectedAgent] = useState(null);
+  const [placeholderIdx, setPlaceholderIdx] = useState(0);
+
   const onCaptureRef = useRef(null);
   const cmdInputRef = useRef(null);
+
+  const CAPTURE_HINTS = [
+    'Deployed v1.3 to staging...',
+    'Fixed memory leak in agent-5...',
+    'Switched from GPT-4 to Claude for summarization...',
+    'Discovered N+1 query in workspace sync...',
+    'Architecture: moved to event-driven pipeline...',
+    'Error: rate limit hit on OpenAI endpoint...',
+  ];
 
   // Live clock
   useEffect(() => {
     const t = setInterval(() => setTime(new Date()), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  // Rotate capture placeholder
+  useEffect(() => {
+    const t = setInterval(() => setPlaceholderIdx(i => (i + 1) % CAPTURE_HINTS.length), 4000);
     return () => clearInterval(t);
   }, []);
 
@@ -291,6 +318,118 @@ export default function Dashboard() {
     }
   };
 
+  // ── Seed Demo Data ──
+  const handleSeedDemo = async () => {
+    setSeedLoading(true);
+    try {
+      const token = (await supabase.auth.getSession()).data.session?.access_token;
+      const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+      const demoAgents = [
+        { name: 'content-writer', module: 'content', description: 'Generates blog posts and social copy', status: 'running' },
+        { name: 'code-reviewer', module: 'engineering', description: 'Reviews PRs and suggests improvements', status: 'idle' },
+        { name: 'data-pipeline', module: 'analytics', description: 'ETL pipeline for daily metrics', status: 'running' },
+      ];
+      const demoObs = [
+        { type: 'deployment', title: 'Deployed v1.3 to production', content: 'Zero-downtime deployment via Railway. All health checks passed.' },
+        { type: 'decision', title: 'Switched content-writer from GPT-4 to Claude 3.5', content: 'Claude produces 40% fewer hallucinations on our domain-specific content.' },
+        { type: 'architecture', title: 'Migrated to event-driven pipeline', content: 'Replaced polling with webhooks. Latency dropped from 2.4s to 180ms.' },
+        { type: 'error', title: 'Rate limit hit on OpenAI API', content: 'Exceeded 10K RPM on the summarization endpoint. Added exponential backoff.' },
+        { type: 'discovery', title: 'Found N+1 query in workspace sync', content: 'Each workspace was making individual DB calls. Batched into single query — 8x speedup.' },
+      ];
+      for (const a of demoAgents) {
+        await fetch(`${API_BASE}/api/v1/agents`, { method: 'POST', headers, body: JSON.stringify({ ...a, org_id: org.id }) });
+      }
+      for (const o of demoObs) {
+        await fetch(`${API_BASE}/api/v1/observations`, { method: 'POST', headers, body: JSON.stringify({ ...o, org_id: org.id }) });
+      }
+      toast('Demo data seeded! Explore your dashboard.', 'success');
+      await fetchData();
+    } catch (err) {
+      console.error('Seed failed:', err);
+      toast('Failed to seed demo data', 'error');
+    }
+    setSeedLoading(false);
+  };
+
+  // ── Register Agent ──
+  const handleRegisterAgent = async (e) => {
+    e.preventDefault();
+    if (!agentForm.name.trim()) return;
+    try {
+      const token = (await supabase.auth.getSession()).data.session?.access_token;
+      const res = await fetch(`${API_BASE}/api/v1/agents`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...agentForm, org_id: org.id, status: 'idle' }),
+      });
+      if (res.ok) {
+        const newAgent = await res.json();
+        setAgents(prev => [newAgent, ...prev]);
+        setAgentForm({ name: '', module: '', description: '' });
+        setShowAgentModal(false);
+        toast('Agent registered!', 'success');
+      } else {
+        const body = await res.json().catch(() => ({}));
+        toast(body.error || 'Failed to register agent', 'error');
+      }
+    } catch { toast('Failed to register agent', 'error'); }
+  };
+
+  // ── Add Workspace ──
+  const handleAddWorkspace = async (e) => {
+    e.preventDefault();
+    if (!wsForm.name.trim()) return;
+    try {
+      const token = (await supabase.auth.getSession()).data.session?.access_token;
+      const res = await fetch(`${API_BASE}/api/v1/workspaces`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...wsForm, org_id: org.id, status: 'active' }),
+      });
+      if (res.ok) {
+        const newWs = await res.json();
+        setWorkspaces(prev => [newWs, ...prev]);
+        setWsForm({ name: '', branch: 'main', stack: '' });
+        setShowWsModal(false);
+        toast('Workspace added!', 'success');
+      } else {
+        const body = await res.json().catch(() => ({}));
+        toast(body.error || 'Failed to add workspace', 'error');
+      }
+    } catch { toast('Failed to add workspace', 'error'); }
+  };
+
+  // ── Delete Observation ──
+  const handleDeleteObs = async (obsId) => {
+    if (!window.confirm('Delete this observation?')) return;
+    try {
+      const token = (await supabase.auth.getSession()).data.session?.access_token;
+      const res = await fetch(`${API_BASE}/api/v1/observations/${obsId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (res.ok) {
+        setObservations(prev => prev.filter(o => o.id !== obsId));
+        setStats(prev => ({ ...prev, observations: Math.max(0, (prev.observations || 1) - 1) }));
+        toast('Observation deleted', 'info');
+      }
+    } catch { toast('Failed to delete', 'error'); }
+  };
+
+  // ── Fetch Knowledge Items ──
+  const fetchKnowledge = useCallback(async () => {
+    if (!org?.id) return;
+    try {
+      const token = (await supabase.auth.getSession()).data.session?.access_token;
+      const res = await fetch(`${API_BASE}/api/v1/knowledge-items?org_id=${org.id}`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (res.ok) setKnowledgeItems(await res.json());
+    } catch {}
+  }, [org?.id]);
+
+  useEffect(() => { if (org?.id) fetchKnowledge(); }, [org?.id, fetchKnowledge]);
+
   if (authLoading) return null;
 
   const liveAgents  = agents.filter(a => a.status === 'running').length;
@@ -301,7 +440,14 @@ export default function Dashboard() {
   const planName    = (org?.plan || 'free').toUpperCase();
   const firstInit   = userName.charAt(0).toUpperCase();
   const isNewUser   = !dataLoading && agents.length === 0 && observations.length === 0 && workspaces.length === 0;
-  const filteredObs = brainFilter === 'all' ? observations : observations.filter(o => o.type === brainFilter);
+  const filteredObs = observations.filter(o => {
+    if (brainFilter !== 'all' && o.type !== brainFilter) return false;
+    if (obsSearch) {
+      const q = obsSearch.toLowerCase();
+      return (o.title || '').toLowerCase().includes(q) || (o.content || '').toLowerCase().includes(q);
+    }
+    return true;
+  });
   const filteredCmds = CMD_ITEMS.filter(item =>
     !cmdQuery || item.name.toLowerCase().includes(cmdQuery.toLowerCase()) || item.desc.toLowerCase().includes(cmdQuery.toLowerCase())
   );
@@ -559,10 +705,17 @@ export default function Dashboard() {
                   </div>
                 ) : (
                   <div className="dash-empty">
-                    <div className="dash-empty-icon">🤖</div>
-                    <h4>No agents yet</h4>
-                    <p>Install the SDK to register your first agent automatically</p>
-                    <code className="dash-empty-cmd">npm install stoic-agentos-sdk</code>
+                    <div className="dash-empty-icon">🚀</div>
+                    <h4>Quick Start</h4>
+                    <p>Get started in seconds — seed sample data or register your first agent manually.</p>
+                    <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
+                      <button className="btn btn-primary btn-sm" onClick={handleSeedDemo} disabled={seedLoading}>
+                        {seedLoading ? 'Seeding...' : '⚡ Seed Demo Data'}
+                      </button>
+                      <button className="btn btn-ghost btn-sm" onClick={() => setShowAgentModal(true)}>
+                        + Register Agent
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -596,7 +749,10 @@ export default function Dashboard() {
                   <div className="dash-empty">
                     <div className="dash-empty-icon">📝</div>
                     <h4>No activity yet</h4>
-                    <p>Capture your first observation below</p>
+                    <p>Use the Quick Capture bar below, or seed demo data to see how observations work.</p>
+                    <button className="btn btn-primary btn-sm" style={{ marginTop: 8 }} onClick={handleSeedDemo} disabled={seedLoading}>
+                      {seedLoading ? 'Seeding...' : '⚡ Seed Demo Data'}
+                    </button>
                   </div>
                 )}
               </div>
@@ -623,7 +779,7 @@ export default function Dashboard() {
                 </select>
                 <input
                   type="text"
-                  placeholder="What happened? Document an agent decision, error, or insight..."
+                  placeholder={CAPTURE_HINTS[placeholderIdx]}
                   value={captureForm.title}
                   onChange={e => setCaptureForm({ ...captureForm, title: e.target.value })}
                   className="dash-capture-input"
@@ -637,19 +793,22 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* ── Agents Tab ── */}
         {activeTab === 'agents' && (
           <div className="dash-content">
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 14 }}>
+              <button className="btn btn-primary btn-sm" onClick={() => setShowAgentModal(true)}>+ Register Agent</button>
+            </div>
             {agents.length > 0 ? (
               <div className="dash-agent-grid">
                 {agents.map(agent => (
-                  <div key={agent.id} className="dash-agent-card">
+                  <div key={agent.id} className="dash-agent-card" onClick={() => setSelectedAgent(agent)} style={{ cursor: 'pointer' }}>
                     <div className="dash-agent-card-top">
                       <span className="dash-agent-card-name">{agent.name}</span>
                       <span className={`dash-agent-status-badge ${agent.status || 'idle'}`}>
                         {agent.status || 'idle'}
                       </span>
                     </div>
+                    {agent.description && <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', margin: '6px 0 8px', lineHeight: 1.4 }}>{agent.description}</div>}
                     <div className="dash-agent-card-stats">
                       <div className="dash-agent-stat">
                         <span className="dash-agent-stat-val">{agent.total_runs || 0}</span>
@@ -678,8 +837,11 @@ export default function Dashboard() {
                 <div className="dash-empty" style={{ padding: 60 }}>
                   <div className="dash-empty-icon">🤖</div>
                   <h4>Register your first agent</h4>
-                  <p>Wrap your AI agents with the SDK and they will appear here automatically with live status tracking.</p>
-                  <code className="dash-empty-cmd">npm install stoic-agentos-sdk</code>
+                  <p>Create agents manually or use the SDK to auto-register them.</p>
+                  <div style={{ display: 'flex', gap: 8, marginTop: 12, justifyContent: 'center' }}>
+                    <button className="btn btn-primary btn-sm" onClick={() => setShowAgentModal(true)}>+ Register Agent</button>
+                    <button className="btn btn-ghost btn-sm" onClick={handleSeedDemo} disabled={seedLoading}>{seedLoading ? '...' : '⚡ Seed Demo'}</button>
+                  </div>
                 </div>
               </div>
             )}
@@ -703,18 +865,18 @@ export default function Dashboard() {
                   </div>
                 </div>
               ))}
-              <button className="dash-ws-card dash-ws-add">
+              <button className="dash-ws-card dash-ws-add" onClick={() => setShowWsModal(true)}>
                 <span className="dash-ws-add-icon">+</span>
                 <span>Add Workspace</span>
               </button>
             </div>
             {workspaces.length === 0 && (
               <div className="dash-panel" style={{ marginTop: 14 }}>
-                <div className="dash-empty" style={{ padding: 60 }}>
+              <div className="dash-empty" style={{ padding: 60 }}>
                   <div className="dash-empty-icon">📦</div>
                   <h4>No workspaces connected</h4>
-                  <p>Workspaces are auto-created when you use the SDK or git hooks in a project directory.</p>
-                  <code className="dash-empty-cmd">npx stoic-agentos-sdk init</code>
+                  <p>Add a workspace manually or use the SDK to auto-create them.</p>
+                  <button className="btn btn-primary btn-sm" style={{ marginTop: 10 }} onClick={() => setShowWsModal(true)}>+ Add Workspace</button>
                 </div>
               </div>
             )}
@@ -725,33 +887,50 @@ export default function Dashboard() {
         {activeTab === 'brain' && (
           <div className="dash-content">
             <div className="dash-panel">
+              {/* Search bar */}
+              <div style={{ marginBottom: 12 }}>
+                <input
+                  type="text" placeholder="Search observations..."
+                  value={obsSearch} onChange={e => setObsSearch(e.target.value)}
+                  style={{ width: '100%', padding: '10px 14px', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)', borderRadius: 8, color: '#fff', fontSize: 13, outline: 'none', fontFamily: 'var(--font-body)' }}
+                />
+              </div>
+              {/* Filter pills with counts */}
               <div className="dash-filter-bar">
-                {BRAIN_FILTERS.map(f => (
-                  <button
-                    key={f}
-                    className={`dash-filter-pill${brainFilter === f ? ' active' : ''}`}
-                    onClick={() => setBrainFilter(f)}
-                  >
-                    {f === 'all' ? 'All' : f.replace('_', ' ')}
-                  </button>
-                ))}
+                {BRAIN_FILTERS.map(f => {
+                  const count = f === 'all' ? observations.length : observations.filter(o => o.type === f).length;
+                  return (
+                    <button key={f} className={`dash-filter-pill${brainFilter === f ? ' active' : ''}`} onClick={() => setBrainFilter(f)}>
+                      {f === 'all' ? 'All' : f.replace('_', ' ')} {count > 0 && <span style={{ marginLeft: 4, opacity: 0.5 }}>({count})</span>}
+                    </button>
+                  );
+                })}
               </div>
 
               {filteredObs.length > 0 ? (
                 <div className="dash-obs-list">
                   {filteredObs.map(obs => (
-                    <div key={obs.id} className="dash-obs-row">
+                    <div key={obs.id} className={`dash-obs-row${expandedObs === obs.id ? ' expanded' : ''}`} onClick={() => setExpandedObs(expandedObs === obs.id ? null : obs.id)} style={{ cursor: 'pointer' }}>
                       <div className={`dash-obs-icon-wrap ${obs.type || 'note'}`}>
                         {TYPE_ICONS[obs.type] || '📌'}
                       </div>
-                      <div className="dash-obs-body">
+                      <div className="dash-obs-body" style={{ flex: 1 }}>
                         <div className="dash-obs-title">{obs.title}</div>
-                        {obs.content && <div className="dash-obs-content">{obs.content}</div>}
+                        {expandedObs === obs.id && obs.content && (
+                          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', margin: '8px 0', padding: '10px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: 6, lineHeight: 1.6, borderLeft: '2px solid var(--accent-purple)' }}>
+                            {obs.content}
+                          </div>
+                        )}
                         <div className="dash-obs-meta">
                           <span className={`dash-obs-type ${obs.type || 'note'}`}>{obs.type || 'note'}</span>
                           <span className="dash-obs-time">{new Date(obs.created_at).toLocaleString()}</span>
                         </div>
                       </div>
+                      {expandedObs === obs.id && (
+                        <button onClick={(e) => { e.stopPropagation(); handleDeleteObs(obs.id); }} style={{ background: 'rgba(255,71,87,0.1)', border: '1px solid rgba(255,71,87,0.3)', color: '#ff4757', padding: '4px 10px', borderRadius: 6, fontSize: 11, cursor: 'pointer', marginLeft: 8, whiteSpace: 'nowrap' }}>
+                          Delete
+                        </button>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -759,7 +938,35 @@ export default function Dashboard() {
                 <div className="dash-empty" style={{ padding: 60 }}>
                   <div className="dash-empty-icon">🧠</div>
                   <h4>{brainFilter !== 'all' ? `No "${brainFilter}" observations` : 'Knowledge brain is empty'}</h4>
-                  <p>Observations from your agents, git hooks, and captures will appear here.</p>
+                  <p>Capture observations or seed demo data to get started.</p>
+                  <button className="btn btn-primary btn-sm" style={{ marginTop: 8 }} onClick={handleSeedDemo} disabled={seedLoading}>{seedLoading ? '...' : '⚡ Seed Demo Data'}</button>
+                </div>
+              )}
+            </div>
+
+            {/* Knowledge Items section */}
+            <div className="dash-panel" style={{ marginTop: 14 }}>
+              <div className="dash-panel-head">
+                <span className="dash-panel-title">
+                  <span className="dash-panel-title-icon">💡</span>
+                  Knowledge Items
+                  {knowledgeItems.length > 0 && <span style={{ marginLeft: 6, fontSize: 12, opacity: 0.4 }}>({knowledgeItems.length})</span>}
+                </span>
+              </div>
+              {knowledgeItems.length > 0 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {knowledgeItems.map(ki => (
+                    <div key={ki.id} style={{ padding: '14px 16px', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)', borderRadius: 10 }}>
+                      <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>{ki.title || ki.key}</div>
+                      {ki.content && <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', lineHeight: 1.5 }}>{ki.content.substring(0, 200)}{ki.content.length > 200 ? '...' : ''}</div>}
+                      <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.2)', marginTop: 6 }}>{new Date(ki.created_at).toLocaleDateString()}</div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="dash-empty">
+                  <div className="dash-empty-icon">💡</div>
+                  <p>Knowledge items from your agents will appear here. Use the SDK to persist decisions and discoveries.</p>
                 </div>
               )}
             </div>
@@ -929,6 +1136,77 @@ export default function Dashboard() {
       />
 
       <ToastContainer toasts={toasts} />
+
+      {/* ── Register Agent Modal ── */}
+      {showAgentModal && (
+        <div className="cmd-backdrop" onClick={() => setShowAgentModal(false)}>
+          <div className="cmd-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 440, padding: 28 }}>
+            <h3 style={{ fontSize: 18, fontWeight: 800, marginBottom: 16 }}>Register Agent</h3>
+            <form onSubmit={handleRegisterAgent} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <input placeholder="Agent name (e.g. content-writer)" required value={agentForm.name} onChange={e => setAgentForm({...agentForm, name: e.target.value})} style={{ padding: '10px 14px', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)', borderRadius: 8, color: '#fff', fontSize: 13, outline: 'none' }} />
+              <input placeholder="Module (e.g. engineering, content, analytics)" value={agentForm.module} onChange={e => setAgentForm({...agentForm, module: e.target.value})} style={{ padding: '10px 14px', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)', borderRadius: 8, color: '#fff', fontSize: 13, outline: 'none' }} />
+              <textarea placeholder="Description (optional)" value={agentForm.description} onChange={e => setAgentForm({...agentForm, description: e.target.value})} rows={3} style={{ padding: '10px 14px', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)', borderRadius: 8, color: '#fff', fontSize: 13, outline: 'none', resize: 'vertical', fontFamily: 'var(--font-body)' }} />
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                <button type="button" className="btn btn-ghost btn-sm" onClick={() => setShowAgentModal(false)}>Cancel</button>
+                <button type="submit" className="btn btn-primary btn-sm">Register Agent</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── Add Workspace Modal ── */}
+      {showWsModal && (
+        <div className="cmd-backdrop" onClick={() => setShowWsModal(false)}>
+          <div className="cmd-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 440, padding: 28 }}>
+            <h3 style={{ fontSize: 18, fontWeight: 800, marginBottom: 16 }}>Add Workspace</h3>
+            <form onSubmit={handleAddWorkspace} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <input placeholder="Workspace name (e.g. stoic-agentos)" required value={wsForm.name} onChange={e => setWsForm({...wsForm, name: e.target.value})} style={{ padding: '10px 14px', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)', borderRadius: 8, color: '#fff', fontSize: 13, outline: 'none' }} />
+              <input placeholder="Branch (default: main)" value={wsForm.branch} onChange={e => setWsForm({...wsForm, branch: e.target.value})} style={{ padding: '10px 14px', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)', borderRadius: 8, color: '#fff', fontSize: 13, outline: 'none' }} />
+              <input placeholder="Stack (e.g. React, Python, Node.js)" value={wsForm.stack} onChange={e => setWsForm({...wsForm, stack: e.target.value})} style={{ padding: '10px 14px', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)', borderRadius: 8, color: '#fff', fontSize: 13, outline: 'none' }} />
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                <button type="button" className="btn btn-ghost btn-sm" onClick={() => setShowWsModal(false)}>Cancel</button>
+                <button type="submit" className="btn btn-primary btn-sm">Add Workspace</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── Agent Detail Modal ── */}
+      {selectedAgent && (
+        <div className="cmd-backdrop" onClick={() => setSelectedAgent(null)}>
+          <div className="cmd-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 500, padding: 28 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+              <div style={{ width: 40, height: 40, borderRadius: 10, background: 'rgba(155,89,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>🤖</div>
+              <div>
+                <div style={{ fontSize: 18, fontWeight: 800 }}>{selectedAgent.name}</div>
+                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>{selectedAgent.module || 'No module'}</div>
+              </div>
+              <span className={`dash-agent-status-badge ${selectedAgent.status || 'idle'}`} style={{ marginLeft: 'auto' }}>{selectedAgent.status || 'idle'}</span>
+            </div>
+            {selectedAgent.description && <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', marginBottom: 16, lineHeight: 1.5 }}>{selectedAgent.description}</div>}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 16 }}>
+              <div style={{ padding: 14, background: 'rgba(255,255,255,0.03)', borderRadius: 10, textAlign: 'center', border: '1px solid var(--border)' }}>
+                <div style={{ fontSize: 22, fontWeight: 900, color: 'var(--accent-cyan)' }}>{selectedAgent.total_runs || 0}</div>
+                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase' }}>Runs</div>
+              </div>
+              <div style={{ padding: 14, background: 'rgba(255,255,255,0.03)', borderRadius: 10, textAlign: 'center', border: '1px solid var(--border)' }}>
+                <div style={{ fontSize: 22, fontWeight: 900, color: (selectedAgent.total_errors || 0) > 0 ? '#ff4757' : 'var(--accent-green)' }}>{selectedAgent.total_errors || 0}</div>
+                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase' }}>Errors</div>
+              </div>
+              <div style={{ padding: 14, background: 'rgba(255,255,255,0.03)', borderRadius: 10, textAlign: 'center', border: '1px solid var(--border)' }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--accent-purple)' }}>{selectedAgent.last_heartbeat ? new Date(selectedAgent.last_heartbeat).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—'}</div>
+                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase' }}>Last Heartbeat</div>
+              </div>
+            </div>
+            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.2)' }}>ID: {selectedAgent.id}</div>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 16 }}>
+              <button className="btn btn-ghost btn-sm" onClick={() => setSelectedAgent(null)}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
