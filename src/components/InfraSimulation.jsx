@@ -70,7 +70,7 @@ function getTimeLabels() {
    CHART COMPONENT — Railway-accurate
    ═══════════════════════════════════════════ */
 
-function MonitorChart({ title, yLabels, series, timeLabels, thresholdY, thresholdLabel }) {
+function MonitorChart({ title, yLabels, series, timeLabels, thresholdY }) {
   const chartW = 400, chartH = 160;
   const padL = 48, padR = 8, padT = 8, padB = 24;
   const innerW = chartW - padL - padR;
@@ -78,33 +78,68 @@ function MonitorChart({ title, yLabels, series, timeLabels, thresholdY, threshol
   const yMax = parseFloat(yLabels[0]);
   const yMin = parseFloat(yLabels[yLabels.length - 1]) || 0;
   const yRange = yMax - yMin || 1;
+  const uid = title.replace(/\s/g, '');
 
-  function toPath(data, stepped = true) {
-    return data.map((v, i) => {
-      const x = padL + (i / (data.length - 1)) * innerW;
-      const y = padT + (1 - (v - yMin) / yRange) * innerH;
-      if (i === 0) return `M${x},${y}`;
-      if (stepped) {
-        const prevX = padL + ((i - 1) / (data.length - 1)) * innerW;
-        const prevY = padT + (1 - (data[i - 1] - yMin) / yRange) * innerH;
-        return `H${x}V${y}`;
-      }
-      return `L${x},${y}`;
-    }).join('');
+  // Convert data value to SVG coordinates
+  function pt(data, i) {
+    return {
+      x: padL + (i / (data.length - 1)) * innerW,
+      y: padT + (1 - (data[i] - yMin) / yRange) * innerH,
+    };
   }
 
-  function toFill(data) {
-    const path = toPath(data);
-    const lastX = padL + innerW;
-    const firstX = padL;
+  // Smooth cubic bezier path — Catmull-Rom → Cubic Bezier conversion
+  function toSmoothPath(data) {
+    if (data.length < 2) return '';
+    const points = data.map((_, i) => pt(data, i));
+    const tension = 0.3;
+    let d = `M${points[0].x},${points[0].y}`;
+    for (let i = 0; i < points.length - 1; i++) {
+      const p0 = points[Math.max(0, i - 1)];
+      const p1 = points[i];
+      const p2 = points[i + 1];
+      const p3 = points[Math.min(points.length - 1, i + 2)];
+      const cp1x = p1.x + (p2.x - p0.x) * tension;
+      const cp1y = p1.y + (p2.y - p0.y) * tension;
+      const cp2x = p2.x - (p3.x - p1.x) * tension;
+      const cp2y = p2.y - (p3.y - p1.y) * tension;
+      d += ` C${cp1x},${cp1y} ${cp2x},${cp2y} ${p2.x},${p2.y}`;
+    }
+    return d;
+  }
+
+  // Smooth fill area
+  function toSmoothFill(data) {
+    const path = toSmoothPath(data);
+    const lastPt = pt(data, data.length - 1);
+    const firstPt = pt(data, 0);
     const bottom = padT + innerH;
-    return `${path}L${lastX},${bottom}L${firstX},${bottom}Z`;
+    return `${path} L${lastPt.x},${bottom} L${firstPt.x},${bottom} Z`;
   }
 
   return (
     <div className="mon-card">
       <div className="mon-title">{title}</div>
       <svg viewBox={`0 0 ${chartW} ${chartH}`} className="mon-svg">
+        <defs>
+          {/* Glow filter for lines */}
+          <filter id={`glow-${uid}`} x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="2" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+          {/* Gradient fills per series */}
+          {series.map((s, si) => (
+            <linearGradient key={si} id={`mg-${si}-${uid}`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={s.color} stopOpacity="0.3" />
+              <stop offset="50%" stopColor={s.color} stopOpacity="0.08" />
+              <stop offset="100%" stopColor={s.color} stopOpacity="0" />
+            </linearGradient>
+          ))}
+        </defs>
+
         {/* Y-axis grid lines (dotted) */}
         {yLabels.map((label, i) => {
           const y = padT + (i / (yLabels.length - 1)) * innerH;
@@ -125,23 +160,36 @@ function MonitorChart({ title, yLabels, series, timeLabels, thresholdY, threshol
           const y = padT + (1 - (thresholdY - yMin) / yRange) * innerH;
           return (
             <line x1={padL} y1={y} x2={chartW - padR} y2={y}
-              stroke="rgba(255,200,50,0.35)" strokeWidth="1" strokeDasharray="6 3" />
+              stroke="rgba(255,200,50,0.4)" strokeWidth="1" strokeDasharray="6 3" />
           );
         })()}
 
-        {/* Data series */}
-        {series.map((s, si) => (
-          <g key={si}>
-            <defs>
-              <linearGradient id={`mg-${si}-${title.replace(/\s/g,'')}`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={s.color} stopOpacity="0.25" />
-                <stop offset="100%" stopColor={s.color} stopOpacity="0" />
-              </linearGradient>
-            </defs>
-            {s.fill && <path d={toFill(s.data)} fill={`url(#mg-${si}-${title.replace(/\s/g,'')})`} />}
-            <path d={toPath(s.data)} fill="none" stroke={s.color} strokeWidth="1.2" />
-          </g>
-        ))}
+        {/* Data series — smooth curves with glow */}
+        {series.map((s, si) => {
+          const lastPt = pt(s.data, s.data.length - 1);
+          return (
+            <g key={si}>
+              {/* Gradient fill */}
+              {s.fill && <path d={toSmoothFill(s.data)} fill={`url(#mg-${si}-${uid})`} />}
+              {/* Glow layer (subtle) */}
+              <path d={toSmoothPath(s.data)} fill="none" stroke={s.color} strokeWidth="3"
+                strokeOpacity="0.15" strokeLinecap="round" strokeLinejoin="round" />
+              {/* Main line */}
+              <path d={toSmoothPath(s.data)} fill="none" stroke={s.color} strokeWidth="1.5"
+                strokeLinecap="round" strokeLinejoin="round" filter={`url(#glow-${uid})`} />
+              {/* Animated endpoint dot */}
+              <circle cx={lastPt.x} cy={lastPt.y} r="2.5" fill={s.color}>
+                <animate attributeName="r" values="2.5;3.5;2.5" dur="2s" repeatCount="indefinite" />
+                <animate attributeName="opacity" values="1;0.5;1" dur="2s" repeatCount="indefinite" />
+              </circle>
+              {/* Outer glow ring on endpoint */}
+              <circle cx={lastPt.x} cy={lastPt.y} r="5" fill="none" stroke={s.color} strokeWidth="0.5" opacity="0.3">
+                <animate attributeName="r" values="5;8;5" dur="2s" repeatCount="indefinite" />
+                <animate attributeName="opacity" values="0.3;0;0.3" dur="2s" repeatCount="indefinite" />
+              </circle>
+            </g>
+          );
+        })}
 
         {/* X-axis time labels */}
         {timeLabels.map((label, i) => {
