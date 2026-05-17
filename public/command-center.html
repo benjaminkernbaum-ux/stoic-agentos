@@ -1,0 +1,4125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⚡ BENJAMIN COMMAND CENTER</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-primary: #0a0a0f;
+  --bg-secondary: #12121a;
+  --bg-card: #16161f;
+  --bg-card-hover: #1c1c28;
+  --border: #1e1e2e;
+  --border-glow: #2a2a3e;
+  --text-primary: #e8e8f0;
+  --text-secondary: #8888a0;
+  --text-dim: #555570;
+  --accent-blue: #4d7cff;
+  --accent-cyan: #00d4ff;
+  --accent-purple: #9b59ff;
+  --accent-green: #00e68a;
+  --accent-orange: #ff9f43;
+  --accent-red: #ff4757;
+  --accent-pink: #ff6b9d;
+  --accent-gold: #ffd700;
+  --gradient-hero: linear-gradient(135deg, #4d7cff 0%, #9b59ff 50%, #ff6b9d 100%);
+  --gradient-card: linear-gradient(145deg, #16161f 0%, #1a1a25 100%);
+  --glass: rgba(22, 22, 31, 0.8);
+  --glass-border: rgba(255, 255, 255, 0.06);
+  --shadow-glow: 0 0 30px rgba(77, 124, 255, 0.15);
+  --radius: 16px;
+  --radius-sm: 10px;
+  /* Obsidian-inspired palette */
+  --ob-purple: #7c3aed;
+  --ob-violet: #a855f7;
+  --ob-indigo: #6366f1;
+  --ob-surface: #13131d;
+  --ob-surface2: #1a1a28;
+  --ob-surface3: #222233;
+  --ob-glow: rgba(124, 58, 237, 0.25);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Inter', -apple-system, sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Animated Background */
+body::before {
+  content: '';
+  position: fixed;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(ellipse at 20% 50%, rgba(77, 124, 255, 0.08) 0%, transparent 50%),
+              radial-gradient(ellipse at 80% 20%, rgba(155, 89, 255, 0.06) 0%, transparent 50%),
+              radial-gradient(ellipse at 50% 80%, rgba(0, 212, 255, 0.04) 0%, transparent 50%);
+  animation: bgFloat 20s ease-in-out infinite;
+  z-index: 0;
+  pointer-events: none;
+}
+
+@keyframes bgFloat {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  33% { transform: translate(2%, -1%) rotate(1deg); }
+  66% { transform: translate(-1%, 2%) rotate(-1deg); }
+}
+
+/* ═══ HEADER ═══ */
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  backdrop-filter: blur(20px);
+  background: rgba(10, 10, 15, 0.85);
+  border-bottom: 1px solid var(--glass-border);
+  padding: 14px 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.logo-icon {
+  width: 42px;
+  height: 42px;
+  background: var(--gradient-hero);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  font-weight: 800;
+  box-shadow: 0 4px 20px rgba(77, 124, 255, 0.3);
+  animation: logoPulse 3s ease-in-out infinite;
+}
+
+@keyframes logoPulse {
+  0%, 100% { box-shadow: 0 4px 20px rgba(77, 124, 255, 0.3); }
+  50% { box-shadow: 0 4px 30px rgba(77, 124, 255, 0.5); }
+}
+
+.header-title {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  background: var(--gradient-hero);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.header-sub {
+  font-size: 11px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  font-weight: 500;
+}
+
+.header-right {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.header-stat {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.header-stat .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.dot.green { background: var(--accent-green); box-shadow: 0 0 8px var(--accent-green); }
+.dot.blue { background: var(--accent-blue); box-shadow: 0 0 8px var(--accent-blue); }
+.dot.gold { background: var(--accent-gold); box-shadow: 0 0 8px var(--accent-gold); }
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.time-display {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  color: var(--text-secondary);
+  padding: 6px 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+}
+
+/* ═══ NAV TABS ═══ */
+.nav-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 8px 32px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+  position: relative;
+  z-index: 50;
+}
+
+.nav-tab {
+  padding: 10px 20px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.25s;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+
+.nav-tab:hover {
+  color: var(--text-primary);
+  background: var(--bg-card);
+}
+
+.nav-tab.active {
+  color: var(--accent-blue);
+  background: rgba(77, 124, 255, 0.1);
+  border-color: rgba(77, 124, 255, 0.2);
+}
+
+.nav-tab.brain-tab.active {
+  color: var(--ob-violet);
+  background: rgba(168, 85, 247, 0.1);
+  border-color: rgba(168, 85, 247, 0.25);
+  box-shadow: 0 0 20px rgba(124, 58, 237, 0.15);
+}
+
+.nav-tab.fetok-tab.active {
+  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.1);
+  border-color: rgba(251, 191, 36, 0.25);
+  box-shadow: 0 0 20px rgba(217, 119, 6, 0.15);
+}
+
+/* FéTok Section */
+.fetok-hero {
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.12) 0%, rgba(217, 119, 6, 0.08) 50%, rgba(245, 158, 11, 0.12) 100%);
+  border: 1px solid rgba(251, 191, 36, 0.2);
+  border-radius: var(--radius);
+  padding: 28px 32px;
+  margin-bottom: 24px;
+  position: relative;
+  overflow: hidden;
+}
+
+.fetok-hero::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #fbbf24, #f59e0b, #d97706, #f59e0b, #fbbf24);
+  background-size: 200% 100%;
+  animation: brainShimmer 4s linear infinite;
+}
+
+.fetok-hero-inner { display: flex; align-items: center; justify-content: space-between; }
+.fetok-hero-left { display: flex; align-items: center; gap: 20px; }
+
+.fetok-logo {
+  width: 64px; height: 64px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 32px;
+  box-shadow: 0 8px 32px rgba(251, 191, 36, 0.25);
+  animation: brainPulse 3s ease-in-out infinite;
+}
+
+.fetok-hero-title {
+  font-size: 24px; font-weight: 800; letter-spacing: -0.5px;
+  background: linear-gradient(135deg, #fde68a 0%, #fbbf24 50%, #d97706 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+
+.fetok-hero-sub { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
+
+.fetok-stats-row { display: flex; gap: 16px; }
+.fetok-stat {
+  text-align: center; padding: 8px 18px;
+  background: rgba(251, 191, 36, 0.08);
+  border: 1px solid rgba(251, 191, 36, 0.15);
+  border-radius: 12px; min-width: 90px;
+}
+.fetok-stat-value { font-size: 24px; font-weight: 800; font-family: 'JetBrains Mono', monospace; color: #fbbf24; }
+.fetok-stat-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: var(--text-dim); margin-top: 2px; }
+
+.fetok-roteiro-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 14px;
+  margin-bottom: 24px;
+}
+
+.fetok-card {
+  background: var(--gradient-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px;
+  transition: all 0.3s;
+  position: relative;
+  overflow: hidden;
+}
+
+.fetok-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #fbbf24, #d97706);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.fetok-card:hover {
+  border-color: rgba(251, 191, 36, 0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 40px rgba(251, 191, 36, 0.08);
+}
+
+.fetok-card:hover::before { opacity: 1; }
+
+.fetok-card-head { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+.fetok-card-emoji { font-size: 28px; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; background: rgba(251, 191, 36, 0.08); border-radius: 12px; }
+.fetok-card-title { font-size: 14px; font-weight: 700; color: #f3f0ff; }
+.fetok-card-verse { font-size: 11px; color: #d97706; font-weight: 600; margin-top: 2px; }
+.fetok-card-hook { font-size: 12px; color: #c4b5fd; line-height: 1.5; font-style: italic; border-left: 3px solid rgba(251, 191, 36, 0.3); padding-left: 10px; margin-bottom: 10px; }
+.fetok-card-foot { display: flex; justify-content: space-between; align-items: center; }
+.fetok-shots-badge { font-size: 11px; color: var(--text-dim); background: rgba(255,255,255,0.04); padding: 3px 10px; border-radius: 12px; }
+.fetok-status { font-size: 11px; padding: 3px 10px; border-radius: 12px; font-weight: 600; background: rgba(16,185,129,0.15); color: #34d399; }
+
+/* ═══ MAIN CONTENT ═══ */
+.main {
+  position: relative;
+  z-index: 1;
+  padding: 24px 32px;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+.section { display: none; }
+.section.active { display: block; }
+
+/* ═══ HERO STATS ═══ */
+.hero-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.hero-card {
+  background: var(--gradient-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  transition: all 0.3s;
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  border-radius: var(--radius) var(--radius) 0 0;
+}
+
+.hero-card:nth-child(1)::before { background: var(--accent-blue); }
+.hero-card:nth-child(2)::before { background: var(--accent-green); }
+.hero-card:nth-child(3)::before { background: var(--accent-purple); }
+.hero-card:nth-child(4)::before { background: var(--accent-orange); }
+.hero-card:nth-child(5)::before { background: var(--accent-cyan); }
+
+.hero-card:hover {
+  border-color: var(--border-glow);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-glow);
+}
+
+.hero-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-dim);
+  margin-bottom: 8px;
+}
+
+.hero-value {
+  font-size: 36px;
+  font-weight: 800;
+  letter-spacing: -1px;
+  line-height: 1;
+}
+
+.hero-value.blue { color: var(--accent-blue); }
+.hero-value.green { color: var(--accent-green); }
+.hero-value.purple { color: var(--accent-purple); }
+.hero-value.orange { color: var(--accent-orange); }
+.hero-value.cyan { color: var(--accent-cyan); }
+
+.hero-detail {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 6px;
+}
+
+/* ═══ CARDS GRID ═══ */
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.card {
+  background: var(--gradient-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  transition: all 0.3s;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.card:hover {
+  border-color: var(--border-glow);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-glow);
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.card-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  flex-shrink: 0;
+}
+
+.card-title {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+}
+
+.card-subtitle {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+
+.card-body {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.card-tags {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.tag {
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.tag.live { background: rgba(0, 230, 138, 0.15); color: var(--accent-green); border: 1px solid rgba(0, 230, 138, 0.2); }
+.tag.deployed { background: rgba(77, 124, 255, 0.15); color: var(--accent-blue); border: 1px solid rgba(77, 124, 255, 0.2); }
+.tag.pending { background: rgba(255, 159, 67, 0.15); color: var(--accent-orange); border: 1px solid rgba(255, 159, 67, 0.2); }
+.tag.planned { background: rgba(85, 85, 112, 0.15); color: var(--text-dim); border: 1px solid rgba(85, 85, 112, 0.2); }
+.tag.python { background: rgba(0, 212, 255, 0.1); color: var(--accent-cyan); border: 1px solid rgba(0, 212, 255, 0.15); }
+.tag.react { background: rgba(155, 89, 255, 0.1); color: var(--accent-purple); border: 1px solid rgba(155, 89, 255, 0.15); }
+.tag.node { background: rgba(0, 230, 138, 0.1); color: var(--accent-green); border: 1px solid rgba(0, 230, 138, 0.15); }
+.tag.mql5 { background: rgba(255, 215, 0, 0.1); color: var(--accent-gold); border: 1px solid rgba(255, 215, 0, 0.15); }
+
+/* ═══ SECTION TITLES ═══ */
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.section-title {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.section-badge {
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  background: rgba(77, 124, 255, 0.12);
+  color: var(--accent-blue);
+}
+
+/* ═══ WORKSPACE TABLE ═══ */
+.ws-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 4px;
+  margin-bottom: 28px;
+}
+
+.ws-table th {
+  text-align: left;
+  padding: 10px 16px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--text-dim);
+}
+
+.ws-table td {
+  padding: 14px 16px;
+  background: var(--bg-card);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  transition: all 0.2s;
+}
+
+.ws-table tr:hover td {
+  background: var(--bg-card-hover);
+}
+
+.ws-table td:first-child {
+  border-left: 1px solid var(--border);
+  border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+}
+
+.ws-table td:last-child {
+  border-right: 1px solid var(--border);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+
+.ws-icon {
+  font-size: 18px;
+  margin-right: 8px;
+}
+
+.ws-path {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+/* ═══ PLATFORM CARDS ═══ */
+.platform-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 14px;
+  margin-bottom: 28px;
+}
+
+.platform-card {
+  background: var(--gradient-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  transition: all 0.3s;
+  cursor: pointer;
+}
+
+.platform-card:hover {
+  border-color: var(--border-glow);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-glow);
+}
+
+.platform-logo {
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.platform-name {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.platform-role {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+
+/* ═══ IFRAME EMBED ═══ */
+.embed-frame {
+  width: 100%;
+  height: 75vh;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-card);
+  overflow: hidden;
+}
+
+.embed-frame iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+.embed-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius) var(--radius) 0 0;
+  margin-bottom: -1px;
+}
+
+.embed-url {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--text-dim);
+  padding: 4px 12px;
+  background: var(--bg-primary);
+  border-radius: 6px;
+  border: 1px solid var(--border);
+}
+
+.embed-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.embed-btn {
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid var(--border);
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.embed-btn:hover {
+  background: var(--bg-card-hover);
+  color: var(--text-primary);
+  border-color: var(--accent-blue);
+}
+
+/* ═══ AGENT GRID ═══ */
+.agent-dept {
+  margin-bottom: 28px;
+}
+
+.dept-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dept-title::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.agent-mini {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  transition: all 0.2s;
+  font-size: 13px;
+}
+
+.agent-mini:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--border-glow);
+}
+
+.agent-id {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent-cyan);
+  min-width: 85px;
+}
+
+.agent-name {
+  font-weight: 500;
+  flex: 1;
+}
+
+.agent-trigger {
+  font-size: 11px;
+  color: var(--text-dim);
+  text-align: right;
+}
+
+.agents-list {
+  display: grid;
+  gap: 6px;
+}
+
+/* ═══ DEPENDENCY MAP ═══ */
+.dep-map {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin-bottom: 28px;
+}
+
+.dep-map canvas {
+  width: 100%;
+  height: 400px;
+}
+
+.dep-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.dep-row:last-child { border: none; }
+
+.dep-source {
+  font-weight: 600;
+  font-size: 13px;
+  min-width: 140px;
+  color: var(--accent-blue);
+}
+
+.dep-arrow {
+  color: var(--text-dim);
+  font-size: 16px;
+}
+
+.dep-target {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.dep-label {
+  font-size: 10px;
+  color: var(--text-dim);
+  font-style: italic;
+  margin-left: auto;
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   ═══ OBSIDIAN KNOWLEDGE BRAIN ═══
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* Brain Header */
+.brain-hero {
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.12) 0%, rgba(99, 102, 241, 0.08) 50%, rgba(168, 85, 247, 0.12) 100%);
+  border: 1px solid rgba(124, 58, 237, 0.2);
+  border-radius: var(--radius);
+  padding: 28px 32px;
+  margin-bottom: 24px;
+  position: relative;
+  overflow: hidden;
+}
+
+.brain-hero::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--ob-purple), var(--ob-violet), var(--ob-indigo), var(--ob-violet), var(--ob-purple));
+  background-size: 200% 100%;
+  animation: brainShimmer 4s linear infinite;
+}
+
+@keyframes brainShimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.brain-hero-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.brain-hero-left {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.brain-logo {
+  width: 64px;
+  height: 64px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, var(--ob-purple) 0%, var(--ob-violet) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  box-shadow: 0 8px 32px var(--ob-glow);
+  animation: brainPulse 3s ease-in-out infinite;
+}
+
+@keyframes brainPulse {
+  0%, 100% { box-shadow: 0 8px 32px var(--ob-glow); transform: scale(1); }
+  50% { box-shadow: 0 12px 48px rgba(124, 58, 237, 0.4); transform: scale(1.03); }
+}
+
+.brain-hero-title {
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  background: linear-gradient(135deg, #c4b5fd 0%, #a78bfa 50%, #8b5cf6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.brain-hero-sub {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+
+.brain-stats-row {
+  display: flex;
+  gap: 16px;
+}
+
+.brain-stat {
+  text-align: center;
+  padding: 8px 18px;
+  background: rgba(124, 58, 237, 0.08);
+  border: 1px solid rgba(124, 58, 237, 0.15);
+  border-radius: 12px;
+  min-width: 90px;
+}
+
+.brain-stat-value {
+  font-size: 24px;
+  font-weight: 800;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--ob-violet);
+}
+
+.brain-stat-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+
+/* Brain Sub-Navigation */
+.brain-nav {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 20px;
+  padding: 4px;
+  background: var(--ob-surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+
+.brain-nav-btn {
+  padding: 10px 20px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.25s;
+  border: 1px solid transparent;
+  background: transparent;
+  font-family: 'Inter', sans-serif;
+}
+
+.brain-nav-btn:hover {
+  color: var(--text-primary);
+  background: var(--ob-surface2);
+}
+
+.brain-nav-btn.active {
+  color: var(--ob-violet);
+  background: rgba(124, 58, 237, 0.12);
+  border-color: rgba(124, 58, 237, 0.25);
+  box-shadow: 0 0 16px rgba(124, 58, 237, 0.1);
+}
+
+.brain-panel { display: none; }
+.brain-panel.active { display: block; }
+
+/* ═══ GRAPH CANVAS ═══ */
+.graph-container {
+  position: relative;
+  background: var(--ob-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  height: 550px;
+}
+
+.graph-container canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+}
+
+.graph-container canvas:active {
+  cursor: grabbing;
+}
+
+.graph-controls {
+  position: absolute;
+  bottom: 16px;
+  right: 16px;
+  display: flex;
+  gap: 6px;
+  z-index: 10;
+}
+
+.graph-ctrl-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: rgba(19, 19, 29, 0.9);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  backdrop-filter: blur(12px);
+}
+
+.graph-ctrl-btn:hover {
+  background: var(--ob-surface2);
+  color: var(--ob-violet);
+  border-color: rgba(124, 58, 237, 0.3);
+}
+
+.graph-legend {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  background: rgba(19, 19, 29, 0.92);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 18px;
+  backdrop-filter: blur(12px);
+  z-index: 10;
+  max-width: 220px;
+}
+
+.graph-legend-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-dim);
+  margin-bottom: 10px;
+}
+
+.graph-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-bottom: 5px;
+}
+
+.graph-legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.graph-tooltip {
+  position: absolute;
+  padding: 10px 16px;
+  background: rgba(19, 19, 29, 0.95);
+  border: 1px solid var(--ob-purple);
+  border-radius: 10px;
+  color: var(--text-primary);
+  font-size: 12px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+  z-index: 20;
+  backdrop-filter: blur(12px);
+  max-width: 250px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+}
+
+.graph-tooltip.visible {
+  opacity: 1;
+}
+
+.graph-tooltip-title {
+  font-weight: 700;
+  font-size: 13px;
+  margin-bottom: 4px;
+  color: var(--ob-violet);
+}
+
+.graph-tooltip-meta {
+  font-size: 10px;
+  color: var(--text-dim);
+}
+
+/* ═══ VAULT BROWSER ═══ */
+.vault-layout {
+  display: grid;
+  grid-template-columns: 280px 1fr 300px;
+  gap: 16px;
+  height: 600px;
+}
+
+.vault-sidebar {
+  background: var(--ob-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.vault-search {
+  padding: 14px;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  background: var(--ob-surface);
+  z-index: 2;
+}
+
+.vault-search input {
+  width: 100%;
+  padding: 10px 14px 10px 36px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text-primary);
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.vault-search input:focus {
+  border-color: var(--ob-violet);
+  box-shadow: 0 0 0 3px var(--ob-glow);
+}
+
+.vault-search-icon {
+  position: absolute;
+  left: 26px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 14px;
+  color: var(--text-dim);
+}
+
+.vault-tree {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 0;
+}
+
+.vault-folder {
+  padding: 0 8px;
+  margin-bottom: 4px;
+}
+
+.vault-folder-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s;
+  user-select: none;
+}
+
+.vault-folder-header:hover {
+  background: var(--ob-surface2);
+  color: var(--text-primary);
+}
+
+.vault-folder-header .arrow {
+  font-size: 10px;
+  transition: transform 0.2s;
+  color: var(--text-dim);
+}
+
+.vault-folder-header .arrow.open {
+  transform: rotate(90deg);
+}
+
+.vault-folder-count {
+  margin-left: auto;
+  font-size: 10px;
+  color: var(--text-dim);
+  font-weight: 500;
+  font-family: 'JetBrains Mono', monospace;
+  background: var(--bg-primary);
+  padding: 1px 7px;
+  border-radius: 8px;
+}
+
+.vault-files {
+  padding-left: 18px;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+}
+
+.vault-file {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 7px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.vault-file:hover {
+  background: var(--ob-surface2);
+  color: var(--text-primary);
+}
+
+.vault-file.active {
+  background: rgba(124, 58, 237, 0.12);
+  color: var(--ob-violet);
+  border-left: 2px solid var(--ob-violet);
+}
+
+.vault-file-icon {
+  font-size: 13px;
+}
+
+.vault-file-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Vault Main Content */
+.vault-content {
+  background: var(--ob-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.vault-content-header {
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  background: var(--ob-surface);
+  z-index: 2;
+}
+
+.vault-content-title {
+  font-size: 18px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.vault-content-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.vault-action-btn {
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid var(--border);
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: 'Inter', sans-serif;
+}
+
+.vault-action-btn:hover {
+  border-color: var(--ob-violet);
+  color: var(--ob-violet);
+}
+
+.vault-content-body {
+  flex: 1;
+  padding: 24px;
+  font-size: 14px;
+  line-height: 1.8;
+  color: var(--text-secondary);
+}
+
+.vault-content-body h1 {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+  letter-spacing: -0.5px;
+}
+
+.vault-content-body h2 {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 24px 0 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+
+.vault-content-body h3 {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ob-violet);
+  margin: 16px 0 6px;
+}
+
+.vault-content-body code {
+  background: var(--bg-primary);
+  padding: 2px 7px;
+  border-radius: 5px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--accent-cyan);
+}
+
+.vault-content-body pre {
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+  margin: 12px 0;
+  overflow-x: auto;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+.vault-content-body .tag-inline {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  background: rgba(124, 58, 237, 0.1);
+  color: var(--ob-violet);
+  margin: 2px 4px 2px 0;
+}
+
+.vault-content-body table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 12px 0;
+  font-size: 12px;
+}
+
+.vault-content-body table th {
+  text-align: left;
+  padding: 8px 12px;
+  font-weight: 600;
+  color: var(--text-dim);
+  border-bottom: 2px solid var(--border);
+  text-transform: uppercase;
+  font-size: 10px;
+  letter-spacing: 1px;
+}
+
+.vault-content-body table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* Backlinks Panel */
+.vault-backlinks {
+  background: var(--ob-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.backlinks-header {
+  padding: 16px;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-secondary);
+  position: sticky;
+  top: 0;
+  background: var(--ob-surface);
+}
+
+.backlinks-count {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 8px;
+  background: rgba(124, 58, 237, 0.12);
+  color: var(--ob-violet);
+}
+
+.backlinks-list {
+  padding: 8px;
+  flex: 1;
+}
+
+.backlink-item {
+  padding: 10px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+  margin-bottom: 4px;
+  border: 1px solid transparent;
+}
+
+.backlink-item:hover {
+  background: var(--ob-surface2);
+  border-color: rgba(124, 58, 237, 0.15);
+}
+
+.backlink-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ob-violet);
+  margin-bottom: 3px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.backlink-snippet {
+  font-size: 11px;
+  color: var(--text-dim);
+  line-height: 1.5;
+  max-height: 40px;
+  overflow: hidden;
+}
+
+.backlink-type {
+  font-size: 9px;
+  padding: 2px 6px;
+  border-radius: 5px;
+  background: var(--bg-primary);
+  color: var(--text-dim);
+  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+/* ═══ DAILY NOTES ═══ */
+.daily-layout {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 16px;
+}
+
+.daily-timeline {
+  background: var(--ob-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0;
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+.daily-timeline-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  background: var(--ob-surface);
+  z-index: 2;
+}
+
+.daily-filter-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.daily-filter-btn {
+  padding: 4px 12px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: 'Inter', sans-serif;
+}
+
+.daily-filter-btn:hover, .daily-filter-btn.active {
+  border-color: rgba(124, 58, 237, 0.3);
+  color: var(--ob-violet);
+  background: rgba(124, 58, 237, 0.08);
+}
+
+.daily-entry {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.15s;
+  cursor: pointer;
+}
+
+.daily-entry:hover {
+  background: var(--ob-surface2);
+}
+
+.daily-entry:last-child {
+  border-bottom: none;
+}
+
+.daily-entry-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.daily-entry-title {
+  font-size: 14px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.daily-entry-time {
+  font-size: 11px;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--text-dim);
+}
+
+.daily-entry-body {
+  font-size: 12px;
+  color: var(--text-dim);
+  line-height: 1.6;
+  margin-bottom: 8px;
+}
+
+.daily-entry-tags {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.daily-entry-ws {
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-weight: 600;
+}
+
+/* Quick Capture Card */
+.quick-capture {
+  background: var(--ob-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.quick-capture-title {
+  font-size: 14px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-secondary);
+}
+
+.quick-capture select,
+.quick-capture input,
+.quick-capture textarea {
+  width: 100%;
+  padding: 10px 14px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text-primary);
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.quick-capture select:focus,
+.quick-capture input:focus,
+.quick-capture textarea:focus {
+  border-color: var(--ob-violet);
+  box-shadow: 0 0 0 3px var(--ob-glow);
+}
+
+.quick-capture textarea {
+  resize: vertical;
+  min-height: 80px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.quick-capture-submit {
+  padding: 10px 20px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  border: none;
+  background: linear-gradient(135deg, var(--ob-purple), var(--ob-violet));
+  color: white;
+  cursor: pointer;
+  transition: all 0.25s;
+  font-family: 'Inter', sans-serif;
+  box-shadow: 0 4px 16px var(--ob-glow);
+}
+
+.quick-capture-submit:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 24px rgba(124, 58, 237, 0.4);
+}
+
+/* ═══ WORKSPACE MEMORIES ═══ */
+.ws-memory-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px;
+}
+
+.ws-memory-card {
+  background: var(--ob-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px;
+  transition: all 0.25s;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.ws-memory-card:hover {
+  border-color: rgba(124, 58, 237, 0.25);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(124, 58, 237, 0.12);
+}
+
+.ws-memory-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+}
+
+.ws-memory-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.ws-memory-icon {
+  font-size: 24px;
+}
+
+.ws-memory-name {
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.ws-memory-id {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--text-dim);
+}
+
+.ws-memory-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.ws-mem-stat {
+  background: var(--bg-primary);
+  border-radius: 8px;
+  padding: 8px 10px;
+  text-align: center;
+}
+
+.ws-mem-stat-val {
+  font-size: 18px;
+  font-weight: 800;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--ob-violet);
+}
+
+.ws-mem-stat-label {
+  font-size: 9px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 2px;
+}
+
+/* Status indicator for Memory Engine connection */
+.brain-connection-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  background: var(--ob-surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 12px;
+  margin-bottom: 16px;
+}
+
+.brain-conn-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent-red);
+  animation: pulse 2s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+.brain-conn-dot.connected {
+  background: var(--accent-green);
+  box-shadow: 0 0 8px var(--accent-green);
+}
+
+.brain-conn-text {
+  color: var(--text-dim);
+}
+
+.brain-conn-action {
+  margin-left: auto;
+  padding: 4px 12px;
+  border-radius: 7px;
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: 'Inter', sans-serif;
+}
+
+.brain-conn-action:hover {
+  border-color: var(--ob-violet);
+  color: var(--ob-violet);
+}
+
+.brain-hero {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+/* ═══ COMMAND PALETTE ═══ */
+.cmd-palette-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  z-index: 9999;
+  display: none;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 15vh;
+}
+
+.cmd-palette-overlay.open {
+  display: flex;
+}
+
+.cmd-palette {
+  width: 560px;
+  max-height: 450px;
+  background: var(--ob-surface);
+  border: 1px solid rgba(124, 58, 237, 0.3);
+  border-radius: 16px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5), 0 0 40px var(--ob-glow);
+  overflow: hidden;
+  animation: paletteSlideIn 0.15s ease-out;
+}
+
+@keyframes paletteSlideIn {
+  from { opacity: 0; transform: translateY(-12px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.cmd-palette-input {
+  width: 100%;
+  padding: 16px 20px 16px 48px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-primary);
+  font-family: 'Inter', sans-serif;
+  font-size: 15px;
+  outline: none;
+}
+
+.cmd-palette-search-icon {
+  position: absolute;
+  left: 18px;
+  top: 18px;
+  font-size: 16px;
+  color: var(--ob-violet);
+}
+
+.cmd-palette-results {
+  overflow-y: auto;
+  max-height: 380px;
+  padding: 8px;
+}
+
+.cmd-result {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.12s;
+  font-size: 13px;
+}
+
+.cmd-result:hover, .cmd-result.selected {
+  background: rgba(124, 58, 237, 0.12);
+}
+
+.cmd-result-icon {
+  font-size: 18px;
+  width: 28px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.cmd-result-text {
+  flex: 1;
+  overflow: hidden;
+}
+
+.cmd-result-title {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.cmd-result-sub {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-top: 1px;
+}
+
+.cmd-result-badge {
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: var(--bg-primary);
+  color: var(--text-dim);
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.cmd-palette-hint {
+  padding: 8px 16px;
+  border-top: 1px solid var(--border);
+  font-size: 10px;
+  color: var(--text-dim);
+  display: flex;
+  gap: 16px;
+}
+
+.cmd-palette-hint kbd {
+  background: var(--bg-primary);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  border: 1px solid var(--border);
+}
+
+/* ═══ SCROLLBAR ═══ */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-glow); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
+
+/* ═══ RESPONSIVE ═══ */
+@media (max-width: 1200px) {
+  .hero-grid { grid-template-columns: repeat(3, 1fr); }
+  .vault-layout { grid-template-columns: 240px 1fr; }
+  .vault-backlinks { display: none; }
+}
+@media (max-width: 768px) {
+  .hero-grid { grid-template-columns: repeat(2, 1fr); }
+  .main { padding: 16px; }
+  .header { padding: 12px 16px; }
+  .nav-tabs { padding: 8px 16px; }
+  .vault-layout { grid-template-columns: 1fr; }
+  .vault-sidebar { display: none; }
+  .daily-layout { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══ COMMAND PALETTE ═══ -->
+<div class="cmd-palette-overlay" id="cmd-overlay" onclick="if(event.target===this)closePalette()">
+  <div class="cmd-palette" style="position:relative">
+    <span class="cmd-palette-search-icon">⚡</span>
+    <input class="cmd-palette-input" id="cmd-input" placeholder="Search brain... notes, workspaces, commands" oninput="filterPalette(this.value)" onkeydown="handlePaletteKey(event)">
+    <div class="cmd-palette-results" id="cmd-results"></div>
+    <div class="cmd-palette-hint">
+      <span><kbd>↑↓</kbd> navigate</span>
+      <span><kbd>Enter</kbd> select</span>
+      <span><kbd>Esc</kbd> close</span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ HEADER ═══ -->
+<div class="header">
+  <div class="header-left">
+    <div class="logo-icon">⚡</div>
+    <div>
+      <div class="header-title">BENJAMIN COMMAND CENTER</div>
+      <div class="header-sub">Stoic Ecosystem · 11 Workspaces · 23 Agents</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="header-stat"><div class="dot green"></div> 15 Live</div>
+    <div class="header-stat"><div class="dot blue"></div> 5 Deployed</div>
+    <div class="header-stat"><div class="dot gold"></div> 3 Pending</div>
+    <div class="time-display" id="clock">--:--:--</div>
+  </div>
+</div>
+
+<!-- ═══ NAV ═══ -->
+<div class="nav-tabs">
+  <div class="nav-tab active" onclick="switchTab('overview')">🏠 Overview</div>
+  <div class="nav-tab" onclick="switchTab('workspaces')">📂 Workspaces</div>
+  <div class="nav-tab" onclick="switchTab('agents')">🤖 Agent Fleet</div>
+  <div class="nav-tab" onclick="switchTab('platforms')">🔗 Platforms</div>
+  <div class="nav-tab" onclick="switchTab('graph')">🕸️ Knowledge Graph</div>
+  <div class="nav-tab brain-tab" onclick="switchTab('brain')">🧠 Knowledge Brain</div>
+  <div class="nav-tab" onclick="switchTab('deps')">🔀 Dependencies</div>
+  <div class="nav-tab fetok-tab" onclick="switchTab('fetok')" style="color:#fbbf24">🎬 FéTok</div>
+  <div class="nav-tab" onclick="window.open('/geo-ops.html','_blank')" style="color:var(--accent-cyan)">🌍 GeoOps</div>
+</div>
+
+<!-- ═══ MAIN ═══ -->
+<div class="main">
+
+  <!-- ══ OVERVIEW ══ -->
+  <div class="section active" id="sec-overview">
+    <div class="hero-grid">
+      <div class="hero-card">
+        <div class="hero-label">Workspaces</div>
+        <div class="hero-value blue">11</div>
+        <div class="hero-detail">Subject-based architecture</div>
+      </div>
+      <div class="hero-card">
+        <div class="hero-label">AI Agents</div>
+        <div class="hero-value green">23</div>
+        <div class="hero-detail">15 live · 5 deployed · 3 pending</div>
+      </div>
+      <div class="hero-card">
+        <div class="hero-label">n8n Workflows</div>
+        <div class="hero-value purple">31</div>
+        <div class="hero-detail">Content → Finance → Security</div>
+      </div>
+      <div class="hero-card">
+        <div class="hero-label">Annual Savings</div>
+        <div class="hero-value orange">$184K</div>
+        <div class="hero-detail">AI Finance Dept alone</div>
+      </div>
+      <div class="hero-card">
+        <div class="hero-label">Knowledge Graph</div>
+        <div class="hero-value cyan">124</div>
+        <div class="hero-detail">Nodes · 235 edges · 12 communities</div>
+      </div>
+    </div>
+
+    <div class="section-header">
+      <div class="section-title">📂 Workspace Overview <span class="section-badge">11 workspaces</span></div>
+    </div>
+
+    <div class="cards-grid">
+      <div class="card" onclick="switchTab('workspaces')">
+        <div class="card-header">
+          <div class="card-icon" style="background:rgba(77,124,255,0.15)">🎬</div>
+          <div>
+            <div class="card-title">LuzDaPalavra</div>
+            <div class="card-subtitle">Biblical cinematic videos</div>
+          </div>
+        </div>
+        <div class="card-body">Higgsfield pipeline, TikTok FYP engine, stoic-factory cloud deploy, video rendering & post-production.</div>
+        <div class="card-tags">
+          <span class="tag python">Python</span>
+          <span class="tag node">Node.js</span>
+          <span class="tag live">Active</span>
+        </div>
+      </div>
+
+      <div class="card" onclick="switchTab('workspaces')">
+        <div class="card-header">
+          <div class="card-icon" style="background:rgba(0,230,138,0.15)">📊</div>
+          <div>
+            <div class="card-title">StoicCRM</div>
+            <div class="card-subtitle">CRM + SaaS Dashboard</div>
+          </div>
+        </div>
+        <div class="card-body">Lead management, n8n orchestrator, SaaS Hub (React/Vite), stoic-jarvis AI assistant, marketing.</div>
+        <div class="card-tags">
+          <span class="tag react">React</span>
+          <span class="tag python">Python</span>
+          <span class="tag live">Active</span>
+        </div>
+      </div>
+
+      <div class="card" onclick="switchTab('workspaces')">
+        <div class="card-header">
+          <div class="card-icon" style="background:rgba(255,215,0,0.15)">📈</div>
+          <div>
+            <div class="card-title">StoicTrading</div>
+            <div class="card-subtitle">Forex EA + Market Data</div>
+          </div>
+        </div>
+        <div class="card-body">Larry Williams 9.1 D1 EA, live quotes bot, market data analysis, TradingView integration.</div>
+        <div class="card-tags">
+          <span class="tag mql5">MQL5</span>
+          <span class="tag python">Python</span>
+          <span class="tag live">Live</span>
+        </div>
+      </div>
+
+      <div class="card" onclick="switchTab('workspaces')">
+        <div class="card-header">
+          <div class="card-icon" style="background:rgba(155,89,255,0.15)">📣</div>
+          <div>
+            <div class="card-title">GTM-Pipelines</div>
+            <div class="card-subtitle">Go-To-Market Automation</div>
+          </div>
+        </div>
+        <div class="card-body">Ad Spy, Ad Generator, SEO Factory, Viralizer, Newsletter, LinkedIn Scraper — full outbound stack.</div>
+        <div class="card-tags">
+          <span class="tag python">Python</span>
+          <span class="tag live">6 Agents</span>
+        </div>
+      </div>
+
+      <div class="card" onclick="switchTab('workspaces')">
+        <div class="card-header">
+          <div class="card-icon" style="background:rgba(0,212,255,0.15)">🤖</div>
+          <div>
+            <div class="card-title">TelegramBots</div>
+            <div class="card-subtitle">Bot Projects</div>
+          </div>
+        </div>
+        <div class="card-body">Telegram bot suite — StoicBot 24/7 cloud, notification bots, community interaction.</div>
+        <div class="card-tags">
+          <span class="tag node">TypeScript</span>
+          <span class="tag live">Live</span>
+        </div>
+      </div>
+
+      <div class="card" onclick="switchTab('workspaces')">
+        <div class="card-header">
+          <div class="card-icon" style="background:rgba(255,71,87,0.15)">🔒</div>
+          <div>
+            <div class="card-title">CyberArmor</div>
+            <div class="card-subtitle">Security Monitor</div>
+          </div>
+        </div>
+        <div class="card-body">ASUS Cyber Armor defense system, prompt hardening audits, environment security scanning.</div>
+        <div class="card-tags">
+          <span class="tag python">Python</span>
+          <span class="tag deployed">Deployed</span>
+        </div>
+      </div>
+
+      <div class="card" onclick="switchTab('workspaces')">
+        <div class="card-header">
+          <div class="card-icon" style="background:rgba(255,107,157,0.15)">🐋</div>
+          <div>
+            <div class="card-title">WhaleTracker</div>
+            <div class="card-subtitle">Smart Money Intel</div>
+          </div>
+        </div>
+        <div class="card-body">WhaleVault — Smart Money Intelligence Terminal. On-chain whale tracking and analytics.</div>
+        <div class="card-tags">
+          <span class="tag python">Python</span>
+          <span class="tag pending">Pending</span>
+        </div>
+      </div>
+
+      <div class="card" onclick="switchTab('workspaces')">
+        <div class="card-header">
+          <div class="card-icon" style="background:rgba(0,230,138,0.15)">🐟</div>
+          <div>
+            <div class="card-title">FishFinder</div>
+            <div class="card-subtitle">Fish ID App</div>
+          </div>
+        </div>
+        <div class="card-body">Camera-based fish identification using TensorFlow Lite. Brazilian fish species database.</div>
+        <div class="card-tags">
+          <span class="tag react">React</span>
+          <span class="tag planned">Planned</span>
+        </div>
+      </div>
+
+      <div class="card" onclick="switchTab('workspaces')">
+        <div class="card-header">
+          <div class="card-icon" style="background:rgba(255,159,67,0.15)">🏠</div>
+          <div>
+            <div class="card-title">Hub</div>
+            <div class="card-subtitle">Comunidade Stoic</div>
+          </div>
+        </div>
+        <div class="card-body">Lean orchestration hub — brand-vault, agent-ops, workflows, memory system. Cross-project routing.</div>
+        <div class="card-tags">
+          <span class="tag node">Node.js</span>
+          <span class="tag live">Core</span>
+        </div>
+      </div>
+
+      <div class="card" onclick="switchTab('workspaces')">
+        <div class="card-header">
+          <div class="card-icon" style="background:rgba(255,159,67,0.15)">👴</div>
+          <div>
+            <div class="card-title">Automacoes-Papai</div>
+            <div class="card-subtitle">Dad's Automations</div>
+          </div>
+        </div>
+        <div class="card-body">PowerShell automation scripts for daily routines. Calendar integration, notifications, and workflow helpers.</div>
+        <div class="card-tags">
+          <span class="tag node">PowerShell</span>
+          <span class="tag deployed">Deployed</span>
+        </div>
+      </div>
+
+      <div class="card" onclick="switchTab('workspaces')">
+        <div class="card-header">
+          <div class="card-icon" style="background:rgba(155,89,255,0.15)">🚂</div>
+          <div>
+            <div class="card-title">RailwayBounty</div>
+            <div class="card-subtitle">Railway Bounty Solver</div>
+          </div>
+        </div>
+        <div class="card-body">Node.js bounty solver deployed on Railway cloud. Automated challenge resolution and submission pipeline.</div>
+        <div class="card-tags">
+          <span class="tag node">Node.js</span>
+          <span class="tag pending">Pending</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Platform Glance -->
+    <div class="section-header">
+      <div class="section-title">🔗 Platform Stack <span class="section-badge">9 platforms</span></div>
+    </div>
+    <div class="platform-grid">
+      <div class="platform-card" onclick="window.open('https://github.com/benjaminkernbaum-ux','_blank')">
+        <div class="platform-logo" style="background:rgba(255,255,255,0.06)">🐙</div>
+        <div><div class="platform-name">GitHub</div><div class="platform-role">Source control & CI/CD</div></div>
+      </div>
+      <div class="platform-card" onclick="window.open('https://railway.app/dashboard','_blank')">
+        <div class="platform-logo" style="background:rgba(155,89,255,0.12)">🚂</div>
+        <div><div class="platform-name">Railway</div><div class="platform-role">Cloud deploy (bots, factory, n8n)</div></div>
+      </div>
+      <div class="platform-card" onclick="window.open('https://vercel.com/dashboard','_blank')">
+        <div class="platform-logo" style="background:rgba(255,255,255,0.06)">▲</div>
+        <div><div class="platform-name">Vercel</div><div class="platform-role">SaaS Hub frontend hosting</div></div>
+      </div>
+      <div class="platform-card" onclick="window.open('https://supabase.com/dashboard','_blank')">
+        <div class="platform-logo" style="background:rgba(0,230,138,0.12)">⚡</div>
+        <div><div class="platform-name">Supabase</div><div class="platform-role">PostgreSQL + Auth + RLS</div></div>
+      </div>
+      <div class="platform-card">
+        <div class="platform-logo" style="background:rgba(255,159,67,0.12)">🔧</div>
+        <div><div class="platform-name">n8n</div><div class="platform-role">31 workflows · Low-code automation</div></div>
+      </div>
+      <div class="platform-card">
+        <div class="platform-logo" style="background:rgba(0,212,255,0.12)">✈️</div>
+        <div><div class="platform-name">Telegram</div><div class="platform-role">Bot + Channel + Notifications</div></div>
+      </div>
+      <div class="platform-card">
+        <div class="platform-logo" style="background:rgba(255,107,157,0.12)">📸</div>
+        <div><div class="platform-name">Instagram</div><div class="platform-role">Content posting + Reels</div></div>
+      </div>
+      <div class="platform-card">
+        <div class="platform-logo" style="background:rgba(255,255,255,0.06)">🎵</div>
+        <div><div class="platform-name">TikTok</div><div class="platform-role">Biblical cinematic reels</div></div>
+      </div>
+      <div class="platform-card">
+        <div class="platform-logo" style="background:rgba(255,215,0,0.12)">📊</div>
+        <div><div class="platform-name">MetaTrader 5</div><div class="platform-role">Larry Williams EA execution</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ WORKSPACES ══ -->
+  <div class="section" id="sec-workspaces">
+    <div class="section-header">
+      <div class="section-title">📂 Workspace DNS <span class="section-badge">11 dedicated workspaces</span></div>
+    </div>
+
+    <table class="ws-table">
+      <thead>
+        <tr>
+          <th></th>
+          <th>Workspace</th>
+          <th>Domain</th>
+          <th>Stack</th>
+          <th>Path</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="ws-icon">🎬</span></td>
+          <td><strong>LuzDaPalavra</strong></td>
+          <td>Biblical videos, TikTok, Higgsfield, stoic-factory</td>
+          <td>Python, Node.js, FFmpeg</td>
+          <td><span class="ws-path">c:\Users\benja\LuzDaPalavra\</span></td>
+          <td><span class="tag live">Active</span></td>
+        </tr>
+        <tr>
+          <td><span class="ws-icon">📊</span></td>
+          <td><strong>StoicCRM</strong></td>
+          <td>CRM, SaaS Hub, n8n, email, stoic-jarvis</td>
+          <td>React, Python, Docker</td>
+          <td><span class="ws-path">c:\Users\benja\StoicCRM\</span></td>
+          <td><span class="tag live">Active</span></td>
+        </tr>
+        <tr>
+          <td><span class="ws-icon">📈</span></td>
+          <td><strong>StoicTrading</strong></td>
+          <td>Forex EA, live quotes, TradingView</td>
+          <td>MQL5, Python</td>
+          <td><span class="ws-path">c:\Users\benja\StoicTrading\</span></td>
+          <td><span class="tag live">Live</span></td>
+        </tr>
+        <tr>
+          <td><span class="ws-icon">🤖</span></td>
+          <td><strong>TelegramBots</strong></td>
+          <td>Telegram bot projects</td>
+          <td>TypeScript, Node.js</td>
+          <td><span class="ws-path">c:\Users\benja\TelegramBots\</span></td>
+          <td><span class="tag live">Live</span></td>
+        </tr>
+        <tr>
+          <td><span class="ws-icon">📣</span></td>
+          <td><strong>GTM-Pipelines</strong></td>
+          <td>AdSpy, SEO factory, Viralizer, Newsletter</td>
+          <td>Python, Claude API</td>
+          <td><span class="ws-path">c:\Users\benja\GTM-Pipelines\</span></td>
+          <td><span class="tag live">Active</span></td>
+        </tr>
+        <tr>
+          <td><span class="ws-icon">🐟</span></td>
+          <td><strong>FishFinder</strong></td>
+          <td>Fish identification app</td>
+          <td>React, TensorFlow</td>
+          <td><span class="ws-path">c:\Users\benja\FishFinder\</span></td>
+          <td><span class="tag planned">Planned</span></td>
+        </tr>
+        <tr>
+          <td><span class="ws-icon">👴</span></td>
+          <td><strong>Automacoes-Papai</strong></td>
+          <td>Dad's PowerShell automations</td>
+          <td>PowerShell</td>
+          <td><span class="ws-path">c:\Users\benja\Automacoes-Papai\</span></td>
+          <td><span class="tag deployed">Deployed</span></td>
+        </tr>
+        <tr>
+          <td><span class="ws-icon">🚂</span></td>
+          <td><strong>RailwayBounty</strong></td>
+          <td>Railway bounty solver</td>
+          <td>Node.js</td>
+          <td><span class="ws-path">c:\Users\benja\RailwayBounty\</span></td>
+          <td><span class="tag pending">Pending</span></td>
+        </tr>
+        <tr>
+          <td><span class="ws-icon">🔒</span></td>
+          <td><strong>CyberArmor</strong></td>
+          <td>Security monitor, prompt hardening</td>
+          <td>Python</td>
+          <td><span class="ws-path">c:\Users\benja\CyberArmor\</span></td>
+          <td><span class="tag deployed">Deployed</span></td>
+        </tr>
+        <tr>
+          <td><span class="ws-icon">🐋</span></td>
+          <td><strong>WhaleTracker</strong></td>
+          <td>Smart Money Intelligence Terminal</td>
+          <td>Python, React</td>
+          <td><span class="ws-path">c:\Users\benja\WhaleTracker\</span></td>
+          <td><span class="tag pending">Pending</span></td>
+        </tr>
+        <tr>
+          <td><span class="ws-icon">🏠</span></td>
+          <td><strong>Comunidade Stoic</strong></td>
+          <td>Hub: brand-vault, agent-ops, workflows</td>
+          <td>Markdown, PS1, JS</td>
+          <td><span class="ws-path">c:\Users\benja\Comunidade stoic\</span></td>
+          <td><span class="tag live">Core</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ══ AGENTS ══ -->
+  <div class="section" id="sec-agents">
+    <div class="section-header">
+      <div class="section-title">🤖 Agent Fleet <span class="section-badge">23 agents · $184K+ annual savings</span></div>
+    </div>
+
+    <div class="agent-dept">
+      <div class="dept-title">⚡ Operations & Content</div>
+      <div class="agents-list" id="ops-agents"></div>
+    </div>
+
+    <div class="agent-dept">
+      <div class="dept-title">📣 GTM Pipeline</div>
+      <div class="agents-list" id="gtm-agents"></div>
+    </div>
+
+    <div class="agent-dept">
+      <div class="dept-title">💬 CRM & Communication</div>
+      <div class="agents-list" id="crm-agents"></div>
+    </div>
+
+    <div class="agent-dept">
+      <div class="dept-title">🏛 Financial Department</div>
+      <div class="agents-list" id="fin-agents"></div>
+    </div>
+  </div>
+
+  <!-- ══ PLATFORMS ══ -->
+  <div class="section" id="sec-platforms">
+    <div class="section-header">
+      <div class="section-title">🔗 Platform Integrations <span class="section-badge">Full Stack</span></div>
+    </div>
+
+    <div class="cards-grid" id="platform-details"></div>
+  </div>
+
+  <!-- ══ KNOWLEDGE GRAPH ══ -->
+  <div class="section" id="sec-graph">
+    <div class="section-header">
+      <div class="section-title">🕸️ Knowledge Graph <span class="section-badge">124 nodes · 235 edges · 12 communities</span></div>
+    </div>
+    <div class="embed-header">
+      <span style="font-weight:600;font-size:14px">📊 Graphify — Interactive Codebase Graph</span>
+      <div class="embed-actions">
+        <span class="embed-url">graphify-out/graph.html</span>
+        <button class="embed-btn" onclick="window.open('/graphify-out/graph.html','_blank')">↗ Open Full</button>
+        <button class="embed-btn" onclick="document.getElementById('graph-iframe').src='/graphify-out/graph.html'">🔄 Reload</button>
+      </div>
+    </div>
+    <div class="embed-frame">
+      <iframe id="graph-iframe" src="/graphify-out/graph.html" title="Knowledge Graph"></iframe>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════════════
+       ═══ KNOWLEDGE BRAIN — OBSIDIAN-ENHANCED SECOND BRAIN ═══
+       ═══════════════════════════════════════════════════════════════════ -->
+  <div class="section" id="sec-brain">
+
+    <!-- Brain Hero -->
+    <div class="brain-hero">
+      <div class="brain-hero-inner">
+        <div class="brain-hero-left">
+          <div class="brain-logo">🧠</div>
+          <div>
+            <div class="brain-hero-title">Stoic Knowledge Brain</div>
+            <div class="brain-hero-sub">Obsidian-powered second brain · SQLite memory · 11 workspace vault</div>
+          </div>
+        </div>
+        <div class="brain-stats-row">
+          <div class="brain-stat">
+            <div class="brain-stat-value" id="brain-stat-notes">—</div>
+            <div class="brain-stat-label">Notes</div>
+          </div>
+          <div class="brain-stat">
+            <div class="brain-stat-value" id="brain-stat-links">235</div>
+            <div class="brain-stat-label">Links</div>
+          </div>
+          <div class="brain-stat">
+            <div class="brain-stat-value" id="brain-stat-obs">0</div>
+            <div class="brain-stat-label">Observations</div>
+          </div>
+          <div class="brain-stat">
+            <div class="brain-stat-value">12</div>
+            <div class="brain-stat-label">Communities</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Connection Status -->
+    <div class="brain-connection-bar" id="brain-conn-bar">
+      <div class="brain-conn-dot" id="brain-conn-dot"></div>
+      <span class="brain-conn-text" id="brain-conn-text">Checking Memory Engine connection...</span>
+      <button class="brain-conn-action" onclick="connectBrain()">⚡ Connect</button>
+    </div>
+
+    <!-- Brain Sub-Nav -->
+    <div class="brain-nav">
+      <button class="brain-nav-btn active" onclick="switchBrainPanel('graph-view')">🌐 Graph View</button>
+      <button class="brain-nav-btn" onclick="switchBrainPanel('vault')">📁 Vault</button>
+      <button class="brain-nav-btn" onclick="switchBrainPanel('daily')">📅 Daily Notes</button>
+      <button class="brain-nav-btn" onclick="switchBrainPanel('workspaces-mem')">📦 Workspace Memory</button>
+      <button class="brain-nav-btn" onclick="switchBrainPanel('knowledge-items');loadKnowledgeItems()">🧠 Knowledge Items</button>
+    </div>
+
+    <!-- ═══ BRAIN PANEL: Graph View ═══ -->
+    <div class="brain-panel active" id="bp-graph-view">
+      <div class="graph-container" id="brain-graph-container">
+        <canvas id="brain-graph-canvas"></canvas>
+        <div class="graph-legend">
+          <div class="graph-legend-title">Communities</div>
+          <div id="graph-legend-items"></div>
+        </div>
+        <div class="graph-controls">
+          <button class="graph-ctrl-btn" onclick="brainGraph.zoomIn()" title="Zoom In">+</button>
+          <button class="graph-ctrl-btn" onclick="brainGraph.zoomOut()" title="Zoom Out">−</button>
+          <button class="graph-ctrl-btn" onclick="brainGraph.resetView()" title="Reset View">⌂</button>
+          <button class="graph-ctrl-btn" onclick="brainGraph.togglePhysics()" title="Toggle Physics" id="physics-btn">⚛</button>
+        </div>
+        <div class="graph-tooltip" id="graph-tooltip">
+          <div class="graph-tooltip-title" id="tooltip-title"></div>
+          <div class="graph-tooltip-meta" id="tooltip-meta"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ BRAIN PANEL: Vault ═══ -->
+    <div class="brain-panel" id="bp-vault">
+      <div class="vault-layout">
+        <!-- Sidebar -->
+        <div class="vault-sidebar">
+          <div class="vault-search" style="position:relative">
+            <span class="vault-search-icon">🔍</span>
+            <input type="text" id="vault-search-input" placeholder="Search vault..." oninput="filterVault(this.value)">
+          </div>
+          <div class="vault-tree" id="vault-tree"></div>
+        </div>
+        <!-- Content -->
+        <div class="vault-content">
+          <div class="vault-content-header">
+            <div class="vault-content-title" id="vault-note-title">📄 Select a note</div>
+            <div class="vault-content-actions">
+              <button class="vault-action-btn" onclick="copyNoteContent()">📋 Copy</button>
+            </div>
+          </div>
+          <div class="vault-content-body" id="vault-note-body">
+            <div style="text-align:center;padding:80px 40px;color:var(--text-dim)">
+              <div style="font-size:48px;margin-bottom:16px">📂</div>
+              <h3 style="color:var(--text-secondary);margin-bottom:8px">Welcome to the Vault</h3>
+              <p>Select a note from the sidebar to view its contents. Your vault contains brand guidelines, agent blueprints, memory observations, and workspace documentation.</p>
+            </div>
+          </div>
+        </div>
+        <!-- Backlinks -->
+        <div class="vault-backlinks">
+          <div class="backlinks-header">
+            🔗 Backlinks <span class="backlinks-count" id="backlinks-count">0</span>
+          </div>
+          <div class="backlinks-list" id="backlinks-list">
+            <div style="padding:20px;text-align:center;color:var(--text-dim);font-size:12px">
+              Select a note to see its connections
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ BRAIN PANEL: Daily Notes ═══ -->
+    <div class="brain-panel" id="bp-daily">
+      <div class="daily-layout">
+        <div class="daily-timeline">
+          <div class="daily-timeline-header">
+            <span style="font-weight:700;font-size:14px;display:flex;align-items:center;gap:8px">📅 Activity Timeline</span>
+            <div class="daily-filter-row">
+              <button class="daily-filter-btn active" onclick="filterDaily(null, this)">All</button>
+              <button class="daily-filter-btn" onclick="filterDaily('decision', this)">💡 Decisions</button>
+              <button class="daily-filter-btn" onclick="filterDaily('architecture', this)">🏗️ Architecture</button>
+              <button class="daily-filter-btn" onclick="filterDaily('file_edit', this)">📝 Edits</button>
+              <button class="daily-filter-btn" onclick="filterDaily('deployment', this)">🚀 Deploys</button>
+            </div>
+          </div>
+          <div id="daily-entries"></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:16px">
+          <!-- Quick Capture -->
+          <div class="quick-capture">
+            <div class="quick-capture-title">⚡ Quick Capture</div>
+            <select id="capture-workspace">
+              <option value="HUB">🏠 Hub</option>
+              <option value="LP">🎬 LuzDaPalavra</option>
+              <option value="CRM">📊 StoicCRM</option>
+              <option value="ST">📈 StoicTrading</option>
+              <option value="TG">🤖 TelegramBots</option>
+              <option value="GTM">📣 GTM-Pipelines</option>
+              <option value="CA">🔒 CyberArmor</option>
+              <option value="WT">🐋 WhaleTracker</option>
+              <option value="FF">🐟 FishFinder</option>
+              <option value="AP">👴 Automacoes-Papai</option>
+              <option value="RB">🚂 RailwayBounty</option>
+            </select>
+            <select id="capture-type">
+              <option value="note">📌 Note</option>
+              <option value="decision">💡 Decision</option>
+              <option value="discovery">🔍 Discovery</option>
+              <option value="architecture">🏗️ Architecture</option>
+              <option value="deployment">🚀 Deployment</option>
+              <option value="error">🔴 Error / Bug</option>
+            </select>
+            <input type="text" id="capture-title" placeholder="Title...">
+            <textarea id="capture-content" placeholder="Content — supports markdown..."></textarea>
+            <button class="quick-capture-submit" onclick="submitCapture()">⚡ Capture to Brain</button>
+          </div>
+
+          <!-- Stats Summary -->
+          <div class="quick-capture" style="gap:8px">
+            <div class="quick-capture-title">📊 Brain Stats</div>
+            <div id="brain-stat-types" style="display:grid;grid-template-columns:1fr 1fr;gap:6px"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ BRAIN PANEL: Workspace Memory ═══ -->
+    <div class="brain-panel" id="bp-workspaces-mem">
+      <div class="ws-memory-grid" id="ws-memory-grid"></div>
+    </div>
+
+    <!-- ═══ BRAIN PANEL: Knowledge Items ═══ -->
+    <div class="brain-panel" id="bp-knowledge-items">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+        <div>
+          <div style="font-size:18px;font-weight:700;color:var(--text-primary)">🧠 Antigravity Knowledge Items</div>
+          <div style="font-size:12px;color:var(--text-dim);margin-top:4px">Persistent memory across all AI conversations · Auto-loaded at conversation start</div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <span id="ki-count-badge" style="background:rgba(167,139,250,0.15);color:#a78bfa;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600">Loading...</span>
+          <button onclick="loadKnowledgeItems()" style="background:var(--bg-card);border:1px solid var(--border);color:var(--text-secondary);padding:4px 12px;border-radius:8px;font-size:12px;cursor:pointer">🔄 Refresh</button>
+        </div>
+      </div>
+      <div id="ki-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px"></div>
+      <div style="margin-top:20px;padding:16px;background:var(--bg-card);border:1px solid var(--border);border-radius:12px">
+        <div style="font-size:13px;font-weight:600;color:var(--text-secondary);margin-bottom:10px">⚡ Auto-Capture Infrastructure</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+          <div style="background:rgba(16,185,129,0.08);padding:12px;border-radius:8px;border-left:3px solid #10b981">
+            <div style="font-size:11px;color:#10b981;font-weight:600">GIT HOOKS</div>
+            <div style="font-size:20px;font-weight:700;color:var(--text-primary)" id="ki-hooks-count">16</div>
+            <div style="font-size:11px;color:var(--text-dim)">repos with post-commit hooks</div>
+          </div>
+          <div style="background:rgba(59,130,246,0.08);padding:12px;border-radius:8px;border-left:3px solid #3b82f6">
+            <div style="font-size:11px;color:#3b82f6;font-weight:600">SCHEDULED REFRESH</div>
+            <div style="font-size:20px;font-weight:700;color:var(--text-primary)">6h</div>
+            <div style="font-size:11px;color:var(--text-dim)">auto-refresh cycle (Task Scheduler)</div>
+          </div>
+          <div style="background:rgba(245,158,11,0.08);padding:12px;border-radius:8px;border-left:3px solid #f59e0b">
+            <div style="font-size:11px;color:#f59e0b;font-weight:600">MEMORY ENGINE</div>
+            <div style="font-size:20px;font-weight:700;color:var(--text-primary)" id="ki-obs-count">—</div>
+            <div style="font-size:11px;color:var(--text-dim)">SQLite observations captured</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ══ DEPENDENCIES ══ -->
+  <div class="section" id="sec-deps">
+    <div class="section-header">
+      <div class="section-title">🔀 Dependency Graph <span class="section-badge">Cross-workspace flows</span></div>
+    </div>
+
+    <div class="dep-map">
+      <div class="dept-title">🎨 Brand Identity Flows</div>
+      <div class="dep-row">
+        <span class="dep-source">brand-vault/</span>
+        <span class="dep-arrow">→</span>
+        <span class="dep-target">LuzDaPalavra</span>
+        <span class="dep-label">Visual identity, colors, templates</span>
+      </div>
+      <div class="dep-row">
+        <span class="dep-source">brand-vault/</span>
+        <span class="dep-arrow">→</span>
+        <span class="dep-target">GTM-Pipelines</span>
+        <span class="dep-label">Voice & tone for content generation</span>
+      </div>
+      <div class="dep-row">
+        <span class="dep-source">brand-vault/</span>
+        <span class="dep-arrow">→</span>
+        <span class="dep-target">StoicCRM</span>
+        <span class="dep-label">Design tokens for SaaS Hub</span>
+      </div>
+    </div>
+
+    <div class="dep-map">
+      <div class="dept-title">🔧 Infrastructure Flows</div>
+      <div class="dep-row">
+        <span class="dep-source">agent-ops/</span>
+        <span class="dep-arrow">→</span>
+        <span class="dep-target">All Workspaces</span>
+        <span class="dep-label">Automation coordination & health checks</span>
+      </div>
+      <div class="dep-row">
+        <span class="dep-source">StoicCRM/n8n</span>
+        <span class="dep-arrow">→</span>
+        <span class="dep-target">Telegram, Stripe, Supabase</span>
+        <span class="dep-label">31 automated workflows</span>
+      </div>
+      <div class="dep-row">
+        <span class="dep-source">stoic-factory</span>
+        <span class="dep-arrow">→</span>
+        <span class="dep-target">Higgsfield, ElevenLabs, FFmpeg</span>
+        <span class="dep-label">Video rendering pipeline</span>
+      </div>
+      <div class="dep-row">
+        <span class="dep-source">StoicBot</span>
+        <span class="dep-arrow">→</span>
+        <span class="dep-target">Railway, Telegram API</span>
+        <span class="dep-label">24/7 cloud deployment</span>
+      </div>
+    </div>
+
+    <div class="dep-map">
+      <div class="dept-title">📊 Data Flows</div>
+      <div class="dep-row">
+        <span class="dep-source">Supabase</span>
+        <span class="dep-arrow">→</span>
+        <span class="dep-target">SaaS Hub, CRM, stoic-factory</span>
+        <span class="dep-label">PostgreSQL + RLS multi-tenant</span>
+      </div>
+      <div class="dep-row">
+        <span class="dep-source">TradingView</span>
+        <span class="dep-arrow">→</span>
+        <span class="dep-target">StoicTrading → Telegram</span>
+        <span class="dep-label">Webhook signals L→ alerts</span>
+      </div>
+      <div class="dep-row">
+        <span class="dep-source">Memory Engine</span>
+        <span class="dep-arrow">→</span>
+        <span class="dep-target">agent-ops → All AI conversations</span>
+        <span class="dep-label">SQLite observation tracking</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ FÉTOK SÉRIE 6 ═══ -->
+  <div class="section" id="sec-fetok">
+    <div class="fetok-hero">
+      <div class="fetok-hero-inner">
+        <div class="fetok-hero-left">
+          <div class="fetok-logo">🎬</div>
+          <div>
+            <div class="fetok-hero-title">FéTok — Série 6 Cinematográfica Jesus</div>
+            <div class="fetok-hero-sub">HIGH VIRAL Content Pipeline • @luz.da.palavra.oficial • TikTok + Instagram</div>
+          </div>
+        </div>
+        <div class="fetok-stats-row">
+          <div class="fetok-stat"><div class="fetok-stat-value">10</div><div class="fetok-stat-label">Roteiros</div></div>
+          <div class="fetok-stat"><div class="fetok-stat-value">70</div><div class="fetok-stat-label">Shots</div></div>
+          <div class="fetok-stat"><div class="fetok-stat-value">10</div><div class="fetok-stat-label">Soul IDs</div></div>
+          <div class="fetok-stat"><div class="fetok-stat-value">4x</div><div class="fetok-stat-label">Posts/Dia</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-header">
+      <div class="section-title">📜 Roteiros — Série 6 <span class="section-badge" style="background:rgba(251,191,36,0.12);color:#fbbf24">10 Cinematic Stories</span></div>
+    </div>
+
+    <div class="fetok-roteiro-grid" id="fetok-roteiro-grid"></div>
+
+    <div class="section-header" style="margin-top:28px">
+      <div class="section-title">🖥️ Production Dashboard <span class="section-badge" style="background:rgba(251,191,36,0.12);color:#fbbf24">Live</span></div>
+    </div>
+
+    <div class="embed-header">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:18px">🎬</span>
+        <span style="font-weight:600;font-size:14px">FéTok Série 6 — Production Hub</span>
+      </div>
+      <div class="embed-actions">
+        <span class="embed-url">/fetok_serie6.html</span>
+        <button class="embed-btn" onclick="window.open('/fetok_serie6.html','_blank')">↗ Open Full</button>
+      </div>
+    </div>
+    <div class="embed-frame">
+      <iframe src="/fetok_serie6.html" loading="lazy"></iframe>
+    </div>
+
+    <div style="margin-top:24px;padding:20px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius)">
+      <div style="font-size:14px;font-weight:700;color:#fbbf24;margin-bottom:14px">⚡ Quick Commands</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(400px,1fr));gap:8px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:12px;background:rgba(0,0,0,0.3);padding:10px 14px;border-radius:8px;border-left:3px solid #d97706;color:#d4d0e0;cursor:pointer" onclick="navigator.clipboard.writeText('node src/cinematicPipeline.js --serie=6 --all --dry-run')" title="Click to copy">node src/cinematicPipeline.js --serie=6 --all --dry-run</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:12px;background:rgba(0,0,0,0.3);padding:10px 14px;border-radius:8px;border-left:3px solid #d97706;color:#d4d0e0;cursor:pointer" onclick="navigator.clipboard.writeText('node src/cinematicPipeline.js --serie=6 --all --publish --viral-mode')" title="Click to copy">node src/cinematicPipeline.js --serie=6 --all --publish --viral-mode</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:12px;background:rgba(0,0,0,0.3);padding:10px 14px;border-radius:8px;border-left:3px solid #d97706;color:#d4d0e0;cursor:pointer" onclick="navigator.clipboard.writeText('node src/viralScheduler.js')" title="Click to copy">node src/viralScheduler.js</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:12px;background:rgba(0,0,0,0.3);padding:10px 14px;border-radius:8px;border-left:3px solid #d97706;color:#d4d0e0;cursor:pointer" onclick="navigator.clipboard.writeText('node src/tiktokAuth.js --bootstrap')" title="Click to copy">node src/tiktokAuth.js --bootstrap</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ═══ CLOCK ═══
+function updateClock() {
+  const now = new Date();
+  const h = String(now.getHours()).padStart(2,'0');
+  const m = String(now.getMinutes()).padStart(2,'0');
+  const s = String(now.getSeconds()).padStart(2,'0');
+  const tz = Intl.DateTimeFormat('en', { timeZoneName: 'short' }).formatToParts(now).find(p => p.type === 'timeZoneName')?.value || 'BRT';
+  document.getElementById('clock').textContent = `${h}:${m}:${s} ${tz}`;
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ═══ TAB SWITCHING ═══
+function switchTab(tab) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('sec-' + tab).classList.add('active');
+  event.target.classList.add('active');
+  if (tab === 'brain') {
+    connectBrain();
+    if (!brainGraph._initialized) brainGraph.init();
+  }
+  if (tab === 'fetok' && !window._fetokInitialized) {
+    initFetokCards();
+    window._fetokInitialized = true;
+  }
+}
+
+// ═══ FÉTOK ROTEIRO CARDS ═══
+function initFetokCards() {
+  const roteiros = [
+    { id: 'cego',       emoji: '👁️', titulo: 'O Cego que Viu Deus',          verse: 'João 9:25',      shots: 8, hook: 'Ele nunca viu a LUZ. Até que Jesus fez ISSO 🕊️' },
+    { id: 'poco',       emoji: '💧', titulo: 'A Mulher no Poço',              verse: 'João 4:14',      shots: 8, hook: 'Ela era a FOFOCA da cidade inteira 😢' },
+    { id: 'pedro_mar',  emoji: '🌊', titulo: 'Pedro Afundando',               verse: 'Mateus 14:31',   shots: 8, hook: '3 SEGUNDOS. Foi o tempo que a fé dele durou ⚡' },
+    { id: 'lazaro',     emoji: '⚰️', titulo: 'Lázaro — 4 Dias Morto',         verse: 'João 11:43',     shots: 7, hook: 'Todo mundo desistiu. Jesus chegou 4 dias ATRASADO 😭' },
+    { id: 'ladrao',     emoji: '✝️', titulo: 'O Ladrão na Cruz',              verse: 'Lucas 23:43',    shots: 7, hook: 'Ele matou, roubou, e morreu ao lado de DEUS 😭' },
+    { id: 'pes',        emoji: '🧎', titulo: 'Jesus Lava os Pés',             verse: 'João 13:14',     shots: 6, hook: 'O REI do universo AJOELHOU no chão 👑' },
+    { id: 'golias',     emoji: '🪨', titulo: 'Davi vs Golias',                verse: '1 Samuel 17:45', shots: 7, hook: '1 PEDRA contra um gigante de 3 METROS 🪨' },
+    { id: 'daniel',     emoji: '🦁', titulo: 'Daniel na Cova dos Leões',      verse: 'Daniel 6:22',    shots: 6, hook: 'Jogaram ele pros LEÕES. Deus mandou os leões DORMIR 🦁' },
+    { id: 'viuva',      emoji: '🫗', titulo: 'A Viúva e o Azeite',            verse: '2 Reis 4:6',     shots: 6, hook: 'Ela só tinha 1 GOTA. Deus encheu a casa INTEIRA 🫗' },
+    { id: 'tempestade', emoji: '⛈️', titulo: 'Jesus Acalma a Tempestade',     verse: 'Marcos 4:39',    shots: 7, hook: 'A NATUREZA obedeceu a voz dele ⚡' },
+  ];
+
+  const grid = document.getElementById('fetok-roteiro-grid');
+  if (!grid) return;
+
+  grid.innerHTML = roteiros.map(r => `
+    <div class="fetok-card">
+      <div class="fetok-card-head">
+        <div class="fetok-card-emoji">${r.emoji}</div>
+        <div>
+          <div class="fetok-card-title">${r.titulo}</div>
+          <div class="fetok-card-verse">📖 ${r.verse}</div>
+        </div>
+      </div>
+      <div class="fetok-card-hook">"${r.hook}"</div>
+      <div class="fetok-card-foot">
+        <span class="fetok-shots-badge">🎬 ${r.shots} shots</span>
+        <span class="fetok-status">✅ Ready</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ═══ BRAIN SUB-PANEL SWITCHING ═══
+function switchBrainPanel(panel) {
+  document.querySelectorAll('.brain-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.brain-nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('bp-' + panel).classList.add('active');
+  event.target.classList.add('active');
+  if (panel === 'graph-view' && brainGraph._initialized) {
+    brainGraph.resize();
+  }
+}
+
+// ═══ MEMORY ENGINE / BRAIN CONNECTION ═══
+let brainConnected = false;
+let brainData = { observations: [], stats: null };
+
+// ═══ KNOWLEDGE ITEMS ═══
+function loadKnowledgeItems() {
+  const KIS = [
+    { id: 'brain-integration',    icon: '🧠', name: 'Master Brain v2.0',           color: '#a78bfa', desc: 'Complete ecosystem brain — 14 workspaces, 23 agents, 17+ platforms, Memory Engine, Command Center, workflow commands', artifacts: ['brain-spec.md'] },
+    { id: 'deployment-map',       icon: '🚀', name: 'Deployment Map',              color: '#ef4444', desc: 'Railway, Vercel, Supabase, Higgsfield topology. Full env key registry for 20+ platform integrations', artifacts: ['deployment-spec.md'] },
+    { id: 'workspace-map',        icon: '🗺️', name: 'Workspace & Git Map',         color: '#3b82f6', desc: 'All 14 workspaces, 17 GitHub repos, git status, branches, context files, routing protocol, running services', artifacts: ['workspace-map.md'] },
+    { id: 'agent-fleet',          icon: '🤖', name: 'Agent Fleet (23 Agents)',      color: '#10b981', desc: '23 agents across 5 modules — Content, GTM, CRM, Finance, Standalone. Schedules, data contracts, orchestration rules', artifacts: ['agent-fleet.md'] },
+    { id: 'stoiccrm-saas-state',  icon: '💻', name: 'StoicCRM SaaS State',         color: '#f59e0b', desc: 'Full production state — what works vs fake, 14 Supabase tables, 10 commits, Stripe setup, env vars, key files', artifacts: ['saas-state.md'] },
+    { id: 'supabase-schema',      icon: '🗄️', name: 'Supabase Schema',             color: '#06b6d4', desc: '14 tables, column schemas, credentials, FK relationships, RLS policies, function map from supabase.js', artifacts: ['schema-spec.md'] },
+    { id: 'recent-achievements',  icon: '🏆', name: 'Recent Achievements',         color: '#ec4899', desc: '11 conversation logs — what was built, commits, outcomes. Prevents re-doing work across sessions', artifacts: ['achievements.md'] },
+  ];
+
+  const grid = document.getElementById('ki-grid');
+  grid.innerHTML = KIS.map(ki => `
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:18px;transition:all 0.2s;cursor:default;border-left:4px solid ${ki.color}" 
+         onmouseenter="this.style.borderColor='${ki.color}';this.style.boxShadow='0 0 20px ${ki.color}22'" 
+         onmouseleave="this.style.borderColor='var(--border)';this.style.borderLeftColor='${ki.color}';this.style.boxShadow='none'">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+        <div style="font-size:24px">${ki.icon}</div>
+        <div>
+          <div style="font-weight:700;font-size:14px;color:var(--text-primary)">${ki.name}</div>
+          <div style="font-size:11px;color:${ki.color};font-family:'JetBrains Mono',monospace">${ki.id}</div>
+        </div>
+      </div>
+      <div style="font-size:12px;color:var(--text-secondary);line-height:1.5;margin-bottom:12px">${ki.desc}</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        ${ki.artifacts.map(a => `<span style="background:rgba(255,255,255,0.05);padding:2px 8px;border-radius:4px;font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--text-dim)">📄 ${a}</span>`).join('')}
+      </div>
+    </div>
+  `).join('');
+
+  document.getElementById('ki-count-badge').textContent = `${KIS.length} Knowledge Items · 56 KB`;
+
+  // Update observation count from Memory Engine
+  if (brainData.stats) {
+    document.getElementById('ki-obs-count').textContent = brainData.stats.total_observations || '—';
+  } else {
+    fetch('http://localhost:37777/api/stats', { signal: AbortSignal.timeout(2000) })
+      .then(r => r.json())
+      .then(d => { document.getElementById('ki-obs-count').textContent = d.total_observations || '—'; })
+      .catch(() => {});
+  }
+}
+
+async function connectBrain() {
+  const dot = document.getElementById('brain-conn-dot');
+  const text = document.getElementById('brain-conn-text');
+  text.textContent = '⏳ Checking Memory Engine...';
+
+  try {
+    const resp = await fetch('http://localhost:37777/api/stats', { signal: AbortSignal.timeout(3000) });
+    if (resp.ok) {
+      const data = await resp.json();
+      brainConnected = true;
+      brainData.stats = data;
+      dot.classList.add('connected');
+      text.innerHTML = `<span style="color:var(--accent-green)">● Connected</span> · ${data.total_observations || 0} observations · ${data.total_sessions || 0} sessions · ${data.total_summaries || 0} summaries`;
+      document.querySelector('.brain-conn-action').textContent = '🔄 Refresh';
+      document.getElementById('brain-stat-obs').textContent = data.total_observations || 0;
+
+      // Fetch recent observations
+      try {
+        const obsResp = await fetch('http://localhost:37777/api/recent?limit=100');
+        if (obsResp.ok) {
+          brainData.observations = await obsResp.json();
+          renderDailyNotes();
+          renderBrainStatTypes(data);
+          renderWorkspaceMemory(data);
+        }
+      } catch {}
+    } else throw new Error('Bad response');
+  } catch {
+    brainConnected = false;
+    dot.classList.remove('connected');
+    document.querySelector('.brain-conn-action').textContent = '⚡ Connect';
+    text.innerHTML = '<span style="color:var(--accent-orange)">● Offline</span> — Start with: <code style="background:var(--bg-primary);padding:2px 8px;border-radius:4px;font-size:11px">node agent-ops/memory/viewer.js</code>';
+    // Still render with mock data
+    renderDailyNotesMock();
+    renderWorkspaceMemoryOffline();
+  }
+}
+
+setTimeout(connectBrain, 1500);
+// Auto-retry connection every 10s if offline
+setInterval(() => { if (!brainConnected) connectBrain(); }, 10000);
+
+// ═══ BRAIN GRAPH — FORCE-DIRECTED VISUALIZATION ═══
+const brainGraph = {
+  _initialized: false,
+  canvas: null, ctx: null,
+  nodes: [], links: [],
+  zoom: 1, panX: 0, panY: 0,
+  dragging: null, panning: false,
+  lastMouse: { x: 0, y: 0 },
+  hovered: null,
+  physicsEnabled: true,
+  animFrame: null,
+
+  communityColors: [
+    '#a78bfa', '#f59e0b', '#ef4444', '#10b981', '#3b82f6',
+    '#f97316', '#ec4899', '#8b5cf6', '#06b6d4', '#84cc16',
+    '#6366f1', '#14b8a6'
+  ],
+
+  init() {
+    this.canvas = document.getElementById('brain-graph-canvas');
+    this.ctx = this.canvas.getContext('2d');
+    this._initialized = true;
+    this.resize();
+    this.buildGraph(); // async — sets legend via buildFromGraphify()
+    this.setupEvents();
+    // Note: renderLegend() is NOT called here — buildFromGraphify() handles it
+    // with descriptive community labels. Calling it here would overwrite them.
+    this.animate();
+    window.addEventListener('resize', () => this.resize());
+  },
+
+  resize() {
+    const container = document.getElementById('brain-graph-container');
+    const rect = container.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    this.canvas.width = rect.width * dpr;
+    this.canvas.height = rect.height * dpr;
+    this.canvas.style.width = rect.width + 'px';
+    this.canvas.style.height = rect.height + 'px';
+    this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    this.W = rect.width;
+    this.H = rect.height;
+  },
+
+  async buildGraph() {
+    // Try to load real graph data from graphify-out/graph.json
+    try {
+      const resp = await fetch('/graphify-out/graph.json');
+      if (resp.ok) {
+        const graphData = await resp.json();
+        this.buildFromGraphify(graphData);
+        document.getElementById('brain-stat-links').textContent = this.links.length;
+        const noteCount = document.getElementById('brain-stat-notes');
+        noteCount.textContent = this.nodes.length;
+        return;
+      }
+    } catch {}
+    // Fallback to hardcoded if graph.json unavailable
+    this.buildFallback();
+  },
+
+  buildFromGraphify(data) {
+    const rawNodes = data.nodes || [];
+    const rawEdges = data.links || [];
+    const cx = this.W / 2, cy = this.H / 2;
+
+    // Build a degree count for sizing
+    const degreeMap = {};
+    rawEdges.forEach(e => {
+      degreeMap[e.source] = (degreeMap[e.source] || 0) + 1;
+      degreeMap[e.target] = (degreeMap[e.target] || 0) + 1;
+    });
+
+    // Convert graphify nodes
+    this.nodes = rawNodes.map((n, i) => {
+      const deg = degreeMap[n.id] || 1;
+      const size = Math.max(4, Math.min(22, 3 + deg * 1.8));
+      const angle = (i / rawNodes.length) * Math.PI * 2 + ((n.community || 0) * 0.8);
+      const radius = 100 + (n.community || 0) * 30 + Math.random() * 80;
+      return {
+        id: n.id,
+        label: n.label || n.id,
+        community: n.community || 0,
+        size,
+        type: n.file_type || 'code',
+        sourceFile: n.source_file || '',
+        x: cx + Math.cos(angle) * radius,
+        y: cy + Math.sin(angle) * radius,
+        vx: 0, vy: 0
+      };
+    });
+
+    // Convert graphify edges
+    this.links = rawEdges.map(e => ({
+      source: e.source,
+      target: e.target,
+      strength: e.weight || 0.5,
+      label: e.label || '',
+      sourceNode: null,
+      targetNode: null
+    }));
+
+    // Resolve references
+    const nodeMap = {};
+    this.nodes.forEach(n => nodeMap[n.id] = n);
+    this.links.forEach(l => {
+      l.sourceNode = nodeMap[l.source];
+      l.targetNode = nodeMap[l.target];
+    });
+    // Remove broken links
+    this.links = this.links.filter(l => l.sourceNode && l.targetNode);
+
+    // Update legend with unique communities — use hyperedge labels if available
+    const communityLabels = {
+      0: 'Memory Engine', 1: 'Database Layer', 2: 'Capture System',
+      3: 'Search & Query', 4: 'GTM Pipeline', 5: 'CRM Outreach',
+      6: 'Health Check', 7: 'Brand System', 8: 'Agent Registry',
+      9: 'Screenshots', 10: 'Sync & Mirror', 11: 'Financial Dept'
+    };
+    // Map from hyperedges if available in data
+    if (data.hyperedges) {
+      data.hyperedges.forEach(he => {
+        he.nodes.forEach(nid => {
+          const node = this.nodes.find(n => n.id === nid);
+          if (node) communityLabels[node.community] = he.label;
+        });
+      });
+    }
+    const communities = [...new Set(this.nodes.map(n => n.community))].sort((a,b) => a - b);
+    const legendItems = document.getElementById('graph-legend-items');
+    legendItems.innerHTML = `<div class="graph-legend-item" style="margin-bottom:4px;font-weight:600;color:var(--ob-violet)">${this.nodes.length} nodes · ${this.links.length} edges</div>` +
+      communities.slice(0, 10).map(c =>
+        `<div class="graph-legend-item"><div class="graph-legend-dot" style="background:${this.communityColors[c % this.communityColors.length]}"></div>${communityLabels[c] || 'Community ' + c} (${this.nodes.filter(n=>n.community===c).length})</div>`
+      ).join('');
+  },
+
+  buildFallback() {
+    const cx = this.W / 2, cy = this.H / 2;
+    const fallback = [
+      { id: 'Hub', label: '🏠 Hub', community: 8, size: 20 },
+      { id: 'LuzDaPalavra', label: '🎬 LuzDaPalavra', community: 0, size: 18 },
+      { id: 'StoicCRM', label: '📊 StoicCRM', community: 1, size: 18 },
+      { id: 'StoicTrading', label: '📈 StoicTrading', community: 2, size: 16 },
+      { id: 'GTM-Pipelines', label: '📣 GTM-Pipelines', community: 4, size: 16 },
+      { id: 'TelegramBots', label: '🤖 TelegramBots', community: 3, size: 14 },
+      { id: 'brand-vault', label: '🎨 Brand Vault', community: 8, size: 14 },
+      { id: 'agent-ops', label: '⚡ Agent Ops', community: 8, size: 16 },
+      { id: 'memory-engine', label: '🧠 Memory Engine', community: 8, size: 15 },
+    ];
+    this.nodes = fallback.map((n, i) => {
+      const angle = (i / fallback.length) * Math.PI * 2;
+      return { ...n, type: 'workspace', x: cx + Math.cos(angle) * 150, y: cy + Math.sin(angle) * 150, vx: 0, vy: 0 };
+    });
+    this.links = [
+      { source: 'Hub', target: 'brand-vault', strength: 1 },
+      { source: 'Hub', target: 'agent-ops', strength: 1 },
+      { source: 'Hub', target: 'memory-engine', strength: 1 },
+      { source: 'brand-vault', target: 'LuzDaPalavra', strength: 0.8 },
+      { source: 'brand-vault', target: 'StoicCRM', strength: 0.7 },
+      { source: 'agent-ops', target: 'GTM-Pipelines', strength: 0.7 },
+    ];
+    this.links.forEach(l => {
+      l.sourceNode = this.nodes.find(n => n.id === l.source);
+      l.targetNode = this.nodes.find(n => n.id === l.target);
+    });
+    this.renderLegend();
+  },
+
+  setupEvents() {
+    const c = this.canvas;
+    c.addEventListener('mousedown', e => {
+      const pos = this.screenToWorld(e.offsetX, e.offsetY);
+      const node = this.findNode(pos.x, pos.y);
+      if (node) {
+        this.dragging = node;
+        this.canvas.style.cursor = 'grabbing';
+      } else {
+        this.panning = true;
+        this.lastMouse = { x: e.offsetX, y: e.offsetY };
+      }
+    });
+
+    c.addEventListener('mousemove', e => {
+      if (this.dragging) {
+        const pos = this.screenToWorld(e.offsetX, e.offsetY);
+        this.dragging.x = pos.x;
+        this.dragging.y = pos.y;
+        this.dragging.vx = 0;
+        this.dragging.vy = 0;
+      } else if (this.panning) {
+        this.panX += e.offsetX - this.lastMouse.x;
+        this.panY += e.offsetY - this.lastMouse.y;
+        this.lastMouse = { x: e.offsetX, y: e.offsetY };
+      } else {
+        const pos = this.screenToWorld(e.offsetX, e.offsetY);
+        const node = this.findNode(pos.x, pos.y);
+        this.hovered = node;
+        this.canvas.style.cursor = node ? 'pointer' : 'grab';
+
+        const tooltip = document.getElementById('graph-tooltip');
+        if (node) {
+          tooltip.classList.add('visible');
+          document.getElementById('tooltip-title').textContent = node.label;
+          document.getElementById('tooltip-meta').textContent = `${node.type} · community ${node.community}`;
+          tooltip.style.left = (e.offsetX + 16) + 'px';
+          tooltip.style.top = (e.offsetY - 10) + 'px';
+        } else {
+          tooltip.classList.remove('visible');
+        }
+      }
+    });
+
+    c.addEventListener('mouseup', () => {
+      this.dragging = null;
+      this.panning = false;
+      this.canvas.style.cursor = 'grab';
+    });
+
+    c.addEventListener('mouseleave', () => {
+      this.dragging = null;
+      this.panning = false;
+      this.hovered = null;
+      document.getElementById('graph-tooltip').classList.remove('visible');
+    });
+
+    c.addEventListener('wheel', e => {
+      e.preventDefault();
+      const zoomFactor = e.deltaY > 0 ? 0.92 : 1.08;
+      this.zoom = Math.max(0.3, Math.min(3, this.zoom * zoomFactor));
+    }, { passive: false });
+  },
+
+  screenToWorld(sx, sy) {
+    return {
+      x: (sx - this.panX) / this.zoom,
+      y: (sy - this.panY) / this.zoom
+    };
+  },
+
+  findNode(wx, wy) {
+    for (let i = this.nodes.length - 1; i >= 0; i--) {
+      const n = this.nodes[i];
+      const dx = n.x - wx, dy = n.y - wy;
+      if (dx * dx + dy * dy < (n.size + 4) * (n.size + 4)) return n;
+    }
+    return null;
+  },
+
+  simulate() {
+    if (!this.physicsEnabled) return;
+    const alpha = 0.3;
+
+    // Repulsion
+    for (let i = 0; i < this.nodes.length; i++) {
+      for (let j = i + 1; j < this.nodes.length; j++) {
+        const a = this.nodes[i], b = this.nodes[j];
+        let dx = b.x - a.x, dy = b.y - a.y;
+        let dist = Math.sqrt(dx * dx + dy * dy) || 1;
+        const force = 800 / (dist * dist);
+        const fx = (dx / dist) * force;
+        const fy = (dy / dist) * force;
+        a.vx -= fx; a.vy -= fy;
+        b.vx += fx; b.vy += fy;
+      }
+    }
+
+    // Attraction (links)
+    this.links.forEach(l => {
+      if (!l.sourceNode || !l.targetNode) return;
+      const a = l.sourceNode, b = l.targetNode;
+      let dx = b.x - a.x, dy = b.y - a.y;
+      let dist = Math.sqrt(dx * dx + dy * dy) || 1;
+      const force = (dist - 100) * 0.008 * (l.strength || 0.5);
+      const fx = (dx / dist) * force;
+      const fy = (dy / dist) * force;
+      a.vx += fx; a.vy += fy;
+      b.vx -= fx; b.vy -= fy;
+    });
+
+    // Center gravity
+    const cx = this.W / 2 / this.zoom, cy = this.H / 2 / this.zoom;
+    this.nodes.forEach(n => {
+      n.vx += (cx - n.x) * 0.0005;
+      n.vy += (cy - n.y) * 0.0005;
+    });
+
+    // Apply velocity
+    this.nodes.forEach(n => {
+      if (n === this.dragging) return;
+      n.vx *= 0.85;
+      n.vy *= 0.85;
+      n.x += n.vx * alpha;
+      n.y += n.vy * alpha;
+    });
+  },
+
+  draw() {
+    const ctx = this.ctx;
+    ctx.clearRect(0, 0, this.W, this.H);
+
+    ctx.save();
+    ctx.translate(this.panX, this.panY);
+    ctx.scale(this.zoom, this.zoom);
+
+    // Draw links
+    this.links.forEach(l => {
+      if (!l.sourceNode || !l.targetNode) return;
+      const a = l.sourceNode, b = l.targetNode;
+      const isHighlighted = this.hovered && (this.hovered === a || this.hovered === b);
+
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
+      ctx.strokeStyle = isHighlighted
+        ? `rgba(168, 133, 247, ${0.6 * (l.strength || 0.5)})`
+        : `rgba(100, 100, 140, ${0.15 * (l.strength || 0.5)})`;
+      ctx.lineWidth = isHighlighted ? 2 : 1;
+      ctx.stroke();
+    });
+
+    // Draw nodes
+    this.nodes.forEach(n => {
+      const color = this.communityColors[n.community % this.communityColors.length];
+      const isHovered = this.hovered === n;
+      const isConnected = this.hovered && this.links.some(l =>
+        (l.sourceNode === this.hovered && l.targetNode === n) ||
+        (l.targetNode === this.hovered && l.sourceNode === n)
+      );
+      const dimmed = this.hovered && !isHovered && !isConnected;
+
+      // Glow
+      if (isHovered) {
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, n.size + 8, 0, Math.PI * 2);
+        const glow = ctx.createRadialGradient(n.x, n.y, n.size, n.x, n.y, n.size + 8);
+        glow.addColorStop(0, color + '40');
+        glow.addColorStop(1, 'transparent');
+        ctx.fillStyle = glow;
+        ctx.fill();
+      }
+
+      // Node circle
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, n.size, 0, Math.PI * 2);
+      ctx.fillStyle = dimmed ? color + '30' : color + (isHovered ? 'ff' : 'cc');
+      ctx.fill();
+      ctx.strokeStyle = dimmed ? 'transparent' : color;
+      ctx.lineWidth = isHovered ? 2.5 : 1;
+      ctx.stroke();
+
+      // Label
+      if (this.zoom > 0.5 || isHovered || n.size > 14) {
+        ctx.font = `${isHovered ? '600' : '500'} ${isHovered ? 12 : 10}px Inter, sans-serif`;
+        ctx.fillStyle = dimmed ? 'rgba(200,200,220,0.15)' : (isHovered ? '#fff' : 'rgba(200,200,220,0.7)');
+        ctx.textAlign = 'center';
+        ctx.fillText(n.label, n.x, n.y + n.size + 14);
+      }
+    });
+
+    ctx.restore();
+  },
+
+  animate() {
+    this.simulate();
+    this.draw();
+    this.animFrame = requestAnimationFrame(() => this.animate());
+  },
+
+  zoomIn() { this.zoom = Math.min(3, this.zoom * 1.2); },
+  zoomOut() { this.zoom = Math.max(0.3, this.zoom / 1.2); },
+  resetView() { this.zoom = 1; this.panX = 0; this.panY = 0; },
+  togglePhysics() {
+    this.physicsEnabled = !this.physicsEnabled;
+    document.getElementById('physics-btn').style.color = this.physicsEnabled ? 'var(--ob-violet)' : 'var(--text-dim)';
+  },
+
+  renderLegend() {
+    const items = document.getElementById('graph-legend-items');
+    const types = [
+      { label: 'Workspace', color: this.communityColors[0] },
+      { label: 'Module', color: this.communityColors[8] },
+      { label: 'Platform', color: this.communityColors[3] },
+      { label: 'Agent', color: this.communityColors[11] },
+    ];
+    items.innerHTML = types.map(t =>
+      `<div class="graph-legend-item"><div class="graph-legend-dot" style="background:${t.color}"></div>${t.label}</div>`
+    ).join('');
+  }
+};
+
+// ═══ VAULT BROWSER — LIVE API ═══
+let vaultNotes = {}; // Will be populated from API
+let liveVaultLoaded = false;
+
+async function loadLiveVault() {
+  if (liveVaultLoaded) return;
+  try {
+    const resp = await fetch('http://localhost:37777/api/vault/tree', { signal: AbortSignal.timeout(3000) });
+    if (resp.ok) {
+      const tree = await resp.json();
+      vaultNotes = {};
+      for (const folder of tree) {
+        const folderId = folder.path.replace(/[\/\\]/g, '-') || 'root';
+        vaultNotes[folderId] = {
+          icon: folder.icon,
+          label: folder.label,
+          files: folder.files.map(f => ({
+            id: f.name.toLowerCase().replace(/\s+/g, '-'),
+            icon: '📄',
+            name: f.name,
+            path: f.path,
+            size: f.size,
+            modified: f.modified,
+            content: null, // lazy-loaded
+            tags: [folder.label.toLowerCase()],
+            backlinks: []
+          }))
+        };
+      }
+      liveVaultLoaded = true;
+      document.getElementById('brain-stat-notes').textContent =
+        Object.values(vaultNotes).reduce((s, f) => s + f.files.length, 0);
+      renderVault();
+      return;
+    }
+  } catch {}
+  // Fallback to static content if API is not available
+  loadStaticVault();
+  renderVault();
+}
+
+function loadStaticVault() {
+  vaultNotes = {
+  'brand-vault': {
+    icon: '🎨',
+    label: 'Brand Vault',
+    files: [
+      {
+        id: 'voice-tone', icon: '📢', name: 'Voice & Tone Rules',
+        content: `<h1>Voice & Tone — Stoic Market</h1>
+<h2>§ Six Rules</h2>
+<table><thead><tr><th>Rule</th><th>Description</th></tr></thead><tbody>
+<tr><td><strong>1. Authority</strong></td><td>Speak as someone who operates, not opines</td></tr>
+<tr><td><strong>2. Precision</strong></td><td>Numbers, not adjectives. Data, not hype.</td></tr>
+<tr><td><strong>3. Stoic Calm</strong></td><td>Never FOMO, never panic. Equanimity above all.</td></tr>
+<tr><td><strong>4. Mentor Tone</strong></td><td>Experienced friend — not guru, not teacher.</td></tr>
+<tr><td><strong>5. Respect Time</strong></td><td>If 10 words suffice, never write 20.</td></tr>
+<tr><td><strong>6. Anti-Noise</strong></td><td>Every post must reduce noise, not add it.</td></tr>
+</tbody></table>
+<h2>§ Forbidden Patterns</h2>
+<p>❌ Never use: "🚀", "to the moon", "urgent", "don't miss out"<br>
+❌ Never promise: guaranteed wins, specific returns<br>
+❌ Never clickbait: misleading previews, engagement hacks</p>`,
+        tags: ['brand', 'voice', 'guidelines'],
+        backlinks: ['content-pillars', 'visual-identity']
+      },
+      {
+        id: 'content-pillars', icon: '📋', name: 'Content Pillars (14 Types)',
+        content: `<h1>Content Pillars — 14 Post Types</h1>
+<table><thead><tr><th>Pillar</th><th>Format</th><th>Tone</th><th>Frequency</th></tr></thead><tbody>
+<tr><td>🔬 Technical Analysis</td><td>Chart mockup</td><td>Technical</td><td>2×/week</td></tr>
+<tr><td>🏛️ Stoic Quote</td><td>Minimal dark</td><td>Philosophical</td><td>3×/week</td></tr>
+<tr><td>🧠 Trader Psychology</td><td>Infographic</td><td>Educational</td><td>2×/week</td></tr>
+<tr><td>📐 PA Setup</td><td>Blueprint</td><td>Precise</td><td>2×/week</td></tr>
+<tr><td>📊 Risk Management</td><td>Dashboard card</td><td>Data-driven</td><td>1×/week</td></tr>
+<tr><td>📖 Technical Concept</td><td>Educational</td><td>Academic-light</td><td>1×/week</td></tr>
+<tr><td>🌅 Stoic Reflection</td><td>Cinematic dark</td><td>Meditative</td><td>2×/week</td></tr>
+<tr><td>₿ BTC Analysis</td><td>Terminal data</td><td>Real-time</td><td>1×/week</td></tr>
+<tr><td>👑 Marcus Aurelius</td><td>Philosophy</td><td>Classical</td><td>2×/week</td></tr>
+<tr><td>⚠️ Rules / Errors</td><td>Checklist</td><td>Prescriptive</td><td>1×/week</td></tr>
+<tr><td>🎬 Behind the Scenes</td><td>Personal</td><td>Transparent</td><td>1×/week</td></tr>
+<tr><td>🕯️ Candle Education</td><td>Chart pattern</td><td>Didactic</td><td>1×/week</td></tr>
+<tr><td>💪 Motivational</td><td>Minimal impact</td><td>Energetic</td><td>2×/week</td></tr>
+<tr><td>📅 Weekly Setup</td><td>3-asset brief</td><td>Strategic</td><td>1×/week</td></tr>
+</tbody></table>
+<h2>§ Target Audience</h2>
+<p>Brazilian traders, 25–40, mobile-first. Stoic Market's job: <strong>Reduce noise. Clarify. Decide. Execute.</strong></p>`,
+        tags: ['brand', 'content', 'strategy'],
+        backlinks: ['voice-tone', 'weekly-cadence']
+      },
+      {
+        id: 'visual-identity', icon: '🎨', name: 'Visual Identity',
+        content: `<h1>Visual Identity — Stoic Market</h1>
+<h2>§ Color Palette</h2>
+<pre>Primary:    #0D0D0D (Nero)       — Background
+Secondary:  #1A1A2E (Midnight)    — Cards & surfaces
+Accent:     #D4AF37 (Gold)        — CTAs, highlights
+Text:       #E0E0E0 (Silver)      — Body text
+Danger:     #FF4444 (Crimson)     — Sell / warnings
+Success:    #00E676 (Emerald)     — Buy / positive</pre>
+<h2>§ Typography</h2>
+<p><strong>Headlines:</strong> Inter 700 — clean, authoritative<br>
+<strong>Body:</strong> Inter 400/500 — easy reading on mobile<br>
+<strong>Data:</strong> JetBrains Mono — numbers, prices, charts</p>
+<h2>§ Design Tokens</h2>
+<pre>border-radius: 12px (cards), 8px (buttons)
+spacing: 8px grid / 16px base
+shadows: 0 4px 16px rgba(0,0,0,0.3)
+glassmorphism: backdrop-filter: blur(12px)</pre>`,
+        tags: ['brand', 'design', 'colors'],
+        backlinks: ['voice-tone', 'content-pillars']
+      }
+    ]
+  },
+  'agent-ops': {
+    icon: '⚡',
+    label: 'Agent Operations',
+    files: [
+      {
+        id: 'agent-registry', icon: '📋', name: 'Agent Registry (23 Agents)',
+        content: `<h1>Agent Registry — 23 AI Agents</h1>
+<h2>§ Operations & Content (6)</h2>
+<p><span class="tag-inline">AUTO</span> AutoCalendar — Cron 09:00 + 20:00<br>
+<span class="tag-inline">WIRE</span> Telegram Bot — On AUTO complete<br>
+<span class="tag-inline">LW-EA</span> MT5 Expert Advisor — OnTick()<br>
+<span class="tag-inline">N8N</span> Orchestrator — Webhooks + Cron<br>
+<span class="tag-inline">STOICBOT</span> 24/7 Cloud Bot — Always on<br>
+<span class="tag-inline">LENS</span> FishFinder AI — Camera trigger</p>
+<h2>§ GTM Pipeline (6)</h2>
+<p><span class="tag-inline">ADSPY</span> Competitor Ad Spy<br>
+<span class="tag-inline">ADGEN</span> Facebook Ad Generator<br>
+<span class="tag-inline">NEWSFEED</span> Newsletter Agent<br>
+<span class="tag-inline">VIRALIZER</span> Content Multiplier<br>
+<span class="tag-inline">SEOFACTORY</span> SEO Content Writer<br>
+<span class="tag-inline">SCRAPE</span> LinkedIn Scraper</p>
+<h2>§ Financial Department (8 agents · saves $184K/year)</h2>
+<p><span class="tag-inline">FINCFO</span> CFO Agent — $4-5K/mo saved<br>
+<span class="tag-inline">LEDGER</span> Bookkeeper — $1.2K/mo saved<br>
+<span class="tag-inline">FORECAST</span> FP&A — $4.5K/mo saved<br>
+<span class="tag-inline">TAXBOT</span> Tax Compliance — $800/mo saved</p>`,
+        tags: ['agents', 'architecture', 'operations'],
+        backlinks: ['orchestration-rules', 'process-blueprints']
+      },
+      {
+        id: 'orchestration-rules', icon: '🔧', name: 'Orchestration Rules',
+        content: `<h1>Orchestration Rules</h1>
+<h2>§ Trigger Chains</h2>
+<pre>AUTO (cron 09:00) → WIRE (Telegram) → StoicBot (cloud)
+TradingView (webhook) → LW-EA → Telegram Alert
+n8n → Stripe webhook → DUNNING (collections)
+NEWSFEED (daily) → VIRALIZER (multiply)</pre>
+<h2>§ Priority Matrix</h2>
+<p><strong>P0 Critical:</strong> Trading signals, security alerts<br>
+<strong>P1 High:</strong> Content publishing, CRM events<br>
+<strong>P2 Normal:</strong> Analytics, reporting<br>
+<strong>P3 Low:</strong> Background maintenance tasks</p>`,
+        tags: ['orchestration', 'automation', 'rules'],
+        backlinks: ['agent-registry', 'process-blueprints']
+      },
+      {
+        id: 'process-blueprints', icon: '📐', name: 'Process Blueprints',
+        content: `<h1>Process Blueprints</h1>
+<h2>§ Content Pipeline (7 Stages)</h2>
+<pre>1. IDEATION → Claude API generates topic ideas
+2. RESEARCH → Web scraping + knowledge retrieval
+3. CREATION → Content generation (text + visuals)
+4. REVIEW → Quality check + brand compliance
+5. SCHEDULING → Queue management + optimal timing
+6. PUBLICATION → Multi-channel posting
+7. ANALYTICS → Performance tracking + iteration</pre>
+<h2>§ Financial Pipeline</h2>
+<pre>1. DATA INGESTION → Stripe + bank feeds + invoices
+2. CATEGORIZATION → AI-powered ledger entries
+3. RECONCILIATION → Cross-reference all sources
+4. REPORTING → Daily/weekly/monthly summaries
+5. COMPLIANCE → Tax calculations + filing prep</pre>`,
+        tags: ['processes', 'blueprints', 'pipeline'],
+        backlinks: ['agent-registry', 'orchestration-rules']
+      }
+    ]
+  },
+  'memory': {
+    icon: '🧠',
+    label: 'Memory Engine',
+    files: [
+      {
+        id: 'memory-schema', icon: '🗄️', name: 'Database Schema',
+        content: `<h1>Memory Engine — Schema</h1>
+<h2>§ Three-Layer Architecture</h2>
+<pre>Sessions → Observations → Summaries
+(progressive disclosure pattern)</pre>
+<h3>sessions</h3>
+<pre>id, session_id, workspace_id, started_at,
+ended_at, summary, token_count</pre>
+<h3>observations</h3>
+<pre>id, session_id, workspace_id, type, title,
+content, file_path, tags, importance (1-10),
+created_at, compressed</pre>
+<h3>summaries</h3>
+<pre>id, session_id, workspace_id, scope,
+content, observation_ids, token_count</pre>
+<h2>§ Observation Types</h2>
+<p>📝 <code>file_edit</code> · ⚡ <code>command</code> · 💡 <code>decision</code> · 🔴 <code>error</code> · 🔍 <code>discovery</code> · 🏗️ <code>architecture</code> · 📦 <code>dependency</code> · ⚙️ <code>config</code> · 🚀 <code>deployment</code> · 📌 <code>note</code></p>`,
+        tags: ['memory', 'database', 'schema'],
+        backlinks: ['memory-api', 'memory-search']
+      },
+      {
+        id: 'memory-api', icon: '🔌', name: 'Memory API',
+        content: `<h1>Memory Engine — API Reference</h1>
+<h2>§ Endpoints (localhost:37777)</h2>
+<pre>GET  /api/stats          → Global statistics
+GET  /api/search?q=...    → Full-text search
+GET  /api/recent          → Recent observations
+GET  /api/timeline/:id    → Timeline context
+GET  /api/observation/:id → Single observation</pre>
+<h2>§ Modules</h2>
+<p><code>db.js</code> — SQLite (sql.js WASM) database layer<br>
+<code>capture.js</code> — Observation capture + sessions<br>
+<code>search.js</code> — Search + timeline + stats<br>
+<code>compress.js</code> — AI-powered summarization<br>
+<code>inject.js</code> — Context injection for agents<br>
+<code>viewer.js</code> — Web dashboard server</p>`,
+        tags: ['memory', 'api', 'reference'],
+        backlinks: ['memory-schema']
+      }
+    ]
+  },
+  'graph': {
+    icon: '🕸️',
+    label: 'Knowledge Graph',
+    files: [
+      {
+        id: 'graph-report', icon: '📊', name: 'Graph Report',
+        content: `<h1>Knowledge Graph Report</h1>
+<h2>§ Statistics</h2>
+<p><strong>124</strong> nodes · <strong>235</strong> edges · <strong>12</strong> communities<br>
+Extraction: 58% EXTRACTED · 42% INFERRED</p>
+<h2>§ God Nodes (Most Connected)</h2>
+<pre>1. openDb()           — 15 edges
+2. run()               — 12 edges
+3. AUTO - AutoCalendar — 11 edges
+4. compressSession()   — 10 edges
+5. compressDaily()     — 8 edges
+6. generateContext()   — 8 edges
+7. capture()           — 7 edges</pre>
+<h2>§ Hyperedges (Group Relationships)</h2>
+<p>🏛 <strong>Financial Department</strong> — CFO, Ledger, Forecast, TaxBot, Recon, Dunning<br>
+📣 <strong>GTM Pipeline</strong> — Scrape, AdGen, Newsfeed, Viralizer, AdSpy, SEOFactory<br>
+🎨 <strong>Brand Identity</strong> — Voice, Colors, Typography, Tokens, Pillars</p>`,
+        tags: ['graph', 'analysis', 'communities'],
+        backlinks: ['memory-schema', 'agent-registry']
+      }
+    ]
+  }
+};
+}
+
+function renderVault() {
+  const tree = document.getElementById('vault-tree');
+  let html = '';
+
+  for (const [folderId, folder] of Object.entries(vaultNotes)) {
+    html += `<div class="vault-folder">
+      <div class="vault-folder-header" onclick="toggleFolder(this)">
+        <span class="arrow open">▶</span>
+        ${folder.icon} ${folder.label}
+        <span class="vault-folder-count">${folder.files.length}</span>
+      </div>
+      <div class="vault-files" style="max-height:500px">
+        ${folder.files.map(f => `
+          <div class="vault-file" onclick="openNote('${folderId}','${f.id}',this)" data-note-id="${f.id}">
+            <span class="vault-file-icon">${f.icon}</span>
+            <span class="vault-file-name">${f.name}</span>
+          </div>
+        `).join('')}
+      </div>
+    </div>`;
+  }
+
+  tree.innerHTML = html;
+}
+
+function toggleFolder(header) {
+  const arrow = header.querySelector('.arrow');
+  const files = header.nextElementSibling;
+  if (arrow.classList.contains('open')) {
+    arrow.classList.remove('open');
+    files.style.maxHeight = '0';
+  } else {
+    arrow.classList.add('open');
+    files.style.maxHeight = '500px';
+  }
+}
+
+async function openNote(folderId, noteId, el) {
+  document.querySelectorAll('.vault-file').forEach(f => f.classList.remove('active'));
+  if (el) el.classList.add('active');
+
+  const folder = vaultNotes[folderId];
+  const note = folder.files.find(f => f.id === noteId);
+  if (!note) return;
+
+  document.getElementById('vault-note-title').innerHTML = `${note.icon} ${note.name}`;
+
+  // If content not loaded yet (live vault), fetch from API
+  if (note.content === null && note.path) {
+    try {
+      document.getElementById('vault-note-body').innerHTML = '<div style="padding:40px;text-align:center;color:var(--text-dim)">Loading...</div>';
+      const resp = await fetch(`http://localhost:37777/api/vault/note?path=${encodeURIComponent(note.path)}`);
+      if (resp.ok) {
+        const data = await resp.json();
+        note.content = markdownToHtml(data.content);
+      } else {
+        note.content = '<p style="color:var(--accent-red)">Failed to load note</p>';
+      }
+    } catch {
+      note.content = '<p style="color:var(--text-dim)">Memory Engine offline — cannot load live notes</p>';
+    }
+  }
+
+  document.getElementById('vault-note-body').innerHTML = note.content || '<p>Empty note</p>';
+
+  // Render backlinks
+  const backlinks = [];
+  for (const [fId, fold] of Object.entries(vaultNotes)) {
+    for (const f of fold.files) {
+      if (f.backlinks && f.backlinks.includes(noteId)) {
+        backlinks.push({ folder: fold.label, ...f });
+      }
+    }
+  }
+  // Also add this note's own backlinks
+  if (note.backlinks) {
+    for (const blId of note.backlinks) {
+      for (const [fId, fold] of Object.entries(vaultNotes)) {
+        const found = fold.files.find(f => f.id === blId);
+        if (found && !backlinks.find(b => b.id === blId)) {
+          backlinks.push({ folder: fold.label, ...found });
+        }
+      }
+    }
+  }
+
+  document.getElementById('backlinks-count').textContent = backlinks.length;
+  document.getElementById('backlinks-list').innerHTML = backlinks.length === 0
+    ? '<div style="padding:20px;text-align:center;color:var(--text-dim);font-size:12px">No backlinks found</div>'
+    : backlinks.map(bl => `
+      <div class="backlink-item" onclick="openNoteById('${bl.id}')">
+        <div class="backlink-title">${bl.icon} ${bl.name} <span class="backlink-type">${bl.folder}</span></div>
+        <div class="backlink-snippet">${bl.tags ? bl.tags.map(t => `#${t}`).join(' ') : ''}</div>
+      </div>
+    `).join('');
+}
+
+function openNoteById(noteId) {
+  for (const [fId, fold] of Object.entries(vaultNotes)) {
+    const note = fold.files.find(f => f.id === noteId);
+    if (note) {
+      const el = document.querySelector(`[data-note-id="${noteId}"]`);
+      openNote(fId, noteId, el);
+      return;
+    }
+  }
+}
+
+function filterVault(query) {
+  const q = query.toLowerCase();
+  document.querySelectorAll('.vault-file').forEach(f => {
+    const name = f.querySelector('.vault-file-name').textContent.toLowerCase();
+    f.style.display = name.includes(q) ? 'flex' : 'none';
+  });
+}
+
+function copyNoteContent() {
+  const body = document.getElementById('vault-note-body');
+  navigator.clipboard.writeText(body.innerText);
+}
+
+// ═══ DAILY NOTES ═══
+const typeIcons = {
+  file_edit: '📝', command: '⚡', decision: '💡', error: '🔴',
+  discovery: '🔍', architecture: '🏗️', dependency: '📦',
+  config: '⚙️', deployment: '🚀', note: '📌'
+};
+
+const wsColors = {
+  LP: 'rgba(77,124,255,0.15)', CRM: 'rgba(0,230,138,0.15)',
+  ST: 'rgba(255,215,0,0.15)', TG: 'rgba(0,212,255,0.15)',
+  GTM: 'rgba(155,89,255,0.15)', FF: 'rgba(0,230,138,0.15)',
+  AP: 'rgba(255,159,67,0.15)', RB: 'rgba(155,89,255,0.15)',
+  CA: 'rgba(255,71,87,0.15)', WT: 'rgba(255,107,157,0.15)',
+  HUB: 'rgba(255,159,67,0.15)'
+};
+
+const wsTextColors = {
+  LP: '#4d7cff', CRM: '#00e68a', ST: '#ffd700', TG: '#00d4ff',
+  GTM: '#9b59ff', FF: '#00e68a', AP: '#ff9f43', RB: '#9b59ff',
+  CA: '#ff4757', WT: '#ff6b9d', HUB: '#ff9f43'
+};
+
+function renderDailyNotes(filter) {
+  const container = document.getElementById('daily-entries');
+  const obs = brainData.observations || [];
+  const filtered = filter ? obs.filter(o => o.type === filter) : obs;
+
+  if (filtered.length === 0) {
+    container.innerHTML = `<div style="padding:60px 20px;text-align:center;color:var(--text-dim)">
+      <div style="font-size:36px;margin-bottom:12px">📅</div>
+      <p>No observations ${filter ? `of type "${filter}"` : ''} found.</p>
+      <p style="margin-top:8px;font-size:11px">Use Quick Capture or connect the Memory Engine to see activity.</p>
+    </div>`;
+    return;
+  }
+
+  container.innerHTML = filtered.slice(0, 50).map(o => `
+    <div class="daily-entry">
+      <div class="daily-entry-header">
+        <div class="daily-entry-title">
+          ${typeIcons[o.type] || '📌'} ${o.title || 'Observation'}
+        </div>
+        <div class="daily-entry-time">${o.created_at || ''}</div>
+      </div>
+      <div class="daily-entry-body">${(o.content || '').substring(0, 200)}${(o.content || '').length > 200 ? '...' : ''}</div>
+      <div class="daily-entry-tags">
+        <span class="daily-entry-ws" style="background:${wsColors[o.workspace_id] || 'rgba(100,100,140,0.1)'};color:${wsTextColors[o.workspace_id] || '#888'}">${o.workspace_id}</span>
+        <span class="daily-entry-ws" style="background:rgba(124,58,237,0.1);color:var(--ob-violet)">${o.type}</span>
+        ${o.importance >= 7 ? '<span class="daily-entry-ws" style="background:rgba(255,215,0,0.15);color:#ffd700">⭐ High Priority</span>' : ''}
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderDailyNotesMock() {
+  const mock = [
+    { title: 'Completed Davi e Golias cinematic video', type: 'deployment', workspace_id: 'LP', content: 'Successfully rendered all 12 shots with premium color grading and uploaded to TikTok. Retention metrics pending.', created_at: '2026-04-21 19:30', importance: 8 },
+    { title: 'RLS policies deployed to all tables', type: 'architecture', workspace_id: 'CRM', content: 'Added user_id columns and Row-Level Security policies across 14 Supabase tables for multi-tenant data isolation.', created_at: '2026-04-21 18:45', importance: 9 },
+    { title: 'Larry Williams EA signal triggered', type: 'decision', workspace_id: 'ST', content: 'EUR/USD D1 9.1 setup detected. EA opened long position at 1.0842. Stop loss at 1.0798.', created_at: '2026-04-21 16:20', importance: 7 },
+    { title: 'Fal.ai balance recharged — $20', type: 'note', workspace_id: 'LP', content: 'Recharged fal.ai credit for keyframe generation. Sufficient for approximately 40 premium renders.', created_at: '2026-04-21 15:00', importance: 5 },
+    { title: 'Mirror sync exported to mobile', type: 'deployment', workspace_id: 'HUB', content: 'sync-agent.ps1 generated claude-mirror package with agent state, commands, and mobile dashboard.', created_at: '2026-04-21 14:30', importance: 6 },
+    { title: 'Graphify knowledge graph built', type: 'discovery', workspace_id: 'HUB', content: '124 nodes, 235 edges, 12 communities detected across the Comunidade Stoic workspace.', created_at: '2026-04-18 17:50', importance: 7 },
+  ];
+  brainData.observations = mock;
+  renderDailyNotes();
+}
+
+function filterDaily(type, el) {
+  if (el) {
+    document.querySelectorAll('.daily-filter-btn').forEach(b => b.classList.remove('active'));
+    el.classList.add('active');
+  }
+  renderDailyNotes(type);
+}
+
+// ═══ BRAIN STATS ═══
+function renderBrainStatTypes(stats) {
+  const container = document.getElementById('brain-stat-types');
+  if (!stats || !stats.by_type) return;
+  container.innerHTML = stats.by_type.map(t => `
+    <div style="background:var(--bg-primary);border-radius:8px;padding:8px 10px;display:flex;align-items:center;justify-content:space-between">
+      <span style="font-size:12px;color:var(--text-secondary)">${typeIcons[t.type] || '📌'} ${t.type}</span>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--ob-violet)">${t.count}</span>
+    </div>
+  `).join('');
+}
+
+// ═══ WORKSPACE MEMORY CARDS ═══
+const wsInfo = {
+  LP: { name: 'LuzDaPalavra', icon: '🎬', color: '#4d7cff' },
+  CRM: { name: 'StoicCRM', icon: '📊', color: '#00e68a' },
+  ST: { name: 'StoicTrading', icon: '📈', color: '#ffd700' },
+  TG: { name: 'TelegramBots', icon: '🤖', color: '#00d4ff' },
+  GTM: { name: 'GTM-Pipelines', icon: '📣', color: '#9b59ff' },
+  FF: { name: 'FishFinder', icon: '🐟', color: '#00e68a' },
+  AP: { name: 'Automacoes', icon: '👴', color: '#ff9f43' },
+  RB: { name: 'Railway', icon: '🚂', color: '#9b59ff' },
+  CA: { name: 'CyberArmor', icon: '🔒', color: '#ff4757' },
+  WT: { name: 'WhaleTracker', icon: '🐋', color: '#ff6b9d' },
+  HUB: { name: 'Hub', icon: '🏠', color: '#ff9f43' }
+};
+
+function renderWorkspaceMemory(stats) {
+  const grid = document.getElementById('ws-memory-grid');
+  const byWs = stats && stats.by_workspace ? stats.by_workspace : [];
+  const wsMap = {};
+  byWs.forEach(w => wsMap[w.workspace_id] = { count: w.count, last: w.last_activity });
+
+  // Fetch real session counts per workspace
+  const sessionMap = {};
+  if (brainData.observations.length > 0) {
+    const sessionIds = new Set();
+    brainData.observations.forEach(o => {
+      if (o.session_id) {
+        const ws = o.workspace_id;
+        if (!sessionMap[ws]) sessionMap[ws] = new Set();
+        sessionMap[ws].add(o.session_id);
+      }
+    });
+  }
+
+  grid.innerHTML = Object.entries(wsInfo).map(([id, info]) => {
+    const wsData = wsMap[id] || { count: 0 };
+    const obsCount = wsData.count;
+    const sessCount = sessionMap[id] ? sessionMap[id].size : (stats.total_sessions && obsCount > 0 ? Math.max(1, Math.round(obsCount / (stats.total_observations / stats.total_sessions))) : 0);
+    return `
+    <div class="ws-memory-card" style="--card-color:${info.color}" onclick="filterAndShowWs('${id}')">
+      <div style="position:absolute;top:0;left:0;right:0;height:2px;background:${info.color}"></div>
+      <div class="ws-memory-header">
+        <span class="ws-memory-icon">${info.icon}</span>
+        <div>
+          <div class="ws-memory-name">${info.name}</div>
+          <div class="ws-memory-id">${id}</div>
+        </div>
+      </div>
+      <div class="ws-memory-stats">
+        <div class="ws-mem-stat">
+          <div class="ws-mem-stat-val">${obsCount}</div>
+          <div class="ws-mem-stat-label">Observations</div>
+        </div>
+        <div class="ws-mem-stat">
+          <div class="ws-mem-stat-val">${sessCount}</div>
+          <div class="ws-mem-stat-label">Sessions</div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderWorkspaceMemoryOffline() {
+  const grid = document.getElementById('ws-memory-grid');
+  grid.innerHTML = Object.entries(wsInfo).map(([id, info]) => `
+    <div class="ws-memory-card">
+      <div style="position:absolute;top:0;left:0;right:0;height:2px;background:${info.color}"></div>
+      <div class="ws-memory-header">
+        <span class="ws-memory-icon">${info.icon}</span>
+        <div>
+          <div class="ws-memory-name">${info.name}</div>
+          <div class="ws-memory-id">${id}</div>
+        </div>
+      </div>
+      <div class="ws-memory-stats">
+        <div class="ws-mem-stat">
+          <div class="ws-mem-stat-val">—</div>
+          <div class="ws-mem-stat-label">Observations</div>
+        </div>
+        <div class="ws-mem-stat">
+          <div class="ws-mem-stat-val">—</div>
+          <div class="ws-mem-stat-label">Sessions</div>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function filterAndShowWs(wsId) {
+  // Switch to daily notes filtered by workspace
+  switchBrainPanel('daily');
+  document.querySelectorAll('.brain-nav-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.brain-nav-btn')[2].classList.add('active');
+  const filtered = brainData.observations.filter(o => o.workspace_id === wsId);
+  const container = document.getElementById('daily-entries');
+  if (filtered.length === 0) {
+    container.innerHTML = `<div style="padding:60px;text-align:center;color:var(--text-dim)">No observations for ${wsId}</div>`;
+    return;
+  }
+  // Temporarily replace and render
+  const origObs = brainData.observations;
+  brainData.observations = filtered;
+  renderDailyNotes();
+  brainData.observations = origObs;
+}
+
+// ═══ QUICK CAPTURE ═══
+async function submitCapture() {
+  const ws = document.getElementById('capture-workspace').value;
+  const type = document.getElementById('capture-type').value;
+  const title = document.getElementById('capture-title').value;
+  const content = document.getElementById('capture-content').value;
+
+  if (!title || !content) {
+    alert('Please fill in title and content');
+    return;
+  }
+
+  // Add to local data
+  const obs = {
+    workspace_id: ws, type, title, content,
+    created_at: new Date().toISOString().replace('T', ' ').substring(0, 16),
+    importance: type === 'decision' ? 8 : type === 'architecture' ? 7 : 5
+  };
+  brainData.observations.unshift(obs);
+  renderDailyNotes();
+
+  // Send to Memory Engine via POST /api/capture
+  if (brainConnected) {
+    try {
+      const resp = await fetch('http://localhost:37777/api/capture', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ workspace: ws, type, title, content, importance: obs.importance })
+      });
+      if (resp.ok) {
+        const result = await resp.json();
+        console.log('🧠 Captured to brain:', result);
+      }
+    } catch (e) { console.warn('Capture failed:', e); }
+  }
+
+  // Clear form
+  document.getElementById('capture-title').value = '';
+  document.getElementById('capture-content').value = '';
+
+  // Flash success
+  const btn = document.querySelector('.quick-capture-submit');
+  btn.textContent = '✅ Captured!';
+  btn.style.background = 'var(--accent-green)';
+  setTimeout(() => {
+    btn.textContent = '⚡ Capture to Brain';
+    btn.style.background = '';
+  }, 1500);
+}
+
+// ═══ AGENT DATA ═══
+const agents = {
+  ops: [
+    { id: 'AUTO', name: 'AutoCalendar', status: 'live', trigger: 'Cron 09:00 + 20:00 BRT' },
+    { id: 'WIRE', name: 'Telegram Bot', status: 'live', trigger: 'AUTO completes' },
+    { id: 'LW-EA', name: 'MT5 Expert Advisor', status: 'live', trigger: 'MT5 OnTick()' },
+    { id: 'N8N', name: 'Orchestrator', status: 'live', trigger: 'Cron / Webhook / Telegram' },
+    { id: 'STOICBOT', name: 'Telegram Bot 24/7', status: 'live', trigger: 'Cron + n8n + TradingView' },
+    { id: 'LENS', name: 'FishFinder AI', status: 'planned', trigger: 'Camera tap' },
+  ],
+  gtm: [
+    { id: 'SCRAPE', name: 'LinkedIn Scraper', status: 'live', trigger: 'Manual CLI' },
+    { id: 'ADGEN', name: 'FB Ad Generator', status: 'live', trigger: 'Manual CLI' },
+    { id: 'ADSPY', name: 'Competitor Ad Spy', status: 'live', trigger: 'Manual CLI' },
+    { id: 'NEWSFEED', name: 'Newsletter Agent', status: 'live', trigger: 'Manual / Daily cron' },
+    { id: 'VIRALIZER', name: 'Content Multiplier', status: 'live', trigger: 'Manual / Post-newsfeed' },
+    { id: 'SEOFACTORY', name: 'SEO Content Factory', status: 'live', trigger: 'Manual CLI' },
+  ],
+  crm: [
+    { id: 'OUTREACH', name: 'WhatsApp Sender', status: 'live', trigger: 'Scheduled / Manual' },
+    { id: 'REPLY', name: 'AI Auto-Reply', status: 'live', trigger: 'Incoming message' },
+    { id: 'DIALER', name: 'Email + Phone Outreach', status: 'live', trigger: 'Scheduled campaign' },
+  ],
+  fin: [
+    { id: 'FINCFO', name: 'CFO Agent', status: 'deployed', trigger: 'Daily 07:00 BRT', replaces: '$4-5K/mo' },
+    { id: 'LEDGER', name: 'Bookkeeping Agent', status: 'deployed', trigger: 'Daily 23:00 BRT', replaces: '$1.2K/mo' },
+    { id: 'FORECAST', name: 'FP&A Agent', status: 'pending', trigger: 'Weekly Mon 08:00', replaces: '$4.5K/mo' },
+    { id: 'TAXBOT', name: 'Tax Compliance', status: 'deployed', trigger: '5th monthly 09:00', replaces: '$800/mo' },
+    { id: 'RECON', name: 'Revenue Controller', status: 'pending', trigger: '1st monthly', replaces: '$5K/mo' },
+    { id: 'DUNNING', name: 'Collections Agent', status: 'live', trigger: 'Failed payment event' },
+    { id: 'WATCHDOG', name: 'Risk Monitor', status: 'deployed', trigger: 'Daily 06:45 BRT' },
+    { id: 'CASHFLOW', name: 'Treasury Agent', status: 'pending', trigger: 'Daily 08:00 BRT' },
+  ]
+};
+
+function renderAgents(listId, agentList) {
+  const container = document.getElementById(listId);
+  container.innerHTML = agentList.map(a => `
+    <div class="agent-mini">
+      <span class="agent-id">${a.id}</span>
+      <span class="agent-name">${a.name}</span>
+      <span class="tag ${a.status}">${a.status}</span>
+      <span class="agent-trigger">${a.trigger}</span>
+      ${a.replaces ? `<span style="font-size:10px;color:var(--accent-orange)">Saves ${a.replaces}</span>` : ''}
+    </div>
+  `).join('');
+}
+
+renderAgents('ops-agents', agents.ops);
+renderAgents('gtm-agents', agents.gtm);
+renderAgents('crm-agents', agents.crm);
+renderAgents('fin-agents', agents.fin);
+
+// ═══ PLATFORM DETAILS ═══
+const platforms = [
+  { icon: '🐙', name: 'GitHub', bg: 'rgba(255,255,255,0.06)', desc: 'Source control, CI/CD pipelines, deploy workflows. Main repo: benjaminkernbaum-ux/StoicHub', tags: ['Git', 'Actions', 'CI/CD'], url: 'https://github.com/benjaminkernbaum-ux' },
+  { icon: '🚂', name: 'Railway', bg: 'rgba(155,89,255,0.12)', desc: 'Cloud hosting for StoicBot (24/7), stoic-factory content engine, n8n orchestrator. Auto-deploy from GitHub.', tags: ['Docker', 'Cloud', 'Auto-Deploy'], url: 'https://railway.app/dashboard' },
+  { icon: '▲', name: 'Vercel', bg: 'rgba(255,255,255,0.06)', desc: 'SaaS Hub frontend (React/Vite). Edge functions, serverless API. Auto-deploy on push to main.', tags: ['Edge', 'Serverless', 'CDN'], url: 'https://vercel.com/dashboard' },
+  { icon: '⚡', name: 'Supabase', bg: 'rgba(0,230,138,0.12)', desc: 'PostgreSQL database with Row-Level Security. Auth, real-time subscriptions, storage. Multi-tenant CRM data.', tags: ['PostgreSQL', 'RLS', 'Auth'], url: 'https://supabase.com/dashboard' },
+  { icon: '🔧', name: 'n8n', bg: 'rgba(255,159,67,0.12)', desc: '31 workflow automations: content → finance → security → CRM. Low-code visual orchestration on Railway Docker.', tags: ['Low-Code', 'Workflows', 'Docker'] },
+  { icon: '✈️', name: 'Telegram API', bg: 'rgba(0,212,255,0.12)', desc: 'StoicBot 24/7, content channel (Stoic Academy), notification system, group interactions, polls.', tags: ['Bot API', 'Channel', 'Webhook'] },
+  { icon: '📸', name: 'Instagram API', bg: 'rgba(255,107,157,0.12)', desc: 'Auto-posting via instagrapi. Content renders (1080x1080), caption generation, Reels upload.', tags: ['instagrapi', 'Reels', 'Auto-Post'] },
+  { icon: '🎵', name: 'TikTok', bg: 'rgba(255,255,255,0.06)', desc: 'Biblical cinematic reels. LuzDaPalavra channel. stoic-factory auto-upload pipeline.', tags: ['Reels', 'FYP', 'Auto-Upload'] },
+  { icon: '📊', name: 'MetaTrader 5', bg: 'rgba(255,215,0,0.12)', desc: 'Larry Williams 9.1 D1 EA. Live trading on Forex. OnTick() signals → Telegram alerts.', tags: ['MQL5', 'EA', 'Forex'] },
+  { icon: '🤖', name: 'Claude API', bg: 'rgba(155,89,255,0.12)', desc: 'AI backbone — content generation, analysis, auto-reply, SEO, ad copy, financial summaries.', tags: ['Sonnet', 'Haiku', 'Opus'] },
+  { icon: '🎙️', name: 'ElevenLabs', bg: 'rgba(0,212,255,0.12)', desc: 'Text-to-speech narration for biblical stories. Portuguese (PT-BR) Antonio voice.', tags: ['TTS', 'PT-BR', 'Pipeline'] },
+  { icon: '🎬', name: 'Fal.ai / Higgsfield', bg: 'rgba(77,124,255,0.12)', desc: 'AI video generation. Keyframe generation (Flux) + animation (Minimax/Higgsfield Soul).', tags: ['Video AI', 'Keyframes', 'Animation'] },
+  { icon: '💳', name: 'Stripe', bg: 'rgba(77,124,255,0.12)', desc: 'Payment processing, subscription management, revenue tracking. Feeds into Finance dept agents.', tags: ['Payments', 'Subs', 'Webhooks'] },
+  { icon: '📋', name: 'Google Sheets', bg: 'rgba(0,230,138,0.12)', desc: 'KPI tracking, ledger sync, forecast scenarios, tax calculations. Finance agent outputs.', tags: ['KPIs', 'Ledger', 'Reports'] },
+];
+
+document.getElementById('platform-details').innerHTML = platforms.map(p => `
+  <div class="card" ${p.url ? `onclick="window.open('${p.url}','_blank')"` : ''}>
+    <div class="card-header">
+      <div class="card-icon" style="background:${p.bg}">${p.icon}</div>
+      <div>
+        <div class="card-title">${p.name}</div>
+      </div>
+    </div>
+    <div class="card-body">${p.desc}</div>
+    <div class="card-tags">${p.tags.map(t => `<span class="tag deployed">${t}</span>`).join('')}</div>
+  </div>
+`).join('');
+
+// ═══ MARKDOWN → HTML (with table support) ═══
+function markdownToHtml(md) {
+  if (!md) return '';
+  // Extract and convert tables BEFORE escaping HTML
+  const tables = [];
+  md = md.replace(/(^\|.+\|\n)(^\|[-| :]+\|\n)((?:^\|.+\|\n?)*)/gm, (match, headerRow, sepRow, bodyRows) => {
+    const parseRow = row => row.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map(c => c.trim());
+    const headers = parseRow(headerRow);
+    const rows = bodyRows.trim().split('\n').filter(r => r.trim()).map(parseRow);
+    const tableHtml = `<table style="width:100%;border-collapse:collapse;margin:12px 0;font-size:13px">
+      <thead><tr>${headers.map(h => `<th style="text-align:left;padding:8px 12px;border-bottom:2px solid var(--border);color:var(--ob-violet);font-weight:600">${h}</th>`).join('')}</tr></thead>
+      <tbody>${rows.map(r => `<tr>${r.map(c => `<td style="padding:6px 12px;border-bottom:1px solid var(--border)">${c}</td>`).join('')}</tr>`).join('')}</tbody>
+    </table>`;
+    const placeholder = `<!--TABLE_${tables.length}-->`;
+    tables.push(tableHtml);
+    return placeholder;
+  });
+
+  let html = md
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    // Headers
+    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+    .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+    // Bold and italic
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    // Code blocks
+    .replace(/```([\s\S]*?)```/g, '<pre>$1</pre>')
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    // Lists
+    .replace(/^- (.+)$/gm, '<li>$1</li>')
+    .replace(/^\d+\. (.+)$/gm, '<li>$1</li>')
+    // Horizontal rule
+    .replace(/^---$/gm, '<hr>')
+    // Links
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" style="color:var(--ob-violet)" target="_blank">$1</a>')
+    // Line breaks (double newline = paragraph)
+    .replace(/\n\n/g, '</p><p>')
+    .replace(/\n/g, '<br>');
+  // Wrap consecutive <li> in <ul>
+  html = html.replace(/(<li>.*?<\/li>(?:<br>)?)+/g, m => '<ul>' + m.replace(/<br>/g,'') + '</ul>');
+  // Re-inject tables
+  tables.forEach((t, i) => {
+    html = html.replace(`&lt;!--TABLE_${i}--&gt;`, t);
+  });
+  return '<p>' + html + '</p>';
+}
+
+// ═══ COMMAND PALETTE ═══
+let paletteSelectedIndex = 0;
+let paletteResults = [];
+
+function openPalette() {
+  document.getElementById('cmd-overlay').classList.add('open');
+  const input = document.getElementById('cmd-input');
+  input.value = '';
+  input.focus();
+  filterPalette('');
+}
+
+function closePalette() {
+  document.getElementById('cmd-overlay').classList.remove('open');
+}
+
+function buildPaletteIndex() {
+  const items = [];
+  // Vault notes
+  for (const [fId, folder] of Object.entries(vaultNotes)) {
+    for (const f of folder.files) {
+      items.push({ icon: f.icon || '📄', title: f.name, sub: folder.label, type: 'note', action: () => { switchTab('brain'); switchBrainPanel('vault'); setTimeout(() => openNote(fId, f.id), 100); } });
+    }
+  }
+  // Tabs
+  const tabs = ['overview', 'workspaces', 'agents', 'platforms', 'graph', 'brain', 'deps'];
+  const tabLabels = { overview: '🏠 Overview', workspaces: '📂 Workspaces', agents: '🤖 Agent Fleet', platforms: '🔗 Platforms', graph: '🕸️ Knowledge Graph', brain: '🧠 Knowledge Brain', deps: '🔀 Dependencies' };
+  tabs.forEach(t => items.push({ icon: tabLabels[t].split(' ')[0], title: tabLabels[t].substring(2), sub: 'Navigation', type: 'tab', action: () => { document.querySelectorAll('.nav-tab')[tabs.indexOf(t)].click(); } }));
+  // Slash commands
+  const commands = [
+    { icon: '🔥', title: '/viralizer', sub: 'Multiply content into Reels, threads, carousels' },
+    { icon: '🏭', title: '/seofactory', sub: 'Generate 2000+ word SEO articles' },
+    { icon: '🕵️', title: '/adspy', sub: 'Scrape competitor Facebook ads' },
+    { icon: '📰', title: '/newsfeed', sub: 'Scan news and generate newsletter' },
+    { icon: '🔄', title: '/mirror_sync', sub: 'Export agent state to mobile' },
+    { icon: '⚡', title: '/turbo_exec', sub: 'Full diagnostic + publish cycle' },
+  ];
+  commands.forEach(c => items.push({ ...c, type: 'command', action: () => { navigator.clipboard.writeText(c.title); closePalette(); } }));
+  // Brain panels
+  const panels = [
+    { icon: '🌐', title: 'Graph View', sub: 'Interactive knowledge graph', action: () => { switchTab('brain'); switchBrainPanel('graph-view'); } },
+    { icon: '📁', title: 'Vault Browser', sub: 'Browse all notes', action: () => { switchTab('brain'); switchBrainPanel('vault'); } },
+    { icon: '📅', title: 'Daily Notes', sub: 'Activity timeline + capture', action: () => { switchTab('brain'); switchBrainPanel('daily'); } },
+    { icon: '📦', title: 'Workspace Memory', sub: 'Per-workspace observation stats', action: () => { switchTab('brain'); switchBrainPanel('workspaces-mem'); } },
+  ];
+  panels.forEach(p => items.push({ ...p, type: 'panel' }));
+  return items;
+}
+
+function filterPalette(query) {
+  const allItems = buildPaletteIndex();
+  const q = query.toLowerCase().trim();
+  paletteResults = q ? allItems.filter(item =>
+    item.title.toLowerCase().includes(q) || (item.sub || '').toLowerCase().includes(q)
+  ) : allItems.slice(0, 12);
+  paletteSelectedIndex = 0;
+  renderPaletteResults();
+}
+
+function renderPaletteResults() {
+  const container = document.getElementById('cmd-results');
+  container.innerHTML = paletteResults.map((r, i) => `
+    <div class="cmd-result ${i === paletteSelectedIndex ? 'selected' : ''}" onclick="executePaletteItem(${i})" onmouseenter="paletteSelectedIndex=${i};renderPaletteResults()">
+      <div class="cmd-result-icon">${r.icon}</div>
+      <div class="cmd-result-text">
+        <div class="cmd-result-title">${r.title}</div>
+        <div class="cmd-result-sub">${r.sub || ''}</div>
+      </div>
+      <span class="cmd-result-badge">${r.type || ''}</span>
+    </div>
+  `).join('') || '<div style="padding:24px;text-align:center;color:var(--text-dim)">No results</div>';
+}
+
+function executePaletteItem(index) {
+  const item = paletteResults[index];
+  if (item && item.action) { closePalette(); item.action(); }
+}
+
+function handlePaletteKey(e) {
+  if (e.key === 'ArrowDown') { e.preventDefault(); paletteSelectedIndex = Math.min(paletteResults.length - 1, paletteSelectedIndex + 1); renderPaletteResults(); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); paletteSelectedIndex = Math.max(0, paletteSelectedIndex - 1); renderPaletteResults(); }
+  else if (e.key === 'Enter') { e.preventDefault(); executePaletteItem(paletteSelectedIndex); }
+  else if (e.key === 'Escape') { closePalette(); }
+}
+
+// Ctrl+K shortcut
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+    e.preventDefault();
+    openPalette();
+  }
+  if (e.key === 'Escape') closePalette();
+});
+
+// ═══ CONVERSATION IMPORT ═══
+async function loadConversations() {
+  try {
+    const resp = await fetch('http://localhost:37777/api/conversations', { signal: AbortSignal.timeout(3000) });
+    if (resp.ok) {
+      const convos = await resp.json();
+      const convoObs = convos.map(c => ({
+        title: `Antigravity Session (${c.lineCount} actions)`,
+        type: 'note',
+        workspace_id: 'HUB',
+        content: c.preview,
+        created_at: c.date.replace('T', ' ').substring(0, 16),
+        importance: 5,
+        isConversation: true
+      }));
+      brainData.observations = [...brainData.observations, ...convoObs]
+        .sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
+      renderDailyNotes();
+    }
+  } catch {}
+}
+
+// ═══ INITIALIZE ═══
+async function initBrain() {
+  await loadLiveVault();
+  loadConversations();
+}
+
+initBrain();
+</script>
+</body>
+</html>

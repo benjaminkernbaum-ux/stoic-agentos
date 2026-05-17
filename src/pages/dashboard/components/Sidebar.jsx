@@ -15,6 +15,7 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen, activeTab, setAct
         <div className="dash-nav-section">Main</div>
 
         {[
+          { id: 'commandcenter', icon: '⚡', label: 'Command Center', badge: { text: 'HQ', color: 'purple' } },
           { id: 'overview',   icon: '📊', label: 'Overview',   badge: errorAgents > 0 ? { text: errorAgents, color: 'red' } : null },
           { id: 'agents',     icon: '🤖', label: 'Agents',     badge: liveAgents > 0 ? { text: liveAgents, color: 'green' } : null },
           { id: 'workspaces', icon: '📦', label: 'Workspaces', badge: null },

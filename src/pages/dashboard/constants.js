@@ -27,6 +27,7 @@ export const CMD_ITEMS = [
   { id: 'brain',      icon: '🧠', name: 'Go to Brain',       desc: 'Knowledge and observations',     tab: 'brain' },
   { id: 'graph',      icon: '🕸️', name: 'Go to Graph',       desc: 'Knowledge visualization',       tab: 'graph' },
   { id: 'settings',   icon: '⚙️', name: 'Go to Settings',    desc: 'API keys and account',           tab: 'settings' },
+  { id: 'commandcenter', icon: '⚡', name: 'Command Center',  desc: 'Full ecosystem command center',  tab: 'commandcenter' },
 ];
 
 export const TAB_TITLES = {
@@ -38,6 +39,7 @@ export const TAB_TITLES = {
   traces:     'Agent Traces',
   workflows:  'Workflows',
   settings:   'Settings',
+  commandcenter: 'Command Center',
 };
 
 export const BRAIN_FILTERS = ['all', 'note', 'decision', 'architecture', 'git_commit', 'deployment', 'discovery', 'error'];

@@ -14,6 +14,9 @@
  *   await openai.chat.completions.create({ model: 'gpt-4o', messages: [...] });
  */
 
+import { createRequire } from 'node:module';
+const _require = createRequire(import.meta.url);
+
 // ── Pricing Table (per 1M tokens, USD) ──
 const PRICING = {
   // OpenAI
@@ -630,11 +633,11 @@ function wrapAnthropicStream(stream, ctx, meta) {
 }
 
 // ── Dynamic Import Helper ──
-// We use synchronous require fallback for CJS compatibility
+// ESM-compatible require for detecting optional peer dependencies
+
 function await_import(mod) {
   try {
-    // Try require first (CommonJS environments, faster)
-    return require(mod);
+    return _require(mod);
   } catch {
     // Module not installed — that's fine
     return null;

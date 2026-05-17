@@ -21,6 +21,7 @@ import BrainTab from './tabs/BrainTab';
 import GraphTab from './tabs/GraphTab';
 import TracesTab from './tabs/TracesTab';
 import WorkflowsTab from './tabs/WorkflowsTab';
+import CommandCenterTab from './tabs/CommandCenterTab';
 import SettingsTab from './tabs/SettingsTab';
 
 import '../Dashboard.css';
@@ -207,6 +208,10 @@ export default function Dashboard() {
             agents={data.agents}
             planName={planName}
           />
+        )}
+
+        {activeTab === 'commandcenter' && (
+          <CommandCenterTab />
         )}
 
         {activeTab === 'workflows' && (
