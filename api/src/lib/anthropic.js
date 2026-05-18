@@ -1,11 +1,14 @@
 /**
- * Anthropic client factory.
+ * Anthropic client factory with Vault-backed BYOK.
  *
- * Resolves the API key in this order:
- *   1. org.anthropic_api_key  (BYOK — per-org)
- *   2. process.env.ANTHROPIC_API_KEY  (platform-wide fallback)
+ * Key resolution (in order):
+ *   1. org.anthropic_api_key  — LEGACY plaintext column. Only present during the
+ *      brief window between code deploy and migration_003. Dropped after.
+ *   2. org.anthropic_key_vault_id  — UUID into vault.secrets. Decrypted via the
+ *      get_org_anthropic_key() RPC (service-role only).
+ *   3. process.env.ANTHROPIC_API_KEY  — platform-wide fallback.
  *
- * Throws when neither is available so callers can surface a clear 4xx.
+ * Decrypted keys are cached in-process for 5min to avoid an RPC per Claude call.
  */
 
 import Anthropic from '@anthropic-ai/sdk';
@@ -17,16 +20,48 @@ export const MODELS = {
 };
 
 const PLATFORM_KEY = process.env.ANTHROPIC_API_KEY || '';
+const KEY_TTL_MS = 5 * 60 * 1000;
 
-const clientCache = new Map();
+const clientCache = new Map();      // api-key string -> Anthropic instance
+const orgKeyCache = new Map();      // org.id -> { key, expiresAt }
 
-export function getAnthropic(org) {
-  const key = org?.anthropic_api_key || PLATFORM_KEY;
+export function invalidateOrgKeyCache(orgId) {
+  orgKeyCache.delete(orgId);
+}
+
+async function fetchOrgKeyFromVault(orgId) {
+  const cached = orgKeyCache.get(orgId);
+  if (cached && cached.expiresAt > Date.now()) return cached.key;
+  if (!supabase) return null;
+
+  const { data, error } = await supabase.rpc('get_org_anthropic_key', { p_org_id: orgId });
+  if (error) {
+    console.warn('vault key fetch failed:', error.message);
+    return null;
+  }
+  if (data) orgKeyCache.set(orgId, { key: data, expiresAt: Date.now() + KEY_TTL_MS });
+  return data || null;
+}
+
+export async function getAnthropic(org) {
+  let key = '';
+
+  if (org?.anthropic_api_key) {
+    // Legacy plaintext path — only hit during deploy/migration overlap.
+    key = org.anthropic_api_key;
+  } else if (org?.id && org?.anthropic_key_vault_id) {
+    const vaultKey = await fetchOrgKeyFromVault(org.id);
+    if (vaultKey) key = vaultKey;
+  }
+
+  if (!key) key = PLATFORM_KEY;
+
   if (!key) {
     const err = new Error('No Anthropic API key configured for this organization');
     err.code = 'NO_ANTHROPIC_KEY';
     throw err;
   }
+
   if (clientCache.has(key)) return clientCache.get(key);
   const client = new Anthropic({ apiKey: key });
   clientCache.set(key, client);
@@ -34,7 +69,14 @@ export function getAnthropic(org) {
 }
 
 export function hasAnthropic(org) {
-  return Boolean(org?.anthropic_api_key || PLATFORM_KEY);
+  // Sync — relies on the auth middleware having loaded org.* (including
+  // anthropic_key_vault_id) onto req.org. Doesn't decrypt; just checks
+  // whether any key path is configured.
+  return Boolean(
+    org?.anthropic_api_key ||
+    org?.anthropic_key_vault_id ||
+    PLATFORM_KEY
+  );
 }
 
 async function logUsage(orgId, endpoint, response) {
@@ -58,7 +100,7 @@ async function logUsage(orgId, endpoint, response) {
  * Pass `endpoint` to attribute the call in the anthropic_usage table.
  */
 export async function complete(org, { model = 'fast', system, messages, maxTokens = 2048, thinking, endpoint = 'unknown' }) {
-  const client = getAnthropic(org);
+  const client = await getAnthropic(org);
   const modelId = MODELS[model] || model;
 
   const params = {

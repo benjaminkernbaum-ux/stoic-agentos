@@ -175,12 +175,17 @@ The platform uses Anthropic Claude for AI-powered insights across three surfaces
 | **SDK** | (calls API endpoints) | `os.summarize()`, `os.analyzeAgent(id)`, `os.ask(q)` |
 
 **Key resolution order** (multi-tenant BYOK):
-1. `organizations.anthropic_api_key` — per-org key set via `POST /api-keys/anthropic`
+1. `organizations.anthropic_key_vault_id` → fetched via `get_org_anthropic_key()` RPC (Supabase Vault, encrypted at rest, service-role only)
 2. `ANTHROPIC_API_KEY` env var — platform-wide fallback
+
+The API caches decrypted keys in-process for 5 min to avoid an RPC per Claude call. Cache is invalidated when the key is set or cleared via `POST/DELETE /api-keys/anthropic`.
 
 **Caching**: All Claude calls use top-level `cache_control: { type: 'ephemeral' }` so repeated system prompts hit the prefix cache (~10% of input cost).
 
-**Migration**: Run `api/supabase/migration_002_anthropic_keys.sql` to add the per-org key columns and usage tracking table.
+**Migrations** (run in order in the Supabase SQL editor):
+1. `api/supabase/migration_001_init.sql` — base schema
+2. `api/supabase/migration_002_anthropic_keys.sql` — adds `anthropic_key_last4`, `anthropic_usage` table
+3. `api/supabase/migration_003_vault_anthropic_keys.sql` — moves keys into Supabase Vault, drops plaintext column, adds `set/get/clear_org_anthropic_key()` RPCs
 
 ---
 

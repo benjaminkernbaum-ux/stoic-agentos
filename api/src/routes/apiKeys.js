@@ -2,6 +2,7 @@ import { Router } from 'express';
 import crypto from 'crypto';
 import { authenticate } from '../middleware/auth.js';
 import { supabase } from '../middleware/db.js';
+import { invalidateOrgKeyCache } from '../lib/anthropic.js';
 
 const router = Router();
 const API_VERSION = 'v1';
@@ -67,23 +68,19 @@ router.get(`/api/${API_VERSION}/api-keys/anthropic`, authenticate, async (req, r
   }
 });
 
-// ── Set Anthropic key (BYOK) ──
+// ── Set Anthropic key (BYOK) — stored encrypted in Supabase Vault ──
 router.post(`/api/${API_VERSION}/api-keys/anthropic`, authenticate, async (req, res) => {
   try {
     const { key } = req.body;
     if (!key || !key.startsWith('sk-ant-')) {
       return res.status(400).json({ error: 'Invalid Anthropic API key format (expected sk-ant-...)' });
     }
-    const last4 = key.slice(-4);
-    const { error } = await supabase
-      .from('organizations')
-      .update({
-        anthropic_api_key: key,
-        anthropic_key_last4: last4,
-        anthropic_key_updated_at: new Date().toISOString(),
-      })
-      .eq('id', req.org.id);
+    const { data: last4, error } = await supabase.rpc('set_org_anthropic_key', {
+      p_org_id: req.org.id,
+      p_key: key,
+    });
     if (error) throw error;
+    invalidateOrgKeyCache(req.org.id);
     res.json({ configured: true, last4 });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -93,15 +90,11 @@ router.post(`/api/${API_VERSION}/api-keys/anthropic`, authenticate, async (req, 
 // ── Remove Anthropic key ──
 router.delete(`/api/${API_VERSION}/api-keys/anthropic`, authenticate, async (req, res) => {
   try {
-    const { error } = await supabase
-      .from('organizations')
-      .update({
-        anthropic_api_key: null,
-        anthropic_key_last4: null,
-        anthropic_key_updated_at: new Date().toISOString(),
-      })
-      .eq('id', req.org.id);
+    const { error } = await supabase.rpc('clear_org_anthropic_key', {
+      p_org_id: req.org.id,
+    });
     if (error) throw error;
+    invalidateOrgKeyCache(req.org.id);
     res.json({ configured: false });
   } catch (err) {
     res.status(500).json({ error: err.message });
