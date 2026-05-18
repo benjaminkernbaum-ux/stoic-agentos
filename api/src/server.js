@@ -23,6 +23,7 @@ import traceRoutes from './routes/traces.js';
 import alertRoutes from './routes/alerts.js';
 import graphRoutes from './routes/graph.js';
 import insightRoutes from './routes/insights.js';
+import { probeVaultRpc } from './lib/anthropic.js';
 
 // ── Config ──
 const PORT = process.env.PORT || 4444;
@@ -66,10 +67,20 @@ app.use(graphRoutes);
 app.use(insightRoutes);
 
 // ── Start ──
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`\n⚡ Stoic AgentOS API — ${API_VERSION}`);
   console.log(`   Port: ${PORT}`);
   console.log(`   Supabase: ${supabase ? '✅ Connected' : '⚠️  No URL or Service Key (demo mode)'}`);
   console.log(`   Stripe: ${process.env.STRIPE_SECRET_KEY ? '✅ Ready' : '⚠️  Not configured'}`);
-  console.log(`   Anthropic: ${process.env.ANTHROPIC_API_KEY ? '✅ Platform key set' : '⚠️  BYOK only (no platform fallback)'}\n`);
+  console.log(`   Anthropic: ${process.env.ANTHROPIC_API_KEY ? '✅ Platform key set' : '⚠️  BYOK only (no platform fallback)'}`);
+
+  if (supabase) {
+    const status = await probeVaultRpc();
+    const icon = status === 'ready' ? '✅' : status === 'pending' ? '⚠️ ' : '❓';
+    const label = status === 'ready'   ? 'Vault BYOK ready'
+                : status === 'pending' ? 'Vault BYOK PENDING — run migration_003_vault_anthropic_keys.sql'
+                : 'Vault BYOK status unknown (probe failed)';
+    console.log(`   ${icon} ${label}`);
+  }
+  console.log('');
 });
