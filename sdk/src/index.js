@@ -320,6 +320,46 @@ export class AgentOS {
     return this._fetch(`/costs${params}`);
   }
 
+  // ═══════════════════════════════════
+  // CLAUDE INSIGHTS (v3.0)
+  // ═══════════════════════════════════
+
+  /**
+   * Summarize recent agent observations with Claude
+   * @param {Object} [options] - { limit, agent_id, model }
+   * @returns {{ summary: string, observation_count: number, usage: object }}
+   */
+  async summarize(options = {}) {
+    return this._send('/insights/summarize', {
+      limit: options.limit || 50,
+      agent_id: options.agent_id || null,
+      model: options.model || 'claude-haiku-4-5',
+    });
+  }
+
+  /**
+   * Deep Claude health analysis of a specific agent
+   * @param {string} agentId - Agent UUID
+   * @param {boolean} [includeTraces=true]
+   * @returns {{ agent: object, analysis: string, usage: object }}
+   */
+  async analyzeAgent(agentId, includeTraces = true) {
+    return this._send('/insights/analyze-agent', {
+      agent_id: agentId,
+      include_traces: includeTraces,
+    });
+  }
+
+  /**
+   * Ask Claude a free-form question about your agent fleet
+   * @param {string} question
+   * @param {string} [context] - Additional context to include
+   * @returns {{ answer: string, usage: object }}
+   */
+  async ask(question, context = '') {
+    return this._send('/insights/ask', { question, context });
+  }
+
   // ── Internal ──
 
   async _send(path, body, method = 'POST') {

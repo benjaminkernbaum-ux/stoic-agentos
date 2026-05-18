@@ -132,4 +132,58 @@ router.delete(`/api/${API_VERSION}/api-keys/:id`, authenticate, async (req, res)
   }
 });
 
+// ── Anthropic BYOK Key Management ──
+
+/** GET /api/v1/api-keys/anthropic — check if org has a key set */
+router.get(`/api/${API_VERSION}/api-keys/anthropic`, authenticate, async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('organizations')
+      .select('anthropic_api_key')
+      .eq('id', req.org.id)
+      .single();
+    if (error) throw error;
+    const hasKey = !!(data?.anthropic_api_key);
+    const masked = hasKey
+      ? data.anthropic_api_key.slice(0, 8) + '...' + data.anthropic_api_key.slice(-4)
+      : null;
+    res.json({ configured: hasKey, key_preview: masked });
+  } catch (err) {
+    // Column may not exist yet (pre-migration) — return safe default
+    res.json({ configured: false, key_preview: null, note: 'Run migration_002_anthropic_keys.sql to enable BYOK' });
+  }
+});
+
+/** POST /api/v1/api-keys/anthropic — save org Anthropic key */
+router.post(`/api/${API_VERSION}/api-keys/anthropic`, authenticate, async (req, res) => {
+  try {
+    const { key } = req.body;
+    if (!key || !key.startsWith('sk-ant-')) {
+      return res.status(400).json({ error: 'Invalid Anthropic API key format — must start with sk-ant-' });
+    }
+    const { error } = await supabase
+      .from('organizations')
+      .update({ anthropic_api_key: key })
+      .eq('id', req.org.id);
+    if (error) throw error;
+    res.json({ saved: true, key_preview: key.slice(0, 8) + '...' + key.slice(-4) });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/** DELETE /api/v1/api-keys/anthropic — remove org Anthropic key */
+router.delete(`/api/${API_VERSION}/api-keys/anthropic`, authenticate, async (req, res) => {
+  try {
+    const { error } = await supabase
+      .from('organizations')
+      .update({ anthropic_api_key: null })
+      .eq('id', req.org.id);
+    if (error) throw error;
+    res.json({ removed: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 export default router;
