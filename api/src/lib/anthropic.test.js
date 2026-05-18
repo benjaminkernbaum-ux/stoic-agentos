@@ -108,6 +108,80 @@ describe('anthropic.js', () => {
     });
   });
 
+  describe('graceful degradation when migration_003 is pending', () => {
+    it('isVaultMigrationError detects PG code 42883', () => {
+      expect(mod.isVaultMigrationError({ code: '42883', message: 'whatever' })).toBe(true);
+    });
+
+    it('isVaultMigrationError sniffs the "function does not exist" message as fallback', () => {
+      expect(mod.isVaultMigrationError({ message: 'function get_org_anthropic_key(uuid) does not exist' })).toBe(true);
+    });
+
+    it('isVaultMigrationError returns false for unrelated errors', () => {
+      expect(mod.isVaultMigrationError({ code: '23505', message: 'duplicate key' })).toBe(false);
+      expect(mod.isVaultMigrationError(null)).toBe(false);
+    });
+
+    it('getAnthropic falls back to platform key when the RPC is missing', async () => {
+      process.env.ANTHROPIC_API_KEY = 'sk-ant-fallback';
+      vi.resetModules();
+      mod = await import('./anthropic.js');
+
+      rpcMock.mockResolvedValueOnce({
+        data: null,
+        error: { code: '42883', message: 'function get_org_anthropic_key(uuid) does not exist' },
+      });
+
+      const client = await mod.getAnthropic({ id: 'org-1', anthropic_key_vault_id: 'v' });
+      expect(client.apiKey).toBe('sk-ant-fallback');
+      expect(mod.vaultStatus()).toBe('pending');
+    });
+
+    it('short-circuits the RPC on subsequent calls once it knows migration is pending', async () => {
+      process.env.ANTHROPIC_API_KEY = 'sk-ant-fallback';
+      vi.resetModules();
+      mod = await import('./anthropic.js');
+
+      rpcMock.mockResolvedValueOnce({
+        data: null,
+        error: { code: '42883', message: 'function does not exist' },
+      });
+
+      await mod.getAnthropic({ id: 'org-1', anthropic_key_vault_id: 'v' });
+      await mod.getAnthropic({ id: 'org-2', anthropic_key_vault_id: 'w' });
+      await mod.getAnthropic({ id: 'org-3', anthropic_key_vault_id: 'x' });
+
+      // Only the first call probes the RPC; the rest short-circuit on vaultRpcAvailable=false
+      expect(rpcMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('probeVaultRpc returns "ready" when the RPC responds', async () => {
+      rpcMock.mockResolvedValueOnce({ data: null, error: null });
+      const status = await mod.probeVaultRpc();
+      expect(status).toBe('ready');
+      expect(mod.vaultStatus()).toBe('ready');
+    });
+
+    it('probeVaultRpc returns "pending" on a missing-RPC error', async () => {
+      rpcMock.mockResolvedValueOnce({
+        data: null,
+        error: { code: '42883', message: 'function does not exist' },
+      });
+      const status = await mod.probeVaultRpc();
+      expect(status).toBe('pending');
+    });
+
+    it('probeVaultRpc returns "unknown" on transport errors (does not toggle state)', async () => {
+      rpcMock.mockResolvedValueOnce({
+        data: null,
+        error: { code: '08006', message: 'connection failed' },
+      });
+      const status = await mod.probeVaultRpc();
+      expect(status).toBe('unknown');
+      expect(mod.vaultStatus()).toBe('unknown');
+    });
+  });
+
   describe('complete', () => {
     it('uses the requested model and passes through messages', async () => {
       process.env.ANTHROPIC_API_KEY = 'sk-ant-platform';

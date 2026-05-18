@@ -10,6 +10,7 @@ function AnthropicKeySection({ toast }) {
   const [keyInput, setKeyInput] = useState('');
   const [busy, setBusy] = useState(false);
   const [showInput, setShowInput] = useState(false);
+  const [migrationPending, setMigrationPending] = useState(false);
 
   const load = async () => {
     const token = await authToken();
@@ -39,7 +40,11 @@ function AnthropicKeySection({ toast }) {
       toast('Anthropic key saved', 'success');
       setKeyInput('');
       setShowInput(false);
+      setMigrationPending(false);
       load();
+    } else if (res.status === 503) {
+      setMigrationPending(true);
+      toast('BYOK not yet enabled — backend migration is pending', 'error');
     } else {
       const body = await res.json().catch(() => ({}));
       toast(body.error || 'Failed to save key', 'error');
@@ -81,6 +86,11 @@ function AnthropicKeySection({ toast }) {
           </button>
         )}
       </div>
+      {migrationPending && (
+        <div style={{ fontSize: 12, padding: '10px 12px', background: 'rgba(255,193,7,0.08)', borderLeft: '2px solid #ffc107', borderRadius: 4, marginTop: 8, opacity: 0.85 }}>
+          BYOK is not yet enabled on this deployment. Inference still works through the platform key — per-org keys will be available once the backend migration runs.
+        </div>
+      )}
       {showInput && !status?.configured && (
         <div className="dash-settings-row">
           <div className="dash-settings-icon">🔐</div>

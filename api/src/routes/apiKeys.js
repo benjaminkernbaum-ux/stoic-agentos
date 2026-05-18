@@ -2,7 +2,15 @@ import { Router } from 'express';
 import crypto from 'crypto';
 import { authenticate } from '../middleware/auth.js';
 import { supabase } from '../middleware/db.js';
-import { invalidateOrgKeyCache } from '../lib/anthropic.js';
+import { invalidateOrgKeyCache, isVaultMigrationError } from '../lib/anthropic.js';
+
+const MIGRATION_PENDING_RESPONSE = {
+  error: 'BYOK is not yet enabled on this deployment',
+  detail: 'Supabase migration_003_vault_anthropic_keys.sql has not been applied. ' +
+          'Inference still works via the platform ANTHROPIC_API_KEY; per-org keys will ' +
+          'be available once the migration runs.',
+  migration: 'migration_003_vault_anthropic_keys.sql',
+};
 
 const router = Router();
 const API_VERSION = 'v1';
@@ -79,7 +87,10 @@ router.post(`/api/${API_VERSION}/api-keys/anthropic`, authenticate, async (req, 
       p_org_id: req.org.id,
       p_key: key,
     });
-    if (error) throw error;
+    if (error) {
+      if (isVaultMigrationError(error)) return res.status(503).json(MIGRATION_PENDING_RESPONSE);
+      throw error;
+    }
     invalidateOrgKeyCache(req.org.id);
     res.json({ configured: true, last4 });
   } catch (err) {
@@ -93,7 +104,10 @@ router.delete(`/api/${API_VERSION}/api-keys/anthropic`, authenticate, async (req
     const { error } = await supabase.rpc('clear_org_anthropic_key', {
       p_org_id: req.org.id,
     });
-    if (error) throw error;
+    if (error) {
+      if (isVaultMigrationError(error)) return res.status(503).json(MIGRATION_PENDING_RESPONSE);
+      throw error;
+    }
     invalidateOrgKeyCache(req.org.id);
     res.json({ configured: false });
   } catch (err) {
