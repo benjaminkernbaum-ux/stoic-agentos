@@ -30,11 +30,31 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
 import { execSync } from 'child_process';
+import Anthropic from '@anthropic-ai/sdk';
 
 // ── Config ──
 const API_URL = process.env.AGENTOS_API_URL || 'https://stoic-agentos-api-production.up.railway.app';
 const API_KEY = process.env.AGENTOS_API_KEY || '';
 const INFRA_PATH = process.env.INFRA_AGENT_PATH || '';
+const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY || '';
+
+const MODELS = { fast: 'claude-haiku-4-5', smart: 'claude-sonnet-4-6' };
+const anthropic = ANTHROPIC_KEY ? new Anthropic({ apiKey: ANTHROPIC_KEY }) : null;
+
+async function claudeCall({ model = 'fast', system, prompt, maxTokens = 1024 }) {
+  if (!anthropic) {
+    return { error: 'ANTHROPIC_API_KEY not configured for MCP server' };
+  }
+  const resp = await anthropic.messages.create({
+    model: MODELS[model] || model,
+    max_tokens: maxTokens,
+    system,
+    messages: [{ role: 'user', content: prompt }],
+    cache_control: { type: 'ephemeral' },
+  });
+  const text = resp.content.filter((b) => b.type === 'text').map((b) => b.text).join('\n');
+  return { text, model: resp.model, usage: resp.usage };
+}
 
 // ── HTTP Helper ──
 async function apiCall(method, path, body = null) {
@@ -302,6 +322,126 @@ server.tool(
     const fullScript = args ? `${script} -- ${args}` : script;
     const result = runInfraCommand(fullScript, timeout);
     return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
+  }
+);
+
+// ════════════════════════════════════════
+// TOOLS: Claude-powered insight
+// ════════════════════════════════════════
+
+server.tool(
+  'agentos_summarize_observations',
+  'Use Claude to summarize recent agent observations into an executive briefing. Uses Haiku 4.5 by default for speed.',
+  {
+    hours: z.number().optional().default(24).describe('Window in hours (default 24)'),
+    model: z.enum(['fast', 'smart']).optional().default('fast').describe('fast=Haiku 4.5, smart=Sonnet 4.6'),
+  },
+  async ({ hours, model }) => {
+    if (!anthropic) {
+      return { content: [{ type: 'text', text: 'ANTHROPIC_API_KEY not set for MCP server.' }] };
+    }
+    const { data: observations } = await apiCall('GET', `/observations?limit=200`);
+    if (!Array.isArray(observations) || observations.length === 0) {
+      return { content: [{ type: 'text', text: 'No observations found.' }] };
+    }
+    const cutoff = Date.now() - hours * 3600 * 1000;
+    const recent = observations.filter((o) => new Date(o.created_at).getTime() >= cutoff);
+    if (recent.length === 0) {
+      return { content: [{ type: 'text', text: `No observations in the last ${hours}h.` }] };
+    }
+    const formatted = recent
+      .map((o) => `[${o.type}|imp:${o.importance}] ${o.title}${o.content ? `\n  ${o.content.slice(0, 300)}` : ''}`)
+      .join('\n');
+    const result = await claudeCall({
+      model,
+      maxTokens: 1024,
+      system:
+        'You are an AI agent operations analyst. Summarize agent activity logs into a concise executive briefing. ' +
+        'Lead with architectural decisions, errors, and deployments. Be specific — cite observation titles.',
+      prompt: `Summarize these ${recent.length} observations from the last ${hours}h:\n\n${formatted}`,
+    });
+    return { content: [{ type: 'text', text: result.text || JSON.stringify(result) }] };
+  }
+);
+
+server.tool(
+  'agentos_analyze_agent',
+  'Use Claude (Sonnet 4.6 with adaptive thinking) to diagnose an agent\'s reliability from its observation log.',
+  {
+    agent_name: z.string().describe('Agent name (as known to AgentOS)'),
+  },
+  async ({ agent_name }) => {
+    if (!anthropic) {
+      return { content: [{ type: 'text', text: 'ANTHROPIC_API_KEY not set for MCP server.' }] };
+    }
+    const { data: agents } = await apiCall('GET', '/agents');
+    const agent = (Array.isArray(agents) ? agents : []).find((a) => a.name === agent_name);
+    if (!agent) {
+      return { content: [{ type: 'text', text: `Agent "${agent_name}" not found.` }] };
+    }
+    const { data: observations } = await apiCall('GET', `/observations?agent=${agent.id}&limit=50`);
+    const errorRate = agent.total_runs > 0 ? (agent.total_errors / agent.total_runs) : 0;
+    const formatted = (Array.isArray(observations) ? observations : [])
+      .map((o) => `[${o.type}] ${o.title}${o.content ? ` — ${o.content.slice(0, 200)}` : ''}`)
+      .join('\n');
+    const resp = await anthropic.messages.create({
+      model: MODELS.smart,
+      max_tokens: 2048,
+      thinking: { type: 'adaptive' },
+      system:
+        'You are a senior SRE diagnosing AI agent reliability. Output: (1) Health verdict (healthy/degraded/failing), ' +
+        '(2) Top 3 issues with evidence, (3) Recommended actions. Be direct.',
+      messages: [
+        {
+          role: 'user',
+          content:
+            `Agent: ${agent.name} (${agent.module})\n` +
+            `Status: ${agent.status}\n` +
+            `Total runs: ${agent.total_runs}, errors: ${agent.total_errors} (${(errorRate * 100).toFixed(1)}%)\n` +
+            `Last heartbeat: ${agent.last_heartbeat || 'never'}\n\n` +
+            `Recent observations:\n${formatted || '(none)'}`,
+        },
+      ],
+      cache_control: { type: 'ephemeral' },
+    });
+    const text = resp.content.filter((b) => b.type === 'text').map((b) => b.text).join('\n');
+    return { content: [{ type: 'text', text }] };
+  }
+);
+
+server.tool(
+  'agentos_ask',
+  'Free-form Q&A about the org\'s agent fleet, grounded in recent observations and registered agents/workspaces. Defaults to Haiku 4.5; pass model="smart" for Sonnet 4.6.',
+  {
+    question: z.string().describe('The question to answer'),
+    model: z.enum(['fast', 'smart']).optional().default('fast').describe('fast=Haiku 4.5, smart=Sonnet 4.6'),
+  },
+  async ({ question, model }) => {
+    if (!anthropic) {
+      return { content: [{ type: 'text', text: 'ANTHROPIC_API_KEY not set for MCP server.' }] };
+    }
+    const [agentsResp, wsResp, obsResp] = await Promise.all([
+      apiCall('GET', '/agents'),
+      apiCall('GET', '/workspaces'),
+      apiCall('GET', '/observations?limit=20'),
+    ]);
+    const agentCount = Array.isArray(agentsResp.data) ? agentsResp.data.length : 0;
+    const wsCount = Array.isArray(wsResp.data) ? wsResp.data.length : 0;
+    const recent = Array.isArray(obsResp.data) ? obsResp.data : [];
+    const context =
+      `Agents: ${agentCount}, Workspaces: ${wsCount}\n\n` +
+      `Last 20 observations:\n` +
+      recent.map((o) => `- [${o.type}] ${o.title}`).join('\n');
+
+    const result = await claudeCall({
+      model,
+      maxTokens: 1024,
+      system:
+        'You are the Stoic AgentOS assistant. Answer questions about the user\'s AI agent fleet ' +
+        'based on the observation log provided. If the answer isn\'t in the data, say so.',
+      prompt: `Context:\n${context}\n\nQuestion: ${question}`,
+    });
+    return { content: [{ type: 'text', text: result.text || JSON.stringify(result) }] };
   }
 );
 

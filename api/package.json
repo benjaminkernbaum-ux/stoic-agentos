@@ -6,13 +6,19 @@
   "main": "src/server.js",
   "scripts": {
     "dev": "node --watch src/server.js",
-    "start": "node src/server.js"
+    "start": "node src/server.js",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.88.0",
     "@supabase/supabase-js": "^2.49.0",
     "cors": "^2.8.5",
     "express": "^4.21.0",
     "stripe": "^17.7.0",
     "uuid": "^11.0.0"
+  },
+  "devDependencies": {
+    "vitest": "^2.1.0"
   }
 }

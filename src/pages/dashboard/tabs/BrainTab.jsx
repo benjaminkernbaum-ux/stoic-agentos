@@ -1,4 +1,79 @@
+import { useState } from 'react';
 import { BRAIN_FILTERS, TYPE_ICONS } from '../constants';
+import { supabase, API_BASE } from '../../../lib/supabase';
+
+function InsightsPanel() {
+  const [hours, setHours] = useState(168);
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState(null);
+  const [error, setError] = useState(null);
+
+  const run = async () => {
+    setBusy(true);
+    setError(null);
+    setResult(null);
+    const token = (await supabase.auth.getSession()).data.session?.access_token;
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/insights/summarize`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hours }),
+      });
+      const body = await res.json();
+      if (!res.ok) setError(body.error || `HTTP ${res.status}`);
+      else setResult(body);
+    } catch (e) {
+      setError(e.message);
+    }
+    setBusy(false);
+  };
+
+  return (
+    <div className="dash-panel" style={{ marginBottom: 16, borderLeft: '2px solid var(--accent-purple)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: result || error ? 12 : 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span style={{ fontSize: 18 }}>🧠</span>
+          <div>
+            <div style={{ fontWeight: 600, fontSize: 13 }}>AI Summary</div>
+            <div style={{ fontSize: 11, opacity: 0.55 }}>Claude-powered briefing of recent activity</div>
+          </div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <select
+            value={hours}
+            onChange={(e) => setHours(Number(e.target.value))}
+            disabled={busy}
+            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', color: '#fff', padding: '6px 10px', borderRadius: 6, fontSize: 12 }}
+          >
+            <option value={24}>Last 24h</option>
+            <option value={168}>Last 7 days</option>
+            <option value={720}>Last 30 days</option>
+          </select>
+          <button className="btn btn-primary btn-sm" onClick={run} disabled={busy}>
+            {busy ? 'Summarizing...' : 'Summarize'}
+          </button>
+        </div>
+      </div>
+      {error && (
+        <div style={{ color: '#ff4757', fontSize: 12, padding: '8px 12px', background: 'rgba(255,71,87,0.08)', borderRadius: 6 }}>
+          {error}
+        </div>
+      )}
+      {result && (
+        <div>
+          <div style={{ fontSize: 13, lineHeight: 1.7, whiteSpace: 'pre-wrap', color: 'rgba(255,255,255,0.85)' }}>
+            {result.summary}
+          </div>
+          <div style={{ fontSize: 10, opacity: 0.4, marginTop: 10, display: 'flex', gap: 12 }}>
+            <span>{result.count} observations</span>
+            <span>{result.model}</span>
+            <span>{result.usage?.input_tokens}→{result.usage?.output_tokens} tokens</span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function BrainTab({ observations, brainFilter, setBrainFilter, obsSearch, setObsSearch, expandedObs, setExpandedObs, handleDeleteObs, handleSeedDemo, seedLoading, knowledgeItems, setShowKiModal }) {
   const filteredObs = observations.filter(o => {
@@ -12,6 +87,7 @@ export default function BrainTab({ observations, brainFilter, setBrainFilter, ob
 
   return (
     <div className="dash-content">
+      <InsightsPanel />
       <div className="dash-panel">
         {/* Search bar */}
         <div style={{ marginBottom: 12 }}>

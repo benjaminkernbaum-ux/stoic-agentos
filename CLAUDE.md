@@ -127,6 +127,13 @@ stoic-agentos/
 | **Billing** |||
 | POST | `/billing/checkout` | Stripe checkout session |
 | POST | `/billing/portal` | Stripe customer portal |
+| **Insights (Claude)** |||
+| POST | `/insights/summarize` | Summarize recent observations (Haiku 4.5) |
+| POST | `/insights/analyze-agent` | Diagnose an agent (Sonnet 4.6 + adaptive thinking) |
+| POST | `/insights/ask` | Free-form Q&A grounded in org data |
+| GET | `/api-keys/anthropic` | Get Anthropic key status (masked) |
+| POST | `/api-keys/anthropic` | Set per-org Anthropic key (BYOK) |
+| DELETE | `/api-keys/anthropic` | Remove per-org Anthropic key |
 | **Webhooks** |||
 | POST | `/webhooks/git` | Git commit capture (uses api_key in body) |
 
@@ -153,7 +160,32 @@ stoic-agentos/
 ### API → Railway
 - **Docker**: `Dockerfile` in repo root
 - **Service**: `stoic-agentos-api` in Railway project `a951f3a5-e4a5-4908-a211-5a36c1e597df`
-- **Env vars** (Railway): `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `STRIPE_SECRET_KEY`, `STRIPE_PRO_PRICE_ID`, `STRIPE_TEAM_PRICE_ID`, `STRIPE_WEBHOOK_SECRET`, `PORT=4444`
+- **Env vars** (Railway): `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `STRIPE_SECRET_KEY`, `STRIPE_PRO_PRICE_ID`, `STRIPE_TEAM_PRICE_ID`, `STRIPE_WEBHOOK_SECRET`, `ANTHROPIC_API_KEY`, `PORT=4444`
+
+---
+
+## Claude Integration
+
+The platform uses Anthropic Claude for AI-powered insights across three surfaces:
+
+| Surface | Models | Where |
+|---------|--------|-------|
+| **API service** | Haiku 4.5 (fast) + Sonnet 4.6 (smart, adaptive thinking) | `api/src/lib/anthropic.js`, `/insights/*` routes |
+| **MCP server** | Same — Haiku for summaries, Sonnet for diagnosis | `agentos_summarize_observations`, `agentos_analyze_agent` |
+| **SDK** | (calls API endpoints) | `os.summarize()`, `os.analyzeAgent(id)`, `os.ask(q)` |
+
+**Key resolution order** (multi-tenant BYOK):
+1. `organizations.anthropic_key_vault_id` → fetched via `get_org_anthropic_key()` RPC (Supabase Vault, encrypted at rest, service-role only)
+2. `ANTHROPIC_API_KEY` env var — platform-wide fallback
+
+The API caches decrypted keys in-process for 5 min to avoid an RPC per Claude call. Cache is invalidated when the key is set or cleared via `POST/DELETE /api-keys/anthropic`.
+
+**Caching**: All Claude calls use top-level `cache_control: { type: 'ephemeral' }` so repeated system prompts hit the prefix cache (~10% of input cost).
+
+**Migrations** (run in order in the Supabase SQL editor):
+1. `api/supabase/migration_001_init.sql` — base schema
+2. `api/supabase/migration_002_anthropic_keys.sql` — adds `anthropic_key_last4`, `anthropic_usage` table
+3. `api/supabase/migration_003_vault_anthropic_keys.sql` — moves keys into Supabase Vault, drops plaintext column, adds `set/get/clear_org_anthropic_key()` RPCs
 
 ---
 
