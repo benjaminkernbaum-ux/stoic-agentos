@@ -12,6 +12,10 @@
     },
     "./instrument": {
       "import": "./src/instrument.js"
+    },
+    "./openclaw": {
+      "import": "./src/openclaw.js",
+      "types": "./src/openclaw.d.ts"
     }
   },
   "bin": {

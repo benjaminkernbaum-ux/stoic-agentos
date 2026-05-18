@@ -48,6 +48,40 @@ npx @stoic/agentos-sdk init-hooks
 
 # Test your API connection
 npx @stoic/agentos-sdk test
+
+# Bulk-register all 25 OpenClaw skills as agents
+npx @stoic/agentos-sdk register-skills
+```
+
+## OpenClaw Integration
+
+Wire local OpenClaw skills to the AgentOS cloud brain so every skill
+invocation is registered as an agent, logged as an observation, and
+heartbeat-pinged on the dashboard.
+
+```javascript
+import { logSkill, observe } from 'stoic-agentos-sdk/openclaw';
+
+// outreach.js — drop the wrapper around your skill entry function.
+export default logSkill('outreach', async (ctx) => {
+  await observe({ type: 'decision', title: 'Sequenced 50 leads via LinkedIn' });
+  // ... skill body
+});
+```
+
+The adapter auto-loads `apiKey` and `workspace` from `~/.openclaw/openclaw.json`
+(`agentos.api_key` / `agentos.workspace`) or `AGENTOS_API_KEY` env var, and
+classifies each of the 25 built-in Stoic skills into its module (content / gtm /
+crm / finance / standalone) so the dashboard groups them correctly. Pass
+`{ module: 'gtm' }` as the third arg to override for custom skills.
+
+For the `memory-bridge` skill — cross-machine shared memory:
+
+```javascript
+import { rememberKnowledge, recallKnowledge } from 'stoic-agentos-sdk/openclaw';
+
+await rememberKnowledge({ name: 'Q2 OKRs', summary: '...', content: '...' });
+const items = await recallKnowledge('okrs');
 ```
 
 ## API Reference

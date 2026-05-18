@@ -17,6 +17,7 @@ const COMMANDS = {
   'init-hooks': initGitHooks,
   instrument: checkInstrumentation,
   test: testConnection,
+  'register-skills': registerOpenclawSkills,
   help: showHelp,
 };
 
@@ -200,6 +201,33 @@ function testConnection() {
     });
 }
 
+async function registerOpenclawSkills() {
+  console.log('\n⚡ Registering OpenClaw skills with AgentOS...\n');
+
+  let apiKey = process.env.AGENTOS_API_KEY;
+  if (!apiKey && existsSync('.agentos.json')) {
+    apiKey = JSON.parse(readFileSync('.agentos.json', 'utf-8')).api_key;
+  }
+  if (!apiKey) {
+    console.log('  ❌ No API key found. Set AGENTOS_API_KEY or run: npx agentos init <YOUR_API_KEY>');
+    process.exit(1);
+  }
+  process.env.AGENTOS_API_KEY = apiKey;
+
+  const { registerAllSkills, SKILL_MODULE_MAP } = await import('./openclaw.js');
+  const results = await registerAllSkills();
+
+  const fulfilled = results.filter((r) => r.status === 'fulfilled').length;
+  const failed = results.length - fulfilled;
+  const skills = Object.keys(SKILL_MODULE_MAP);
+
+  console.log(`  Registered ${fulfilled}/${results.length} skills`);
+  if (failed > 0) console.log(`  ${failed} failed (likely already registered — that's fine)`);
+  console.log('\n  Skills:');
+  skills.forEach((name) => console.log(`    • ${name.padEnd(20)} → ${SKILL_MODULE_MAP[name]}`));
+  console.log('\n  ✅ Done. Visit https://stoic-agentos.vercel.app to see them.\n');
+}
+
 function showHelp() {
   console.log(`
 ⚡ Stoic AgentOS CLI v2.0.0
@@ -209,6 +237,7 @@ Commands:
   init-hooks                  — Install git post-commit hooks
   instrument                  — Check LLM SDK instrumentation setup
   test                        — Test API connection
+  register-skills             — Register all 25 OpenClaw skills as agents
   help                        — Show this message
 
 Auto-Instrumentation:
