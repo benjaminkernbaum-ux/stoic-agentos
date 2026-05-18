@@ -62,6 +62,7 @@ router.post(`/api/${API_VERSION}/insights/summarize`, authenticate, async (req, 
     const result = await complete(req.org, {
       model: 'fast',
       maxTokens: 1024,
+      endpoint: 'summarize',
       system:
         'You are an AI agent operations analyst. Summarize agent activity logs into a concise executive briefing. ' +
         'Lead with the most important architectural decisions, errors, and deployments. Use markdown with bold section headers. ' +
@@ -121,6 +122,7 @@ router.post(`/api/${API_VERSION}/insights/analyze-agent`, authenticate, async (r
       model: 'smart',
       maxTokens: 2048,
       thinking: true,
+      endpoint: 'analyze-agent',
       system:
         'You are a senior SRE diagnosing AI agent reliability. Output: (1) Health verdict (healthy/degraded/failing), ' +
         '(2) Top 3 issues with evidence from the log, (3) Recommended actions. Be direct, no fluff.',
@@ -178,6 +180,7 @@ router.post(`/api/${API_VERSION}/insights/ask`, authenticate, async (req, res) =
     const result = await complete(req.org, {
       model,
       maxTokens: 1024,
+      endpoint: 'ask',
       system:
         'You are the Stoic AgentOS assistant. Answer questions about the user\'s AI agent fleet based on the ' +
         'observation log provided. If the answer isn\'t in the data, say so.',
@@ -193,6 +196,64 @@ router.post(`/api/${API_VERSION}/insights/ask`, authenticate, async (req, res) =
     });
   } catch (err) {
     handleAnthropicError(err, res);
+  }
+});
+
+// Approximate per-1M-token pricing (USD) for cost estimation in the dashboard.
+// Cache reads are billed at ~10% of input, cache writes at ~125%.
+const PRICING = {
+  'claude-haiku-4-5':  { input: 1.00, output: 5.00 },
+  'claude-sonnet-4-6': { input: 3.00, output: 15.00 },
+  'claude-opus-4-7':   { input: 5.00, output: 25.00 },
+};
+
+function estimateCost(row) {
+  const p = PRICING[row.model] || PRICING['claude-haiku-4-5'];
+  const inCost = ((row.input_tokens || 0) * p.input + (row.cache_creation_tokens || 0) * p.input * 1.25 + (row.cache_read_tokens || 0) * p.input * 0.1) / 1_000_000;
+  const outCost = (row.output_tokens || 0) * p.output / 1_000_000;
+  return inCost + outCost;
+}
+
+// ── Usage summary for the dashboard ──
+router.get(`/api/${API_VERSION}/insights/usage`, authenticate, async (req, res) => {
+  try {
+    const { days = 30 } = req.query;
+    const since = new Date(Date.now() - Number(days) * 86400 * 1000).toISOString();
+
+    const { data, error } = await supabase
+      .from('anthropic_usage')
+      .select('endpoint,model,input_tokens,output_tokens,cache_read_tokens,cache_creation_tokens,created_at')
+      .eq('org_id', req.org.id)
+      .gte('created_at', since)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+
+    const totals = { calls: 0, input: 0, output: 0, cache_read: 0, cache_creation: 0, cost_usd: 0 };
+    const byEndpoint = {};
+    const byModel = {};
+
+    for (const row of data || []) {
+      totals.calls += 1;
+      totals.input += row.input_tokens || 0;
+      totals.output += row.output_tokens || 0;
+      totals.cache_read += row.cache_read_tokens || 0;
+      totals.cache_creation += row.cache_creation_tokens || 0;
+      const cost = estimateCost(row);
+      totals.cost_usd += cost;
+
+      byEndpoint[row.endpoint] = (byEndpoint[row.endpoint] || 0) + 1;
+      byModel[row.model] = (byModel[row.model] || 0) + 1;
+    }
+
+    res.json({
+      window_days: Number(days),
+      totals: { ...totals, cost_usd: Number(totals.cost_usd.toFixed(4)) },
+      by_endpoint: byEndpoint,
+      by_model: byModel,
+      recent: (data || []).slice(0, 10),
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 

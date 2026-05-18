@@ -9,6 +9,7 @@
  */
 
 import Anthropic from '@anthropic-ai/sdk';
+import { supabase } from '../middleware/db.js';
 
 export const MODELS = {
   fast: 'claude-haiku-4-5',
@@ -36,11 +37,27 @@ export function hasAnthropic(org) {
   return Boolean(org?.anthropic_api_key || PLATFORM_KEY);
 }
 
+async function logUsage(orgId, endpoint, response) {
+  if (!supabase || !orgId) return;
+  const u = response.usage || {};
+  await supabase.from('anthropic_usage').insert({
+    org_id: orgId,
+    endpoint,
+    model: response.model,
+    input_tokens: u.input_tokens || 0,
+    output_tokens: u.output_tokens || 0,
+    cache_read_tokens: u.cache_read_input_tokens || 0,
+    cache_creation_tokens: u.cache_creation_input_tokens || 0,
+  }).then(() => {}, (err) => console.warn('usage log failed:', err.message));
+}
+
 /**
  * One-shot Claude call with sensible defaults and auto-caching of the system
  * prompt. Use `model: 'fast'` (Haiku) or `model: 'smart'` (Sonnet).
+ *
+ * Pass `endpoint` to attribute the call in the anthropic_usage table.
  */
-export async function complete(org, { model = 'fast', system, messages, maxTokens = 2048, thinking }) {
+export async function complete(org, { model = 'fast', system, messages, maxTokens = 2048, thinking, endpoint = 'unknown' }) {
   const client = getAnthropic(org);
   const modelId = MODELS[model] || model;
 
@@ -57,6 +74,8 @@ export async function complete(org, { model = 'fast', system, messages, maxToken
   }
 
   const response = await client.messages.create(params);
+
+  logUsage(org?.id, endpoint, response);
 
   const text = response.content
     .filter((b) => b.type === 'text')
