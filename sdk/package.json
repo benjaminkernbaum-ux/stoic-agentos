@@ -52,6 +52,10 @@
   "engines": {
     "node": ">=18.0.0"
   },
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
   "peerDependencies": {
     "openai": ">=4.0.0",
     "@anthropic-ai/sdk": ">=0.20.0"
@@ -60,5 +64,8 @@
     "openai": { "optional": true },
     "@anthropic-ai/sdk": { "optional": true }
   },
-  "dependencies": {}
+  "dependencies": {},
+  "devDependencies": {
+    "vitest": "^2.1.0"
+  }
 }

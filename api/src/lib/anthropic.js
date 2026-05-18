@@ -2,11 +2,9 @@
  * Anthropic client factory with Vault-backed BYOK.
  *
  * Key resolution (in order):
- *   1. org.anthropic_api_key  — LEGACY plaintext column. Only present during the
- *      brief window between code deploy and migration_003. Dropped after.
- *   2. org.anthropic_key_vault_id  — UUID into vault.secrets. Decrypted via the
+ *   1. org.anthropic_key_vault_id  — UUID into vault.secrets. Decrypted via the
  *      get_org_anthropic_key() RPC (service-role only).
- *   3. process.env.ANTHROPIC_API_KEY  — platform-wide fallback.
+ *   2. process.env.ANTHROPIC_API_KEY  — platform-wide fallback.
  *
  * Decrypted keys are cached in-process for 5min to avoid an RPC per Claude call.
  */
@@ -46,10 +44,7 @@ async function fetchOrgKeyFromVault(orgId) {
 export async function getAnthropic(org) {
   let key = '';
 
-  if (org?.anthropic_api_key) {
-    // Legacy plaintext path — only hit during deploy/migration overlap.
-    key = org.anthropic_api_key;
-  } else if (org?.id && org?.anthropic_key_vault_id) {
+  if (org?.id && org?.anthropic_key_vault_id) {
     const vaultKey = await fetchOrgKeyFromVault(org.id);
     if (vaultKey) key = vaultKey;
   }
@@ -72,11 +67,7 @@ export function hasAnthropic(org) {
   // Sync — relies on the auth middleware having loaded org.* (including
   // anthropic_key_vault_id) onto req.org. Doesn't decrypt; just checks
   // whether any key path is configured.
-  return Boolean(
-    org?.anthropic_api_key ||
-    org?.anthropic_key_vault_id ||
-    PLATFORM_KEY
-  );
+  return Boolean(org?.anthropic_key_vault_id || PLATFORM_KEY);
 }
 
 async function logUsage(orgId, endpoint, response) {

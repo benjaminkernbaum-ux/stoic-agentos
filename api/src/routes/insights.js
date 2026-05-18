@@ -199,20 +199,7 @@ router.post(`/api/${API_VERSION}/insights/ask`, authenticate, async (req, res) =
   }
 });
 
-// Approximate per-1M-token pricing (USD) for cost estimation in the dashboard.
-// Cache reads are billed at ~10% of input, cache writes at ~125%.
-const PRICING = {
-  'claude-haiku-4-5':  { input: 1.00, output: 5.00 },
-  'claude-sonnet-4-6': { input: 3.00, output: 15.00 },
-  'claude-opus-4-7':   { input: 5.00, output: 25.00 },
-};
-
-function estimateCost(row) {
-  const p = PRICING[row.model] || PRICING['claude-haiku-4-5'];
-  const inCost = ((row.input_tokens || 0) * p.input + (row.cache_creation_tokens || 0) * p.input * 1.25 + (row.cache_read_tokens || 0) * p.input * 0.1) / 1_000_000;
-  const outCost = (row.output_tokens || 0) * p.output / 1_000_000;
-  return inCost + outCost;
-}
+import { estimateCost } from '../lib/pricing.js';
 
 // ── Usage summary for the dashboard ──
 router.get(`/api/${API_VERSION}/insights/usage`, authenticate, async (req, res) => {

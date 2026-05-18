@@ -108,6 +108,8 @@ os.capture({
 | 🔑 **API Key Management** | Generate, list, and revoke keys from the dashboard |
 | 💳 **Usage-Based Billing** | Free tier with real limits, upgrade when you need more |
 | 🔒 **Row-Level Security** | Full RLS on Supabase — your data is isolated per org |
+| 🧠 **Claude-Powered Insights** | Auto-summarize activity (Haiku 4.5) and diagnose failing agents (Sonnet 4.6 + thinking) |
+| 🔐 **BYOK** | Bring your own Anthropic key — stored encrypted in Supabase Vault, never plaintext |
 
 ## Why AgentOS?
 
@@ -195,7 +197,29 @@ os.wrapAgent(name, fn)                              // Auto-monitor function
 os.addKnowledge({ name, summary, content })         // Persist knowledge
 os.listAgents()                                     // Get all agents
 os.listObservations({ limit, type })                // Query observations
+
+// Claude-powered insights (v2.1+)
+await os.summarize({ hours: 168 })                 // AI briefing of recent activity
+await os.analyzeAgent(agentId)                     // Diagnose an agent's health
+await os.ask('Why did the email-agent fail?')      // Free-form Q&A
 ```
+
+## Claude Integration
+
+AgentOS uses Anthropic Claude for AI-powered insights — summarizing observations, diagnosing agent failures, answering free-form questions about your fleet.
+
+**Models:** Haiku 4.5 for fast summaries, Sonnet 4.6 with adaptive thinking for deep diagnosis.
+
+**Three surfaces:**
+- **API**: `POST /insights/{summarize,analyze-agent,ask}` — see API Reference
+- **SDK**: `os.summarize()`, `os.analyzeAgent(id)`, `os.ask(q)` (above)
+- **MCP server**: `agentos_summarize_observations`, `agentos_analyze_agent`, `agentos_ask` tools
+
+**BYOK (Bring Your Own Key):** Customers can route inference through their own Anthropic account from Settings → Anthropic API Key. Keys are stored encrypted in Supabase Vault (`vault.secrets`, pgsodium at rest) and accessed only by the API's service role. When no per-org key is set, the platform falls back to the `ANTHROPIC_API_KEY` env var.
+
+**Cost tracking:** Every Claude call is logged to `anthropic_usage` with token counts and cache hits. The Settings tab shows call count, token usage, and estimated cost over a 7/30/90-day window.
+
+**Caching:** All requests use `cache_control: { type: 'ephemeral' }` so repeated system prompts hit the prefix cache at ~10% of input cost.
 
 ## Contributing
 
