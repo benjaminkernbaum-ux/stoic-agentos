@@ -409,6 +409,42 @@ server.tool(
   }
 );
 
+server.tool(
+  'agentos_ask',
+  'Free-form Q&A about the org\'s agent fleet, grounded in recent observations and registered agents/workspaces. Defaults to Haiku 4.5; pass model="smart" for Sonnet 4.6.',
+  {
+    question: z.string().describe('The question to answer'),
+    model: z.enum(['fast', 'smart']).optional().default('fast').describe('fast=Haiku 4.5, smart=Sonnet 4.6'),
+  },
+  async ({ question, model }) => {
+    if (!anthropic) {
+      return { content: [{ type: 'text', text: 'ANTHROPIC_API_KEY not set for MCP server.' }] };
+    }
+    const [agentsResp, wsResp, obsResp] = await Promise.all([
+      apiCall('GET', '/agents'),
+      apiCall('GET', '/workspaces'),
+      apiCall('GET', '/observations?limit=20'),
+    ]);
+    const agentCount = Array.isArray(agentsResp.data) ? agentsResp.data.length : 0;
+    const wsCount = Array.isArray(wsResp.data) ? wsResp.data.length : 0;
+    const recent = Array.isArray(obsResp.data) ? obsResp.data : [];
+    const context =
+      `Agents: ${agentCount}, Workspaces: ${wsCount}\n\n` +
+      `Last 20 observations:\n` +
+      recent.map((o) => `- [${o.type}] ${o.title}`).join('\n');
+
+    const result = await claudeCall({
+      model,
+      maxTokens: 1024,
+      system:
+        'You are the Stoic AgentOS assistant. Answer questions about the user\'s AI agent fleet ' +
+        'based on the observation log provided. If the answer isn\'t in the data, say so.',
+      prompt: `Context:\n${context}\n\nQuestion: ${question}`,
+    });
+    return { content: [{ type: 'text', text: result.text || JSON.stringify(result) }] };
+  }
+);
+
 // ════════════════════════════════════════
 // RESOURCES: Project Context
 // ════════════════════════════════════════

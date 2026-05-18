@@ -111,6 +111,83 @@ function AnthropicKeySection({ toast }) {
   );
 }
 
+function AnthropicUsagePanel() {
+  const [data, setData] = useState(null);
+  const [days, setDays] = useState(30);
+  const [loading, setLoading] = useState(true);
+
+  const load = async (windowDays) => {
+    setLoading(true);
+    const token = await authToken();
+    if (!token) { setLoading(false); return; }
+    const res = await fetch(`${API_BASE}/api/v1/insights/usage?days=${windowDays}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (res.ok) setData(await res.json());
+    setLoading(false);
+  };
+
+  useEffect(() => { load(days); }, [days]);
+
+  if (loading && !data) return null;
+
+  const totals = data?.totals || {};
+  const fmt = (n) => (n || 0).toLocaleString();
+
+  return (
+    <div className="dash-settings-section">
+      <div className="dash-settings-section-head" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span>Claude Usage</span>
+        <select
+          value={days}
+          onChange={(e) => setDays(Number(e.target.value))}
+          style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', color: '#fff', padding: '4px 8px', borderRadius: 6, fontSize: 12 }}
+        >
+          <option value={7}>7 days</option>
+          <option value={30}>30 days</option>
+          <option value={90}>90 days</option>
+        </select>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 12 }}>
+        <div style={{ padding: 12, background: 'rgba(255,255,255,0.03)', borderRadius: 6 }}>
+          <div style={{ fontSize: 11, opacity: 0.55 }}>Calls</div>
+          <div style={{ fontSize: 18, fontWeight: 600 }}>{fmt(totals.calls)}</div>
+        </div>
+        <div style={{ padding: 12, background: 'rgba(255,255,255,0.03)', borderRadius: 6 }}>
+          <div style={{ fontSize: 11, opacity: 0.55 }}>Input tokens</div>
+          <div style={{ fontSize: 18, fontWeight: 600 }}>{fmt(totals.input)}</div>
+        </div>
+        <div style={{ padding: 12, background: 'rgba(255,255,255,0.03)', borderRadius: 6 }}>
+          <div style={{ fontSize: 11, opacity: 0.55 }}>Output tokens</div>
+          <div style={{ fontSize: 18, fontWeight: 600 }}>{fmt(totals.output)}</div>
+        </div>
+        <div style={{ padding: 12, background: 'rgba(0,212,255,0.06)', borderRadius: 6, borderLeft: '2px solid #00d4ff' }}>
+          <div style={{ fontSize: 11, opacity: 0.55 }}>Est. cost</div>
+          <div style={{ fontSize: 18, fontWeight: 600, color: '#00d4ff' }}>${(totals.cost_usd || 0).toFixed(2)}</div>
+        </div>
+      </div>
+
+      {totals.cache_read > 0 && (
+        <div style={{ fontSize: 11, opacity: 0.55, marginBottom: 12 }}>
+          Cache hits saved {fmt(totals.cache_read)} tokens at ~90% off (cache reads cost ~10% of input).
+        </div>
+      )}
+
+      {Object.keys(data?.by_endpoint || {}).length > 0 && (
+        <div style={{ fontSize: 12 }}>
+          <div style={{ opacity: 0.55, marginBottom: 6 }}>By endpoint:</div>
+          <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+            {Object.entries(data.by_endpoint).map(([k, v]) => (
+              <span key={k}><code style={{ background: 'rgba(255,255,255,0.05)', padding: '2px 6px', borderRadius: 4 }}>{k}</code> {v}</span>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function SettingsTab({ userName, user, orgName, planName, handleUpgrade, upgradeLoading, handleManageSubscription, apiKey, apiKeys, handleGenerateKey, handleRevokeKey, keyGenLoading, handleLogout, toast }) {
   return (
     <div className="dash-content">
@@ -258,6 +335,9 @@ export default function SettingsTab({ userName, user, orgName, planName, handleU
 
       {/* BYOK Anthropic key */}
       <AnthropicKeySection toast={toast} />
+
+      {/* Claude usage */}
+      <AnthropicUsagePanel />
 
       {/* Danger zone */}
       <div className="dash-settings-section">
