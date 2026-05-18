@@ -169,6 +169,36 @@ export declare class AgentOS {
     status?: 'success' | 'error';
   }): Promise<Trace[]>;
 
+  /** Summarize recent observations using Claude */
+  summarize(options?: {
+    hours?: number;
+    agent_id?: string;
+    workspace_id?: string;
+  }): Promise<{
+    summary: string;
+    count: number;
+    window_hours: number;
+    model: string;
+    usage: Record<string, number>;
+  }>;
+
+  /** Diagnose an agent using Claude Sonnet 4.6 with adaptive thinking */
+  analyzeAgent(agentId: string): Promise<{
+    analysis: string;
+    agent: { id: string; name: string; status: string; error_rate: number };
+    model: string;
+    usage: Record<string, number>;
+  }>;
+
+  /** Free-form Q&A grounded in your org's data */
+  ask(question: string, options?: {
+    model?: 'fast' | 'smart';
+  }): Promise<{
+    answer: string;
+    model: string;
+    usage: Record<string, number>;
+  }>;
+
   /** Graceful shutdown — flush all pending data */
   shutdown(): Promise<void>;
 }

@@ -22,6 +22,7 @@ import webhookRoutes from './routes/webhooks.js';
 import traceRoutes from './routes/traces.js';
 import alertRoutes from './routes/alerts.js';
 import graphRoutes from './routes/graph.js';
+import insightRoutes from './routes/insights.js';
 
 // ── Config ──
 const PORT = process.env.PORT || 4444;
@@ -62,11 +63,13 @@ app.use(webhookRoutes);
 app.use(traceRoutes);
 app.use(alertRoutes);
 app.use(graphRoutes);
+app.use(insightRoutes);
 
 // ── Start ──
 app.listen(PORT, () => {
   console.log(`\n⚡ Stoic AgentOS API — ${API_VERSION}`);
   console.log(`   Port: ${PORT}`);
   console.log(`   Supabase: ${supabase ? '✅ Connected' : '⚠️  No URL or Service Key (demo mode)'}`);
-  console.log(`   Stripe: ${process.env.STRIPE_SECRET_KEY ? '✅ Ready' : '⚠️  Not configured'}\n`);
+  console.log(`   Stripe: ${process.env.STRIPE_SECRET_KEY ? '✅ Ready' : '⚠️  Not configured'}`);
+  console.log(`   Anthropic: ${process.env.ANTHROPIC_API_KEY ? '✅ Platform key set' : '⚠️  BYOK only (no platform fallback)'}\n`);
 });

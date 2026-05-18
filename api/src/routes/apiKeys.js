@@ -48,6 +48,66 @@ router.post(`/api/${API_VERSION}/api-keys`, authenticate, async (req, res) => {
   }
 });
 
+// ── Get Anthropic key status (masked) ──
+router.get(`/api/${API_VERSION}/api-keys/anthropic`, authenticate, async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('organizations')
+      .select('anthropic_key_last4, anthropic_key_updated_at')
+      .eq('id', req.org.id)
+      .single();
+    if (error) throw error;
+    res.json({
+      configured: Boolean(data.anthropic_key_last4),
+      last4: data.anthropic_key_last4,
+      updated_at: data.anthropic_key_updated_at,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Set Anthropic key (BYOK) ──
+router.post(`/api/${API_VERSION}/api-keys/anthropic`, authenticate, async (req, res) => {
+  try {
+    const { key } = req.body;
+    if (!key || !key.startsWith('sk-ant-')) {
+      return res.status(400).json({ error: 'Invalid Anthropic API key format (expected sk-ant-...)' });
+    }
+    const last4 = key.slice(-4);
+    const { error } = await supabase
+      .from('organizations')
+      .update({
+        anthropic_api_key: key,
+        anthropic_key_last4: last4,
+        anthropic_key_updated_at: new Date().toISOString(),
+      })
+      .eq('id', req.org.id);
+    if (error) throw error;
+    res.json({ configured: true, last4 });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Remove Anthropic key ──
+router.delete(`/api/${API_VERSION}/api-keys/anthropic`, authenticate, async (req, res) => {
+  try {
+    const { error } = await supabase
+      .from('organizations')
+      .update({
+        anthropic_api_key: null,
+        anthropic_key_last4: null,
+        anthropic_key_updated_at: new Date().toISOString(),
+      })
+      .eq('id', req.org.id);
+    if (error) throw error;
+    res.json({ configured: false });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ── Revoke API Key ──
 router.delete(`/api/${API_VERSION}/api-keys/:id`, authenticate, async (req, res) => {
   try {

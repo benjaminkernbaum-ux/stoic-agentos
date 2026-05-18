@@ -273,6 +273,45 @@ export class AgentOS {
     return this._fetch(`/traces?${params}`);
   }
 
+  // ═══════════════════════════════════
+  // CLAUDE INSIGHTS (v2.1)
+  // ═══════════════════════════════════
+
+  /**
+   * Summarize recent observations using Claude.
+   * @param {Object} [options]
+   * @param {number} [options.hours=24] - Window in hours
+   * @param {string} [options.agent_id] - Filter to one agent
+   * @param {string} [options.workspace_id] - Filter to one workspace
+   * @returns {Promise<{summary: string, count: number, model: string, usage: object}>}
+   */
+  async summarize(options = {}) {
+    return this._send('/insights/summarize', {
+      hours: options.hours || 24,
+      agent_id: options.agent_id,
+      workspace_id: options.workspace_id,
+    });
+  }
+
+  /**
+   * Diagnose an agent's reliability using Claude (Sonnet 4.6 with thinking).
+   * @param {string} agentId - Agent UUID
+   * @returns {Promise<{analysis: string, agent: object, model: string, usage: object}>}
+   */
+  async analyzeAgent(agentId) {
+    return this._send('/insights/analyze-agent', { agent_id: agentId });
+  }
+
+  /**
+   * Ask a free-form question grounded in your org's data.
+   * @param {string} question
+   * @param {Object} [options]
+   * @param {'fast'|'smart'} [options.model='fast'] - fast=Haiku 4.5, smart=Sonnet 4.6
+   */
+  async ask(question, options = {}) {
+    return this._send('/insights/ask', { question, model: options.model || 'fast' });
+  }
+
   /**
    * Get cost breakdown for current month
    */
