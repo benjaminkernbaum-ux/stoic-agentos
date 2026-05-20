@@ -144,18 +144,22 @@
   }
 }
 
-/* ═══ CINEMATIC MERGE — Scroll Reveals ═══ */
+/* ══════════════════════════════════════════
+   CINEMATIC MERGE — Premium Visual System
+   ══════════════════════════════════════════ */
+
+/* ── Scroll Reveal Animations ── */
 .section-reveal {
   opacity: 0;
-  transform: translateY(30px);
-  transition: opacity 0.8s ease, transform 0.8s ease;
+  transform: translateY(40px);
+  transition: opacity 0.9s cubic-bezier(0.16, 1, 0.3, 1), transform 0.9s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .section-reveal.visible {
   opacity: 1;
   transform: translateY(0);
 }
 
-/* ═══ Hero Canvas Wrapper ═══ */
+/* ── Hero Canvas Wrapper ── */
 .hero {
   position: relative;
   overflow: hidden;
@@ -168,80 +172,251 @@
   z-index: 1;
 }
 
-/* ═══ Scroll Indicator ═══ */
+/* ── Hero Badge Enhancement ── */
+.hero-badge {
+  position: relative;
+  overflow: hidden;
+}
+.hero-badge::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent);
+  animation: shimmerBadge 4s ease-in-out infinite;
+}
+@keyframes shimmerBadge {
+  0% { left: -100%; }
+  100% { left: 200%; }
+}
+
+/* ── Gradient Text Enhancement ── */
+.gradient-text {
+  background-size: 200% auto;
+  animation: gradientShift 5s ease-in-out infinite;
+}
+@keyframes gradientShift {
+  0%, 100% { background-position: 0% center; }
+  50% { background-position: 100% center; }
+}
+
+/* ── Scroll Indicator ── */
 .scroll-indicator {
   position: absolute;
-  bottom: 32px;
+  bottom: 40px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 2;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-  animation: scrollBounce 2s ease-in-out infinite;
+  gap: 10px;
+  animation: scrollBounce 2.5s cubic-bezier(0.45, 0, 0.55, 1) infinite;
 }
 .scroll-indicator span {
   font-family: var(--font-mono);
-  font-size: 0.65rem;
-  letter-spacing: 3px;
+  font-size: 0.6rem;
+  letter-spacing: 4px;
   text-transform: uppercase;
-  color: rgba(255,255,255,0.25);
+  color: rgba(255,255,255,0.2);
 }
 .scroll-indicator svg {
-  width: 20px;
-  height: 20px;
-  stroke: rgba(0,240,255,0.4);
+  width: 18px;
+  height: 18px;
+  stroke: rgba(0,240,255,0.35);
   fill: none;
   stroke-width: 2;
 }
 @keyframes scrollBounce {
-  0%, 100% { transform: translateX(-50%) translateY(0); }
-  50% { transform: translateX(-50%) translateY(8px); }
+  0%, 100% { transform: translateX(-50%) translateY(0); opacity: 0.6; }
+  50% { transform: translateX(-50%) translateY(10px); opacity: 1; }
 }
 
-/* ═══ Metrics Section ═══ */
+/* ══════════════════════════════════════════
+   METRICS SECTION — Museum-grade
+   ══════════════════════════════════════════ */
 .metrics-section {
   position: relative;
   overflow: hidden;
-  padding: 100px 0;
+  padding: 120px 0;
 }
 .metrics-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 32px;
-  max-width: 900px;
+  gap: 24px;
+  max-width: 960px;
   margin: 0 auto;
 }
 .metric-counter {
+  position: relative;
   text-align: center;
-  padding: 40px 16px;
-  background: rgba(255,255,255,0.02);
-  border: 1px solid rgba(255,255,255,0.06);
-  border-radius: var(--radius-lg, 16px);
-  backdrop-filter: blur(8px);
-  transition: transform 0.3s, border-color 0.3s;
+  padding: 48px 20px 40px;
+  background: rgba(255,255,255,0.015);
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 20px;
+  backdrop-filter: blur(12px);
+  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.5s ease,
+              box-shadow 0.5s ease;
+  overflow: hidden;
+}
+.metric-counter::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
 }
 .metric-counter:hover {
-  transform: translateY(-4px);
+  transform: translateY(-8px) scale(1.02);
   border-color: rgba(255,255,255,0.12);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+}
+.metric-counter-done {
+  border-color: rgba(255,255,255,0.08);
 }
 .metric-counter-value {
   font-family: 'Space Grotesk', var(--font-primary), sans-serif;
-  font-size: 3.5rem;
+  font-size: 3.8rem;
   font-weight: 700;
   line-height: 1;
-  margin-bottom: 12px;
+  margin-bottom: 16px;
+  letter-spacing: -2px;
+  transition: text-shadow 0.8s ease;
 }
 .metric-counter-label {
   font-family: var(--font-mono);
-  font-size: 0.7rem;
-  letter-spacing: 2px;
+  font-size: 0.65rem;
+  letter-spacing: 3px;
   text-transform: uppercase;
-  color: rgba(255,255,255,0.35);
+  color: rgba(255,255,255,0.3);
+}
+.metric-counter-ring {
+  position: absolute;
+  inset: 4px;
+  border: 1px solid transparent;
+  border-radius: 18px;
+  pointer-events: none;
+  transition: border-color 1s ease, box-shadow 1s ease;
 }
 
-/* ═══ Breathing Glow ═══ */
+/* ══════════════════════════════════════════
+   FEATURE CARDS — Enhanced hover
+   ══════════════════════════════════════════ */
+.feature-card {
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.4s ease,
+              box-shadow 0.4s ease !important;
+}
+.feature-card:hover {
+  transform: translateY(-6px) !important;
+  border-color: rgba(255,255,255,0.1) !important;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.2),
+              0 0 1px rgba(255,255,255,0.1) !important;
+}
+.feature-card .feature-icon {
+  transition: transform 0.3s ease;
+}
+.feature-card:hover .feature-icon {
+  transform: scale(1.15) rotate(-3deg);
+}
+
+/* ══════════════════════════════════════════
+   CODE BLOCK — Enhanced
+   ══════════════════════════════════════════ */
+.code-block {
+  position: relative;
+  overflow: hidden;
+}
+.code-block::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent-purple, #9b59ff), var(--accent-cyan, #00d4ff), transparent);
+  opacity: 0.4;
+}
+
+/* ══════════════════════════════════════════
+   COMPARISON TABLE — Enhanced
+   ══════════════════════════════════════════ */
+.compare-table tr {
+  transition: background 0.3s ease;
+}
+.compare-table tbody tr:hover {
+  background: rgba(255,255,255,0.02);
+}
+
+/* ══════════════════════════════════════════
+   PRICING CARDS — Enhanced hover
+   ══════════════════════════════════════════ */
+.pricing-card {
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.3s ease,
+              box-shadow 0.4s ease;
+}
+.pricing-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+}
+.pricing-card.featured {
+  position: relative;
+  overflow: hidden;
+}
+.pricing-card.featured::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--accent-purple, #9b59ff), var(--accent-cyan, #00d4ff));
+}
+
+/* ══════════════════════════════════════════
+   SECTION LABELS — Enhanced
+   ══════════════════════════════════════════ */
+.section-label {
+  position: relative;
+  display: inline-block;
+}
+.section-label::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 30px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent-cyan, #00d4ff), transparent);
+  border-radius: 2px;
+}
+
+/* ══════════════════════════════════════════
+   FOOTER — Enhanced separator
+   ══════════════════════════════════════════ */
+.footer {
+  position: relative;
+}
+.footer::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 10%;
+  right: 10%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent);
+}
+
+/* ══════════════════════════════════════════
+   BREATHING / GLOW
+   ══════════════════════════════════════════ */
 @keyframes breathe {
   0%, 100% { opacity: 0.7; }
   50% { opacity: 1; }
@@ -250,19 +425,55 @@
   animation: breathe 3s ease-in-out infinite;
 }
 
-/* ═══ Section with particle background ═══ */
+/* ── Section with particle background ── */
 .section-particles {
   position: relative;
   overflow: hidden;
 }
 
+/* ══════════════════════════════════════════
+   SOCIAL BADGES — Enhanced
+   ══════════════════════════════════════════ */
+.social-badge {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.social-badge:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+}
+
+/* ══════════════════════════════════════════
+   NAV — Enhanced glass
+   ══════════════════════════════════════════ */
+.nav.scrolled {
+  backdrop-filter: blur(20px) saturate(1.5);
+}
+
+/* ══════════════════════════════════════════
+   RESPONSIVE
+   ══════════════════════════════════════════ */
 @media (max-width: 768px) {
   .metrics-grid {
     grid-template-columns: repeat(2, 1fr);
-    gap: 16px;
+    gap: 12px;
+  }
+  .metric-counter {
+    padding: 32px 12px 28px;
   }
   .metric-counter-value {
-    font-size: 2.2rem;
+    font-size: 2.4rem;
+    letter-spacing: -1px;
+  }
+  .scroll-indicator {
+    bottom: 24px;
   }
 }
 
+@media (max-width: 480px) {
+  .metric-counter-value {
+    font-size: 1.8rem;
+  }
+  .metrics-grid {
+    gap: 8px;
+  }
+}

@@ -11,6 +11,7 @@ export default function ParticleMesh({ particleCount = 40, color = '#00f0ff', sp
     let w, h;
     const mouse = { x: -1000, y: -1000 };
     const particles = [];
+    const rgb = hexToRgb(color);
 
     function resize() {
       const dpr = window.devicePixelRatio || 1;
@@ -33,6 +34,8 @@ export default function ParticleMesh({ particleCount = 40, color = '#00f0ff', sp
           y: Math.random() * h,
           vx: (Math.random() - 0.5) * speed,
           vy: (Math.random() - 0.5) * speed,
+          phase: Math.random() * Math.PI * 2,
+          size: 1 + Math.random() * 2,
         });
       }
     }
@@ -44,10 +47,12 @@ export default function ParticleMesh({ particleCount = 40, color = '#00f0ff', sp
     }
 
     init();
-    window.addEventListener('resize', () => { resize(); });
+    window.addEventListener('resize', () => resize());
     window.addEventListener('mousemove', onMouse);
 
+    let t = 0;
     function draw() {
+      t++;
       ctx.clearRect(0, 0, w, h);
 
       for (let i = 0; i < particles.length; i++) {
@@ -55,41 +60,48 @@ export default function ParticleMesh({ particleCount = 40, color = '#00f0ff', sp
         // Mouse scatter
         const dx = p.x - mouse.x, dy = p.y - mouse.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist < 100 && dist > 1) {
-          p.vx += (dx / dist) * 0.4;
-          p.vy += (dy / dist) * 0.4;
+        if (dist < 120 && dist > 1) {
+          const force = (1 - dist / 120) * 0.5;
+          p.vx += (dx / dist) * force;
+          p.vy += (dy / dist) * force;
         }
-        // Wandering
-        p.vx += (Math.random() - 0.5) * 0.02;
-        p.vy += (Math.random() - 0.5) * 0.02;
+        // Organic wandering
+        p.vx += Math.sin(t * 0.01 + p.phase) * 0.01;
+        p.vy += Math.cos(t * 0.01 + p.phase + 1) * 0.01;
         // Damping
-        p.vx *= 0.98;
-        p.vy *= 0.98;
+        p.vx *= 0.97;
+        p.vy *= 0.97;
         // Speed limit
         const spd = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
-        if (spd > speed * 2) { p.vx *= (speed * 2) / spd; p.vy *= (speed * 2) / spd; }
+        if (spd > speed * 2.5) { p.vx *= (speed * 2.5) / spd; p.vy *= (speed * 2.5) / spd; }
 
         p.x += p.vx;
         p.y += p.vy;
         // Wrap
-        if (p.x < -10) p.x = w + 10;
-        if (p.x > w + 10) p.x = -10;
-        if (p.y < -10) p.y = h + 10;
-        if (p.y > h + 10) p.y = -10;
+        if (p.x < -20) p.x = w + 20;
+        if (p.x > w + 20) p.x = -20;
+        if (p.y < -20) p.y = h + 20;
+        if (p.y > h + 20) p.y = -20;
       }
 
-      // Connections
+      // Connections with glow
       for (let i = 0; i < particles.length; i++) {
         for (let j = i + 1; j < particles.length; j++) {
           const dx = particles[i].x - particles[j].x;
           const dy = particles[i].y - particles[j].y;
           const dist = Math.sqrt(dx * dx + dy * dy);
           if (dist < connectionDistance) {
-            const alpha = (1 - dist / connectionDistance) * 0.12;
+            const alpha = (1 - dist / connectionDistance);
+            // Subtle glow layer
             ctx.beginPath();
-            ctx.strokeStyle = color.replace(')', `,${alpha})`).replace('rgb', 'rgba').replace('rgba(', 'rgba(').replace('#', '');
-            // Handle hex color
-            ctx.strokeStyle = `rgba(${hexToRgb(color)},${alpha})`;
+            ctx.strokeStyle = `rgba(${rgb},${alpha * 0.06})`;
+            ctx.lineWidth = 3;
+            ctx.moveTo(particles[i].x, particles[i].y);
+            ctx.lineTo(particles[j].x, particles[j].y);
+            ctx.stroke();
+            // Crisp line
+            ctx.beginPath();
+            ctx.strokeStyle = `rgba(${rgb},${alpha * 0.15})`;
             ctx.lineWidth = 0.5;
             ctx.moveTo(particles[i].x, particles[i].y);
             ctx.lineTo(particles[j].x, particles[j].y);
@@ -98,14 +110,23 @@ export default function ParticleMesh({ particleCount = 40, color = '#00f0ff', sp
         }
       }
 
-      // Dots
+      // Dots with glow
       for (let i = 0; i < particles.length; i++) {
+        const p = particles[i];
+        const pulse = Math.sin(t * 0.03 + p.phase) * 0.3 + 0.7;
+        // Outer glow
+        const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size * 4);
+        g.addColorStop(0, `rgba(${rgb},${0.2 * pulse})`);
+        g.addColorStop(1, `rgba(${rgb},0)`);
+        ctx.fillStyle = g;
         ctx.beginPath();
-        ctx.fillStyle = color;
-        ctx.globalAlpha = 0.6;
-        ctx.arc(particles[i].x, particles[i].y, 1.5, 0, Math.PI * 2);
+        ctx.arc(p.x, p.y, p.size * 4, 0, Math.PI * 2);
         ctx.fill();
-        ctx.globalAlpha = 1;
+        // Core dot
+        ctx.beginPath();
+        ctx.fillStyle = `rgba(${rgb},${0.6 + pulse * 0.4})`;
+        ctx.arc(p.x, p.y, p.size * 0.8, 0, Math.PI * 2);
+        ctx.fill();
       }
 
       rafRef.current = requestAnimationFrame(draw);
