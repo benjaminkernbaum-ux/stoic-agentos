@@ -1,0 +1,79 @@
+name: 'CI — Stoic AgentOS API'
+
+on:
+  push:
+    branches: [main, master]
+    paths: ['api/**']
+  pull_request:
+    branches: [main, master]
+    paths: ['api/**']
+
+jobs:
+  lint-and-build:
+    name: Lint & Build Check
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: api/package-lock.json
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Syntax Check (import all modules)
+        run: node -e "import('./src/server.js').then(() => console.log('✅ All imports resolve')).catch(e => { console.error('❌', e.message); process.exit(1) })"
+
+      - name: Run Tests
+        run: npm test || echo "⚠️ No tests configured yet"
+        continue-on-error: true
+
+  security-audit:
+    name: Dependency Audit
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Audit for Vulnerabilities
+        run: npm audit --audit-level=high || true
+
+  sdk-check:
+    name: SDK Validation
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: sdk
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Syntax Check (SDK entry)
+        run: node -e "import('./src/index.js').then(() => console.log('✅ SDK OK')).catch(e => { console.error('❌', e.message); process.exit(1) })"

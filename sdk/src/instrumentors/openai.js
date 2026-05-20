@@ -108,14 +108,16 @@ function patchInstance(instance, sdk) {
         activeTrace.addSpan(span);
       } else {
         // No active trace — send as standalone trace
-        sdk._send('/traces', {
-          trace_id: `auto_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-          name: `openai:${model}`,
-          status: 'success',
-          duration_ms: latencyMs,
+        sdk._send('/traces/ingest', {
+          trace: {
+            trace_id: `auto_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+            name: `openai:${model}`,
+            status: 'success',
+            duration_ms: latencyMs,
+            total_tokens: totalTokens,
+            total_cost_usd: costUsd,
+          },
           spans: [span],
-          total_tokens: totalTokens,
-          total_cost_usd: costUsd,
         }).catch(() => {});
       }
 
@@ -151,14 +153,16 @@ function patchInstance(instance, sdk) {
       if (activeTrace) {
         activeTrace.addSpan(span);
       } else {
-        sdk._send('/traces', {
-          trace_id: `auto_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-          name: `openai:${model}:error`,
-          status: 'error',
-          duration_ms: latencyMs,
+        sdk._send('/traces/ingest', {
+          trace: {
+            trace_id: `auto_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+            name: `openai:${model}:error`,
+            status: 'error',
+            duration_ms: latencyMs,
+            total_tokens: 0,
+            total_cost_usd: 0,
+          },
           spans: [span],
-          total_tokens: 0,
-          total_cost_usd: 0,
         }).catch(() => {});
       }
 

@@ -1,0 +1,884 @@
+STOIC MARKET RESEARCH
+USO INSTITUCIONAL    NÃO CONSTITUI RECOMENDAÇÃO DE INVESTIMENTO
+STOIC MARKET RESEARCH
+Tactical Cross-Asset Outlook
+Risco-Off Firme,
+Estagflação no Preço.
+Posicionamento defensivo recomendado para a semana de 18 a 22 de Maio. Score de
+sentimento agregado em −42, e a única assimetria de alta no horizonte de cinco
+pregões depende da impressão da NVDA na quarta.
+Data de publicação
+17 de Maio de 2026, 22:00 BRT
+Edição
+Sentimento Estoico #001
+Cobertura
+Macro global, Brasil, FX, Renda fixa, Equities, Commodities, Cripto
+Horizonte
+Tático — 5 a 20 pregões
+Universo coberto
+12 ativos do sistema Larry Williams 9.1 — D1
+Autor
+Stoic Market Research Desk
+
+
+STOIC MARKET RESEARCH
+Tactical Outlook    18 de Maio de 2026
+Documento confidencial  Stoic Market  @stoic.mkt
+Página 1
+I  SUMÁRIO
+Resumo Executivo
+SCORE DE SENTIMENTO
+−42
+escala −100 (medo extremo) a +100 (euforia)
+VEREDICTO
+RISCO-OFF FIRME
+Viés estagflacionário no preço
+ Postura defensiva justificada por convergência de
+quatro vetores estruturais: guerra EUA–Irã no terceiro
+mês sem desfecho, Estreito de Ormuz interditado (IEA
+classifica como maior disrupção da história), CPI core
+acima do esperado em 12/05 e mercado precificando
+alta — não corte — do Fed Funds em 2027.
+ Dólar tornou-se o ativo-haven preferencial: melhor
+semana desde início de março. EM sob pressão
+multiplicativa. Real perdeu 3,48% na semana mesmo
+com Selic em 14,50%.
+ Ibovespa registra quinta semana consecutiva de
+queda, fechando em 177.283 pontos. USD/BRL
+retornou acima de R$5,00. C6 projeta IPCA 2026 em
+4,8%, fora do teto.
+ NVDA na quarta (20/05) é o único catalisador de alta
+da semana. Rali de IA pausou após seis semanas
+seguidas de máximas. Indústria de semicondutores
+caiu 3% em uma sessão (12/05).
+ Recomendação operacional: redução de exposição
+em 50% em renda variável até NVDA reportar.
+Posições direcionadas em ouro long, dólar long contra
+EM, BTC short abaixo de 78k. Sem novos longs em
+EUR/USD ou índices até confirmação.
+CINCO CHAMADAS TÁTICAS PRINCIPAIS
+#
+Ativo
+Direção
+Convicção
+Horizonte
+ Racional sintetizado
+ 
+1
+XAU/USD
+LONG
+★★★★★
+20 pregões
+Haven + inflação persistente + dólar forte. Setup raro de
+tripla convergência.
+2
+USD/BRL
+LONG
+★★★★
+10 pregões
+Real perde por aversão global; carry não segura risco-off
+externo.
+3
+BTC/USD
+SHORT
+★★★
+5–10
+pregões
+Perdeu 78k. Quebra de 75k abre 70k. Bias bearish até
+estrutura recuperar.
+4
+NDX
+NEUTRO
+—
+Pré-NVDA
+Sem setup limpo. Posição direcional apenas após print de
+quarta.
+5
+EUR/USD
+SHORT
+★★★
+10 pregões
+DXY haven dominante. ECB sem catalisador para reverter.
+
+
+STOIC MARKET RESEARCH
+Tactical Outlook    18 de Maio de 2026
+Documento confidencial  Stoic Market  @stoic.mkt
+Página 2
+MENSAGEM CENTRAL
+O mercado parou de precificar corte de juros e começou a precificar estagflação. Quando a curva de juros
+americana inverte o sinal — de cortes em 2026 para aumentos em 2027 — o regime mudou. Defensividade
+não é covardia; é leitura de regime. O dinheiro que não se perde em mercado ruim é o que compra mercado
+bom.
+
+
+STOIC MARKET RESEARCH
+Tactical Outlook    18 de Maio de 2026
+Documento confidencial  Stoic Market  @stoic.mkt
+Página 3
+II  MACRO
+Panorama Macroeconômico
+O cenário macroeconômico global atravessa uma transição crítica. Após seis semanas consecutivas
+de máximas históricas no S&P 500 sustentadas pelo rali de inteligência artificial, a leitura de inflação
+acima do esperado em 12/05 e a deterioração simultânea das negociações entre Washington e
+Teerã redirecionaram a precificação de ativos de risco. A questão não é mais se haverá impacto
+inflacionário do choque energético — é qual a magnitude e duração.
+2.1 Choque Geopolítico — Guerra EUA–Irã
+O conflito entre Estados Unidos e Irã entra no seu terceiro mês sem sinais concretos de desfecho. A IEA
+classificou a interrupção do fluxo pelo Estreito de Ormuz como a maior disrupção de oferta da história do
+mercado global de petróleo. Aproximadamente 20% da oferta mundial de petróleo e parcela significativa do
+GNL passam pela região, e a QatarEnergy declarou force majeure em seus contratos.
+Brent oscilou entre US$ 90 e US$ 114 nas últimas três semanas, fechando sexta-feira (15/05) em US$ 110,49
+(+1,13%). O padrão de violenta volatilidade sugere posicionamento especulativo elevado e baixa visibilidade —
+três séries de apostas suspeitas contra o petróleo nos minutos que antecederam declarações da Casa Branca
+(US$ 580M em 23/03, US$ 950M em 07/04, US$ 750M em 17/04) estão sob investigação por possível insider
+trading conforme reportagem do Financial Times.
+INDICADOR
+NÍVEL ATUAL
+VAR. SEMANA
+VAR. MÊS
+SINAL
+Brent crude (USD/bbl)
+110,49
++5,8%
++18,2%
+↑ Estagflacionário
+US Treasury 10Y (%)
+4,38
++22 bp
++58 bp
+↑ Restritivo
+US Treasury 30Y (%)
+5,12
++18 bp
++62 bp
+↑ Restritivo
+DXY
+104,82
++1,9%
++3,8%
+↑ Haven
+VIX
+18,43
++6,78%
++24,1%
+↑ Volatilidade
+CPI core EUA (a.a.)
+3,4%
+—
++0,3 pp
+↑ Inflação
+S&P 500 fwd P/E
+20,9
+—
+−0,3
+↑ Acima da média
+2.2 Reversão do Regime Inflacionário
+A leitura de CPI core acima do consenso em 12/05 produziu o primeiro grande ajuste de expectativas de juros
+do ano. O Nasdaq 100 caiu quase 1% naquela sessão e o subíndice de semicondutores recuou 3%. O ponto
+crítico não está no número mensal isolado, mas no que ele sinaliza: o choque energético da guerra está se
+transmitindo para preços ao consumidor com velocidade superior à projetada pelos modelos do Fed em janeiro.
+Os contratos futuros de SOFR removeram completamente as apostas de corte de juros em 2026 e
+passaram a precificar uma alta do Fed Funds em 2027. Esta inversão de regime é o evento monetário mais
+relevante do mês — não a leitura de CPI em si, mas o que o mercado fez com ela. A última vez que esse tipo
+de reprecificação ocorreu fora de um ciclo de aperto foi em 2008.
+IMPLICAÇÃO OPERACIONAL
+Estratégias de duration longa, ações de crescimento sem geração de caixa e ativos de risco emergentes
+perdem a tese estrutural enquanto a curva de juros americana se mantiver invertida em direção a aperto.
+Ativos com pricing power real, geradores de caixa imediato e safe havens tradicionais (ouro, dólar, prata)
+capturam o fluxo de saída.
+
+
+STOIC MARKET RESEARCH
+Tactical Outlook    18 de Maio de 2026
+Documento confidencial  Stoic Market  @stoic.mkt
+Página 4
+III  CROSS-ASSET
+Posicionamento de Classes de Ativos
+A matriz abaixo consolida as visões táticas (5 a 20 pregões) por classe de ativo e região. Pontuação OW
+(overweight) / N (neutro) / UW (underweight) reflete a alocação recomendada relativa a um benchmark
+balanceado.
+CLASSE
+SUBCLASSE / ATIVO
+VISÃO
+Δ
+CONV.
+COMENTÁRIO
+EQUITIES
+EUA — Mega-cap Tech
+N
+↓
+★ ★ ■
+Beta de IA pausado; aguardar NVDA
+EUA — S&P 500 broad
+UW
+↓
+★ ★ ★
+Multiplo 20,9x sem suporte de earnings broad
+Europa — STOXX 600
+UW
+↓
+★ ★ ★
+Energia + ECB sem espaço pra afrouxar
+Japão — TOPIX
+N
+—
+★ ■ ■
+Yen volátil; carry frágil
+EM ex-China
+UW
+↓
+★ ★ ★
+Dólar forte penaliza estrutura
+Brasil — Ibovespa
+UW
+↓
+★ ★ ★
+5ª sem queda; risco político somando
+China — CSI 300
+N
+—
+★ ■ ■
+Estímulo limitado, mas valuation barato
+RENDA
+FIXA
+UST 2Y
+N
+↑
+★ ★ ■
+Front end ancorado; sem corte 2026
+UST 10Y
+UW
+↓
+★ ★ ★
+Termo prêmio crescendo; oferta pesada
+UST 30Y
+UW
+↓
+★ ★ ★
+Yield > 5% sem ponto de parada claro
+DI Brasil — curta
+OW
+—
+★ ★ ★
+Selic 14,5% restritiva; carry real elevado
+NTN-B 2035
+OW
+↑
+★ ★ ■
+Proteção real com IPCA destravando
+EM hard currency
+UW
+↓
+★ ★ ■
+Spread comprime quando dólar acelera
+FX
+USD (DXY)
+OW
+↑
+★ ★ ★
+Haven flow dominante; melhor semana desde
+mar
+EUR/USD
+UW
+↓
+★ ★ ★
+DXY estrutural; ECB sem catalisador
+GBP/USD
+UW
+↓
+★ ★ ■
+BoE neutro; gilts pressionados
+USD/JPY
+N
+—
+★ ■ ■
+Intervenção possível mantém range
+USD/BRL
+OW
+(USD)
+↑
+★ ★ ★
+Risk-off importado supera Selic
+AUD/NZD
+N
+—
+★ ■ ■
+Sem direção; fora do setup
+COMMODIT
+IES
+Ouro (XAU)
+OW
+↑
+★ ★ ★
+Tripla convergência: haven + inflação + DXY
+Prata (XAG)
+OW
+↑
+★ ★ ■
+Beta do ouro com volatilidade adicional
+Brent Crude
+N
+↑
+★ ★ ■
+Direção bullish, mas vol especulativo extremo
+Cobre
+UW
+↓
+★ ★ ■
+Atividade global desacelerando
+CRIPTO
+BTC
+UW
+↓
+★ ★ ■
+Perdeu 78k; correlação com risk-on quebrou
+ETH
+UW
+↓
+★ ★ ■
+Sem catalisador específico
+Legenda: OW overweight (acima da carteira neutra)  N neutro  UW underweight  Δ mudança vs. edição anterior  ★★★ convicção
+alta  ★★■ média  ★■■ baixa.
+
+
+STOIC MARKET RESEARCH
+Tactical Outlook    18 de Maio de 2026
+Documento confidencial  Stoic Market  @stoic.mkt
+Página 5
+IV  CENÁRIOS
+Análise de Cenários
+Três cenários para os próximos 20 pregões, com probabilidades atribuídas e vetores de gatilho
+explícitos. Probabilidades calibradas a partir de pricing implícito de opções (S&P 500, USD/BRL) e
+curva forward de Brent.
+Cenário Base — Estagflação Controlada
+55%
+ CASO CENTRAL
+Conflito EUA–Irã segue sem resolução nas próximas 4 semanas. Brent oscila entre US$ 95 e US$ 115. CPI
+core mantém-se acima de 3% e Fed sinaliza pausa longa, removendo definitivamente expectativa de corte
+em 2026. S&P consolida 5% a 8% abaixo das máximas recentes.
+GATILHOS
+ Strait of Hormuz parcialmente operacional, fluxo abaixo da média histórica
+ Earnings de NVDA confirmam guidance forte, mas múltiplos não expandem
+ PMI EUA estabiliza próximo a 50; sem recessão sinalizada
+ Dólar consolida ganhos, DXY entre 103 e 106
+ Ibovespa testa suporte em 175k mas mantém range
+IMPACTOS POR CLASSE
+Equities EUA −3 a −8%  Brent US$ 95–115  UST 10Y 4,30–4,60%  DXY 103–106
+Ouro +4 a +9%  BTC 68k–78k range  USD/BRL R$ 5,00–5,15  Ibovespa 173k–180k
+Cenário Adverso — Choque Estagflacionário
+30%
+ BEAR CASE
+Escalada militar adicional ou novo ataque a infraestrutura saudita/qatari. Brent acima de US$ 130. CPI core
+acelera para 4%+. Fed obrigado a sinalizar alta de juros em 2026. S&P corrige 12% a 18% das máximas.
+EM em forte estresse.
+GATILHOS
+ Ampliação geográfica do conflito (UAE, Arábia, Iraque)
+ Brent fura US$ 130 e mantém prêmio sustentado
+ PCE core supera 3,5% — pressão política sobre Powell intensa
+ Dólar acelera para DXY 108+  Real testa R$ 5,40
+ Liquidação coordenada em renda variável EM e crédito high-yield
+IMPACTOS POR CLASSE
+Equities EUA −12 a −18%  Brent US$ 130+  UST 10Y 5,00%+  DXY 108+
+Ouro +15 a +25%  BTC 55k–65k  USD/BRL R$ 5,30–5,50  Ibovespa 160k–170k
+Cenário Otimista — Resolução Diplomática
+15%
+ BULL CASE
+
+
+STOIC MARKET RESEARCH
+Tactical Outlook    18 de Maio de 2026
+Documento confidencial  Stoic Market  @stoic.mkt
+Página 6
+Cessar-fogo formal EUA–Irã com cronograma de reabertura do Estreito. Brent recua para US$ 75. CPI core
+retorna abaixo de 3%. Fed reinsere expectativa de cortes em 2026. NVDA imprime e amplia rali de IA. S&P
+retoma máximas e estende +5%.
+GATILHOS
+ Acordo formal com cronograma de implementação verificável
+ Brent recua abaixo de US$ 80 em 2 semanas
+ Inflação volta a desacelerar; SOFR repreciona cortes
+ Fluxo de retorno para EM  Real abaixo de R$ 4,90
+ Ibovespa rompe 185k e retoma direção altista
+IMPACTOS POR CLASSE
+Equities EUA +5 a +8%  Brent US$ 75  UST 10Y 3,80–4,10%  DXY 100–102
+Ouro −3 a −7%  BTC 85k–95k  USD/BRL R$ 4,80–4,90  Ibovespa 185k–195k
+
+
+STOIC MARKET RESEARCH
+Tactical Outlook    18 de Maio de 2026
+Documento confidencial  Stoic Market  @stoic.mkt
+Página 7
+V  POSICIONAMENTO TÁTICO
+Trade Book — Universo LW 9.1
+Recomendações estruturadas no sistema Larry Williams 9.1 aplicado ao timeframe diário (D1), com filtro de
+tendência via EMA 50 e gatilho de entrada via virada da EMA 3. Risco fixo de 1% do capital por operação; stop
+via ATR de 14 períodos.
+5.1 Posições Ativas com Trigger Definido
+ATIVO
+DIR.
+ENTRADA
+STOP
+ALVO 1 / 2
+R:R
+CONV.
+HORIZ.
+XAU/USD
+LONG
+4520
+4485 (ATR×2,2)
+4595 / 4680
+1:2,1 /
+1:4,5
+ALTA
+20 pregões
+XAG/USD
+LONG
+75,40
+73,80 (ATR×2,5)
+78,90 / 82,20
+1:2,2 /
+1:4,3
+MÉDIA
+15 pregões
+USD/BRL
+LONG
+R$ 5,02
+R$ 4,95 (suporte
+semanal)
+R$ 5,12 / 5,22
+1:1,4 /
+1:2,9
+ALTA
+10 pregões
+BTC/USD
+SHORT
+Quebra de
+75k
+78,5k
+70k / 67k
+1:1,4 /
+1:2,4
+MÉDIA
+5–10 pregões
+EUR/USD
+SHORT
+1,1640
+(toque
+retração)
+1,1710
+(ATR×2,0)
+1,1520 / 1,1430
+1:1,7 /
+1:3,0
+MÉDIA
+10 pregões
+GBP/USD
+SHORT
+1,3450
+(rejeição)
+1,3520
+1,3300 / 1,3210
+1:2,1 /
+1:3,4
+MÉDIA
+10 pregões
+Tese sintetizada por ativo:
+XAU/USD  ·  Convergência haven + inflação real + dólar forte. Setup raro de tripla confirmação.
+XAG/USD  ·  Beta do ouro. Volatilidade adicional justifica peso menor, mas convicção direcional alta.
+USD/BRL  ·  Risk-off importado supera carry. Stop curto justificado por proximidade do suporte.
+BTC/USD  ·  Apenas após confirmação técnica abaixo de 75k. Sem entrada antecipada.
+EUR/USD  ·  DXY haven dominante. ECB sem catalisador para reverter a dinâmica.
+GBP/USD  ·  Gilts pressionados. Setup técnico mais limpo que EUR/USD.
+5.2 Posições Passivas e Ativos Fora do Setup
+ATIVO
+POSTURA
+NOTA
+NDX
+AGUARDAR
+Nenhuma posição direcional antes do print de 20/05 após fechamento.
+NVDA
+AGUARDAR
+Earnings na quarta. Entrar apenas com confirmação técnica D1 no dia seguinte.
+MSFT
+REDUZIR
+Realizar parcial de longs estruturais. Manter posição core reduzida.
+GOOGL
+REDUZIR
+Idem MSFT. Beta de IA pausando justifica redução de exposição.
+AMZN
+MANTER
+Posição neutra. EMA 50 ainda acima como filtro. Sem ação tática.
+TSLA
+FORA
+Volatilidade sem direção. Fora do setup LW 9.1 atualmente.
+AUD/NZD
+FORA
+Sem virada D1. Setup neutro mantém ativo fora da carteira.
+
+
+STOIC MARKET RESEARCH
+Tactical Outlook    18 de Maio de 2026
+Documento confidencial  Stoic Market  @stoic.mkt
+Página 8
+REGRA DE TAMANHO DE POSIÇÃO DA SEMANA
+Exposição agregada em renda variável reduzida em 50% até a divulgação dos resultados da NVDA na
+quarta-feira (20/05) após o fechamento. Stops mais largos não compensam o risco do evento — o que
+compensa é menos exposição nominal. Posições direcionais em ouro, dólar e bitcoin não são afetadas por
+esta regra; aplica-se apenas a equities EUA, Brasil e ETFs.
+
+
+STOIC MARKET RESEARCH
+Tactical Outlook    18 de Maio de 2026
+Documento confidencial  Stoic Market  @stoic.mkt
+Página 9
+VI  MERCADO LOCAL
+Lente Brasil
+O mercado brasileiro entra a semana com o canário de risco já cantado. Cinco semanas
+consecutivas de queda no Ibovespa, com perda acumulada de −3,71% apenas na semana
+encerrada em 15/05, fecharam o índice em 177.283 pontos. O dólar à vista retornou para R$ 5,07,
+com alta semanal de 3,48% — mas mantendo queda de 7,70% no ano. O movimento de aversão a
+risco veio predominantemente do exterior, mas o componente doméstico está ganhando tração e
+adiciona prêmio justamente quando o externo já cobra caro.
+ATIVO / INDICADOR
+NÍVEL
+DIA
+SEMANA
+OBSERVAÇÃO
+Ibovespa
+177.283 pts
+−0,61%
+−3,71%
+5 semanas seguidas de queda
+USD/BRL
+R$ 5,0664
++1,59%
++3,48%
+Risk-off importado supera carry
+DI Jan/27
+13,85%
++18 bp
++42 bp
+Curva precifica Selic alta + risco fiscal
+NTN-B 2035 (real)
+6,82%
++12 bp
++28 bp
+Yield real acima da média histórica
+CDS Brasil 5Y
+168 bp
++9 bp
++22 bp
+Spread soberano alargando
+IPCA 12m proj. (C6)
+4,8%
+—
++0,2 pp
+Fora do teto da meta
+Selic
+14,50%
+—
+—
+BC sinalizou conforto na ata de abril
+6.1 Eixos de Pressão Doméstica
+Inflação destravando. A projeção do C6 Bank para IPCA 2026 em 4,8% coloca a inflação acima do teto da
+meta de 4,5%. Embora a maior parte do impulso venha do choque energético externo, a manutenção da Selic
+em 14,50% via ata serena do Copom sugere que o Banco Central está confortável com a política atual. O
+Bradesco projeta Selic a 12,75% no fim do ano, mas condicionado ao fim da guerra do Irã ainda neste trimestre
+— premissa que perde validade a cada semana sem desfecho.
+Risco político em ascensão. O noticiário doméstico da semana incluiu (i) revelações sobre laços entre Flávio
+Bolsonaro e Daniel Vorcaro, banqueiro preso, levantando dúvidas sobre a candidatura presidencial; (ii)
+deflagração da Operação Sem Refino pela Polícia Federal, apontando o ex-governador Cláudio Castro por
+suposta proteção ao Grupo Refit em fraudes fiscais bilionárias. Não são, individualmente, eventos sistêmicos —
+mas em conjunto adicionam prêmio de risco fiscal e político em um momento de fragilidade externa.
+Petrobras paradoxal. Mesmo com Brent acima de US$ 110, as ações da Petrobras (PETR4) recuaram 1,46%
+após o balanço do 1T26, com investidores focando em risco regulatório e política de preços. O sinal é
+importante: petróleo alto deixou de ser bullish para a petroleira brasileira em regime de intervenção. Setor de
+commodities domésticas perdeu o automatismo histórico com preços internacionais.
+6.2 Recomendação de Alocação Local
+Sobrealocar: NTN-B intermediárias (vencimentos 2030–2035) capturando yield real acima de 6,5%. CDB de
+bancos médios com prazo curto e CDI 110%+. FIIs de papel atrelados a IPCA com desconto vs. patrimonial.
+Neutro: Tesouro Selic e fundos DI — carry resiste, mas oportunidade custo cresce. Ações de exportadoras
+dolarizadas com pricing power (commodities agro, papel e celulose).
+Subalocar: Small caps domésticas, varejo discricionário, construção residencial de média renda.
+Multimercados com beta longo global concentrado em IA.
+
+
+STOIC MARKET RESEARCH
+Tactical Outlook    18 de Maio de 2026
+Documento confidencial  Stoic Market  @stoic.mkt
+Página 10
+VII  GERENCIAMENTO DE RISCO
+Riscos Principais
+Mapeamento dos cinco riscos materiais para a tese central. Cada risco classificado por probabilidade, impacto
+e direção em relação ao posicionamento recomendado.
+#
+RISCO
+PROB.
+IMPACTO
+VS. TESE
+AÇÃO MITIGADORA
+1
+Resolução súbita do conflito
+EUA–Irã via acordo de cessar-fogo
+verificável
+Baixa
+(15%)
+Alto
+Contra (bull)
+Fechar shorts em equity broad
+rapidamente; reduzir longs em ouro
+40–60%
+2
+Earnings da NVDA decepcionantes
+(revisão para baixo do capex de
+hyperscalers)
+Média
+(35%)
+Alto
+A favor
+(bear)
+Nenhuma ação prévia; entrar em
+novos shorts em NDX e SOXX D+1
+após confirmação
+3
+PCE Core (30/05) acima de 3,5% —
+confirmação de inflação
+destravando
+Média
+(40%)
+Médio-Alt
+o
+A favor
+(bear)
+Sustenta tese central; aumentar
+exposição em ouro e dólar contra EM
+4
+Intervenção do Tesouro/BCB no
+câmbio com USD/BRL acima de R$
+5,20
+Média
+(30%)
+Médio
+Contra
+parcial
+Reduzir tamanho de USD/BRL long
+perto de R$ 5,15; stop apertado se
+intervenção sinalizada
+5
+Deterioração fiscal doméstica
+adicional (PEC fiscal travada,
+downgrade soberano)
+Baixa
+(10%)
+Alto
+A favor
+(bear)
+Reduzir exposição a NTN-B longas;
+manter caixa elevado em CDI curto
+Calendário de Eventos da Semana
+DATA
+HORA BRT
+EVENTO
+IMPORTÂNCIA
+JURISDIÇÃO
+Seg 18/05
+09:30
+Empire State Manufacturing (NY Fed)
+Média
+EUA
+Seg 18/05
+11:00
+NAHB Housing Index
+Média
+EUA
+Ter 19/05
+09:00
+Ata Copom (BCB) — abril
+Alta
+Brasil
+Qua 20/05
+09:30
+Building Permits + Housing Starts
+Média
+EUA
+Qua 20/05
+15:00
+FOMC Minutes (reunião de abril)
+Alta
+EUA
+Qua 20/05
+Pós-close
+NVDA — Q1 FY27 Earnings
+Crítica
+EUA
+Qui 21/05
+09:30
+Initial Jobless Claims
+Média
+EUA
+Qui 21/05
+14:00
+Leilão 20Y Treasury (jumbo)
+Alta
+EUA
+Sex 22/05
+10:30
+Flash PMIs (Manuf. + Composite)
+Alta
+EUA / Zona
+Euro
+Sex 22/05
+11:00
+Michigan Consumer Sentiment (final)
+Média
+EUA
+
+
+STOIC MARKET RESEARCH
+Tactical Outlook    18 de Maio de 2026
+Documento confidencial  Stoic Market  @stoic.mkt
+Página 11
+VIII  ANEXOS
+Metodologia e Glossário
+A.1 Score de Sentimento — Construção
+O score agregado de sentimento (faixa −100 a +100) é calculado como média ponderada de nove
+componentes normalizados. Pesos refletem a influência relativa observada empiricamente em janelas de 60
+pregões.
+#
+COMPONENTE
+PESO
+INPUT
+1
+Componente macro-geopolítico
+20%
+Notícias-chave codificadas em sinal −100/+100
+2
+Regime inflacionário
+15%
+CPI surprise + breakevens 5Y5Y + commodities
+3
+Pricing do Fed (SOFR futures)
+15%
+Movimento das taxas implícitas vs. 30 dias atrás
+4
+VIX (z-score 60d)
+10%
+VIX > 1 desvio = sinal negativo
+5
+DXY (z-score 60d)
+10%
+Dólar forte = saída de risco, sinal negativo
+6
+S&P breadth
+10%
+% de ações acima da EMA 50 diária
+7
+Spreads de crédito HY
+10%
+OAS High Yield vs. média de 90 dias
+8
+Cripto risk proxy
+5%
+Funding rates BTC + ratio BTC/ETH
+9
+Componente Brasil local
+5%
+Ibov vs. MSCI EM + CDS BR + DI Jan/27
+A.2 Faixas de Interpretação do Score
+FAIXA
+ REGIME
+ POSTURA RECOMENDADA
++60 a +100
+ Euforia
+ Reduzir exposição; vender força; ativar hedges contra topo
++20 a +59
+Risk-on saudável
+Manter posições; sem grandes movimentos
+−19 a +19
+ Neutro
+ Esperar setup técnico; sem viés direcional
+−20 a −59
+Risk-off (atual: −42)
+Defensivo; haven flow; reduzir beta
+−60 a −100
+ Pânico
+ Buying opportunity emergente; entrada escalonada
+A.3 Fontes Primárias e Cadência
+Bloomberg (Markets Wrap diária), Financial Times (análise + reportagem investigativa), Reuters (cobertura
+global e Brasil), Valor Econômico (cobertura doméstica), MT Newswires (alertas em tempo real), CNN Brasil,
+Money Times, Seu Dinheiro (acompanhamento local). Dados macro via FRED (St. Louis Fed). Preços spot via
+TradingView Webhooks (cache 5 min). Cripto via CoinGecko API. Calendário econômico via Forex Factory
+JSON.
+Cadência editorial: publicação semanal aos domingos às 22:00 BRT, cobrindo a semana seguinte.
+Atualização delta diária às 06:30 BRT integrada ao briefing matinal. Alertas intraday via Telegram quando o
+score variar 15+ pontos ou em eventos de magnitude pré-mapeada.
+A.4 Glossário
+ATR
+Average True Range — medida de volatilidade usada para dimensionar stops.
+BoE
+Bank of England — banco central do Reino Unido.
+
+
+STOIC MARKET RESEARCH
+Tactical Outlook    18 de Maio de 2026
+Documento confidencial  Stoic Market  @stoic.mkt
+Página 12
+CDS
+Credit Default Swap — derivativo de crédito; spread sinaliza risco soberano.
+DXY
+U.S. Dollar Index — cesta do dólar contra 6 moedas principais.
+ECB
+European Central Bank — banco central da Zona Euro.
+EMA
+Exponential Moving Average — média móvel exponencial.
+EM
+Emerging Markets — mercados emergentes.
+FOMC
+Federal Open Market Committee — comitê de política monetária do Fed.
+LW 9.1
+Sistema Larry Williams 9.1 — método de entrada por virada de EMA 3.
+OAS
+Option-Adjusted Spread — spread de crédito ajustado por opcionalidade.
+OW / N / UW
+Overweight / Neutral / Underweight — postura relativa ao benchmark.
+PCE
+Personal Consumption Expenditures — índice de inflação preferido do Fed.
+R:R
+Risk-Reward — razão entre risco e retorno potencial da operação.
+SOFR
+Secured Overnight Financing Rate — taxa interbancária referência EUA.
+
+
+STOIC MARKET RESEARCH
+Tactical Outlook    18 de Maio de 2026
+Documento confidencial  Stoic Market  @stoic.mkt
+Página 13
+IX  DISCLAIMER
+Avisos Legais
+Natureza do documento. Este relatório é produzido pelo Stoic Market Research Desk com finalidade exclusivamente informativa e
+educacional, voltado à comunidade Stoic Market e a leitores qualificados em renda variável e derivativos. Não constitui, em qualquer
+hipótese, recomendação personalizada de investimento, oferta de valores mobiliários ou solicitação para compra ou venda de quaisquer
+instrumentos financeiros.
+Ausência de habilitação regulatória. O Stoic Market não é registrado como analista de valores mobiliários nos termos da Resolução CVM
+nº 20 e não está habilitado a prestar serviço de consultoria de valores mobiliários nos termos da Resolução CVM nº 19. Análises aqui
+apresentadas refletem opiniões pessoais e estudos próprios, não devendo ser confundidas com aconselhamento profissional.
+Riscos do mercado. Operações em mercados financeiros — incluindo, sem limitação, ações, derivativos, FX, criptomoedas e commodities
+— envolvem risco substancial de perda, podendo exceder o capital aportado em estratégias alavancadas. Resultados passados não
+constituem garantia de resultados futuros. Cada leitor é responsável por avaliar a adequação de qualquer estratégia ao seu perfil de risco,
+horizonte e objetivos pessoais, preferencialmente com auxílio de profissional habilitado.
+Limitações da análise. As projeções, cenários e probabilidades aqui apresentadas baseiam-se em informações disponíveis publicamente
+até a data de publicação e em modelos quantitativos próprios. Condições de mercado podem alterar-se rapidamente e tornar obsoletas as
+conclusões do documento. O Stoic Market não assume compromisso de revisar ou atualizar este relatório após sua publicação inicial.
+Conflitos de interesse. O autor e/ou membros do desk podem manter, adquirir ou liquidar posições em ativos mencionados neste relatório a
+qualquer momento, em consonância ou em contradição com as visões aqui apresentadas. Sinalizações específicas via canais oficiais da
+comunidade Stoic Market são comunicadas no momento da execução.
+Direitos autorais e distribuição. Este documento é propriedade intelectual do Stoic Market. A reprodução total ou parcial, redistribuição em
+qualquer meio, ou uso comercial sem autorização expressa são vedados. Citações pontuais são permitidas mediante atribuição completa da
+fonte e data de publicação.
+Fontes externas. Citações de Bloomberg, Financial Times, Reuters, Valor Econômico, CNN Brasil e demais veículos referenciados são
+utilizadas em caráter de contextualização editorial sob princípios de uso justo (fair use). Direitos autorais permanecem com os respectivos
+detentores.
+Lei aplicável. Este documento e qualquer disputa decorrente do seu uso submetem-se à legislação brasileira, sendo eleito o foro da
+Comarca de São Paulo, Capital, com exclusão de qualquer outro, por mais privilegiado que seja.
+ Stoic Market Research Desk  @stoic.mkt  Edição de 18 de Maio de 2026
+ 
