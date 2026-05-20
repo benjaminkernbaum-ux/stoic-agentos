@@ -1,9 +1,11 @@
 {
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
+  "redirects": [
+    { "source": "/showcase", "destination": "/", "permanent": false }
+  ],
   "rewrites": [
-    { "source": "/showcase", "destination": "/showcase/index.html" },
-    { "source": "/((?!showcase).*)", "destination": "/index.html" }
+    { "source": "/(.*)", "destination": "/index.html" }
   ],
   "headers": [
     {
