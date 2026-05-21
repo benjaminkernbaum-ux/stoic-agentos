@@ -161,31 +161,52 @@ router.post(`/api/${API_VERSION}/insights/analyze-agent`, authenticate, async (r
 });
 
 // ── Free-form ask ──
+// Reads org.hot_cache first (claude-obsidian "hot.md" pattern). If a fresh
+// cache exists, it replaces the 20-observation context fetch — typically a
+// ~80% input-token reduction. Falls back to the live fetch when the cache
+// is missing, stale, or the migration hasn't been applied.
 router.post(`/api/${API_VERSION}/insights/ask`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     if (!hasAnthropic(req.org)) {
       return res.status(402).json({ error: 'No Anthropic API key configured' });
     }
 
-    const { question, model = 'fast' } = req.body;
+    const { question, model = 'fast', force_fresh = false } = req.body;
     if (!question) return res.status(400).json({ error: 'question required' });
 
-    const [{ count: agentCount }, { count: wsCount }, { data: recent }] = await Promise.all([
-      supabase!.from('agents').select('*', { count: 'exact', head: true }).eq('org_id', req.org.id),
-      supabase!.from('workspaces').select('*', { count: 'exact', head: true }).eq('org_id', req.org.id),
-      supabase!
-        .from('observations')
-        .select('type,title,created_at')
-        .eq('org_id', req.org.id)
-        .order('created_at', { ascending: false })
-        .limit(20),
-    ]);
+    const cacheUsable =
+      !force_fresh &&
+      typeof req.org.hot_cache === 'string' &&
+      req.org.hot_cache.length > 0 &&
+      req.org.hot_cache_stale !== true;
 
-    const context =
-      `Organization: ${req.org.name} (plan: ${req.org.plan})\n` +
-      `Agents: ${agentCount}, Workspaces: ${wsCount}\n\n` +
-      `Last 20 observations:\n` +
-      (recent || []).map((o: Record<string, unknown>) => `- [${o.type}] ${o.title}`).join('\n');
+    let context: string;
+    let contextSource: 'hot_cache' | 'live';
+
+    if (cacheUsable) {
+      context =
+        `Organization: ${req.org.name} (plan: ${req.org.plan})\n\n` +
+        `Hot cache (updated ${req.org.hot_cache_updated_at}):\n${req.org.hot_cache}`;
+      contextSource = 'hot_cache';
+    } else {
+      const [{ count: agentCount }, { count: wsCount }, { data: recent }] = await Promise.all([
+        supabase!.from('agents').select('*', { count: 'exact', head: true }).eq('org_id', req.org.id),
+        supabase!.from('workspaces').select('*', { count: 'exact', head: true }).eq('org_id', req.org.id),
+        supabase!
+          .from('observations')
+          .select('type,title,created_at')
+          .eq('org_id', req.org.id)
+          .order('created_at', { ascending: false })
+          .limit(20),
+      ]);
+
+      context =
+        `Organization: ${req.org.name} (plan: ${req.org.plan})\n` +
+        `Agents: ${agentCount}, Workspaces: ${wsCount}\n\n` +
+        `Last 20 observations:\n` +
+        (recent || []).map((o: Record<string, unknown>) => `- [${o.type}] ${o.title}`).join('\n');
+      contextSource = 'live';
+    }
 
     const result = await complete(req.org, {
       model,
@@ -193,7 +214,7 @@ router.post(`/api/${API_VERSION}/insights/ask`, authenticate, async (req: Authen
       endpoint: 'ask',
       system:
         'You are the Stoic AgentOS assistant. Answer questions about the user\'s AI agent fleet based on the ' +
-        'observation log provided. If the answer isn\'t in the data, say so.',
+        'context provided. If the answer isn\'t in the data, say so.',
       messages: [
         { role: 'user', content: `Context:\n${context}\n\nQuestion: ${question}` },
       ],
@@ -201,6 +222,103 @@ router.post(`/api/${API_VERSION}/insights/ask`, authenticate, async (req: Authen
 
     res.json({
       answer: result.text,
+      model: result.model,
+      usage: result.usage,
+      context_source: contextSource,
+    });
+  } catch (err: unknown) {
+    handleAnthropicError(err as AnthropicError, res);
+  }
+});
+
+// ── Hot cache: read ──
+router.get(`/api/${API_VERSION}/insights/hot-cache`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
+  res.json({
+    hot_cache: req.org.hot_cache ?? null,
+    updated_at: req.org.hot_cache_updated_at ?? null,
+    stale: req.org.hot_cache_stale ?? false,
+  });
+});
+
+// ── Hot cache: refresh ──
+// Synthesizes a new ~500-word summary of recent activity and overwrites
+// org.hot_cache. Cache is a cache, not a journal — old content is discarded.
+router.post(`/api/${API_VERSION}/insights/hot-cache/refresh`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    if (!hasAnthropic(req.org)) {
+      return res.status(402).json({ error: 'No Anthropic API key configured' });
+    }
+
+    const since = new Date(Date.now() - 7 * 86400 * 1000).toISOString();
+
+    const [{ data: observations }, { count: agentCount }, { count: wsCount }] = await Promise.all([
+      supabase!
+        .from('observations')
+        .select('type,title,content,importance,created_at')
+        .eq('org_id', req.org.id)
+        .gte('created_at', since)
+        .order('importance', { ascending: false })
+        .order('created_at', { ascending: false })
+        .limit(150),
+      supabase!.from('agents').select('*', { count: 'exact', head: true }).eq('org_id', req.org.id),
+      supabase!.from('workspaces').select('*', { count: 'exact', head: true }).eq('org_id', req.org.id),
+    ]);
+
+    if (!observations || observations.length === 0) {
+      const empty = `# Hot Cache\n\nLast Updated: ${new Date().toISOString()}\n\nNo observations in the last 7 days. ${agentCount ?? 0} agents, ${wsCount ?? 0} workspaces registered.`;
+      const { error: upErr } = await supabase!
+        .from('organizations')
+        .update({
+          hot_cache: empty,
+          hot_cache_updated_at: new Date().toISOString(),
+          hot_cache_stale: false,
+        })
+        .eq('id', req.org.id);
+      if (upErr) throw upErr;
+      return res.json({ hot_cache: empty, updated_at: new Date().toISOString(), stale: false, observations_summarized: 0 });
+    }
+
+    const formatted = observations
+      .map((o: Record<string, unknown>) => `[${o.type}|imp:${o.importance}] ${o.title}${o.content ? `\n  ${(o.content as string).slice(0, 200)}` : ''}`)
+      .join('\n');
+
+    const result = await complete(req.org, {
+      model: 'fast',
+      maxTokens: 800,
+      endpoint: 'hot-cache-refresh',
+      system:
+        'You generate a hot cache: a compact rolling summary of an AI agent fleet\'s recent activity. ' +
+        'Stay under 500 words. Use markdown with these exact sections: ' +
+        '## Last Updated, ## Key Recent Activity, ## Active Agents, ## Recent Decisions, ## Open Issues. ' +
+        'Be factual. Cite observation titles. Skip empty sections. ' +
+        'This is a cache, not a journal — write it as if rewriting from scratch.',
+      messages: [
+        {
+          role: 'user',
+          content:
+            `Organization: ${req.org.name} (plan: ${req.org.plan})\n` +
+            `Agents: ${agentCount ?? 0}, Workspaces: ${wsCount ?? 0}\n\n` +
+            `Last ${observations.length} observations (most important / recent first):\n${formatted}`,
+        },
+      ],
+    });
+
+    const now = new Date().toISOString();
+    const { error: upErr } = await supabase!
+      .from('organizations')
+      .update({
+        hot_cache: result.text,
+        hot_cache_updated_at: now,
+        hot_cache_stale: false,
+      })
+      .eq('id', req.org.id);
+    if (upErr) throw upErr;
+
+    res.json({
+      hot_cache: result.text,
+      updated_at: now,
+      stale: false,
+      observations_summarized: observations.length,
       model: result.model,
       usage: result.usage,
     });

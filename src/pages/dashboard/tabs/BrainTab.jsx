@@ -1,6 +1,109 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { BRAIN_FILTERS, TYPE_ICONS } from '../constants';
 import { supabase, API_BASE } from '../../../lib/supabase';
+
+function HotCachePanel() {
+  const [cache, setCache] = useState(null);
+  const [updatedAt, setUpdatedAt] = useState(null);
+  const [stale, setStale] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
+  const [expanded, setExpanded] = useState(false);
+
+  const load = async () => {
+    const token = (await supabase.auth.getSession()).data.session?.access_token;
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/insights/hot-cache`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const body = await res.json();
+      if (res.ok) {
+        setCache(body.hot_cache);
+        setUpdatedAt(body.updated_at);
+        setStale(body.stale);
+      }
+    } catch (e) {
+      // silent — feature degrades cleanly if migration_004 not applied
+    }
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const refresh = async () => {
+    setBusy(true);
+    setError(null);
+    const token = (await supabase.auth.getSession()).data.session?.access_token;
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/insights/hot-cache/refresh`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: '{}',
+      });
+      const body = await res.json();
+      if (!res.ok) setError(body.error || `HTTP ${res.status}`);
+      else {
+        setCache(body.hot_cache);
+        setUpdatedAt(body.updated_at);
+        setStale(false);
+        setExpanded(true);
+      }
+    } catch (e) {
+      setError(e.message);
+    }
+    setBusy(false);
+  };
+
+  const hasCache = cache && cache.length > 0;
+  const ageMin = updatedAt ? Math.round((Date.now() - new Date(updatedAt).getTime()) / 60000) : null;
+  const ageLabel = ageMin == null ? '' : ageMin < 1 ? 'just now' : ageMin < 60 ? `${ageMin}m ago` : ageMin < 1440 ? `${Math.round(ageMin/60)}h ago` : `${Math.round(ageMin/1440)}d ago`;
+
+  return (
+    <div className="dash-panel" style={{ marginBottom: 16, borderLeft: '2px solid #ff9e3d' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: hasCache ? 12 : 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span style={{ fontSize: 18 }}>🔥</span>
+          <div>
+            <div style={{ fontWeight: 600, fontSize: 13, display: 'flex', alignItems: 'center', gap: 8 }}>
+              Hot Cache
+              {stale && hasCache && (
+                <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 4, background: 'rgba(255,158,61,0.15)', color: '#ff9e3d', fontWeight: 500 }}>
+                  stale
+                </span>
+              )}
+            </div>
+            <div style={{ fontSize: 11, opacity: 0.55 }}>
+              Rolling ~500-word summary {hasCache && ageLabel ? `· updated ${ageLabel}` : '· not yet generated'}
+            </div>
+          </div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {hasCache && (
+            <button
+              className="btn btn-sm"
+              onClick={() => setExpanded(e => !e)}
+              style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', color: '#fff' }}
+            >
+              {expanded ? 'Hide' : 'Show'}
+            </button>
+          )}
+          <button className="btn btn-primary btn-sm" onClick={refresh} disabled={busy}>
+            {busy ? 'Refreshing...' : hasCache ? 'Refresh' : 'Generate'}
+          </button>
+        </div>
+      </div>
+      {error && (
+        <div style={{ color: '#ff4757', fontSize: 12, padding: '8px 12px', background: 'rgba(255,71,87,0.08)', borderRadius: 6 }}>
+          {error}
+        </div>
+      )}
+      {hasCache && expanded && (
+        <div style={{ fontSize: 13, lineHeight: 1.7, whiteSpace: 'pre-wrap', color: 'rgba(255,255,255,0.85)', padding: '12px 14px', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)', borderRadius: 6 }}>
+          {cache}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function InsightsPanel() {
   const [hours, setHours] = useState(168);
@@ -87,6 +190,7 @@ export default function BrainTab({ observations, brainFilter, setBrainFilter, ob
 
   return (
     <div className="dash-content">
+      <HotCachePanel />
       <InsightsPanel />
       <div className="dash-panel">
         {/* Search bar */}
