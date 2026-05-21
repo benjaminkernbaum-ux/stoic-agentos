@@ -6,6 +6,7 @@ import { useToast, ToastContainer } from './hooks/useToast.jsx';
 import { useDashboardData } from './hooks/useDashboardData';
 import { useDashboardActions } from './hooks/useDashboardActions';
 import { CAPTURE_HINTS } from './constants';
+import DashboardParticles from '../../components/DashboardParticles';
 
 // Components
 import CommandPalette from './components/CommandPalette';
@@ -128,6 +129,8 @@ export default function Dashboard() {
 
   return (
     <div className="dash">
+
+      <DashboardParticles />
 
       <CommandPalette
         cmdOpen={cmdOpen} setCmdOpen={setCmdOpen}

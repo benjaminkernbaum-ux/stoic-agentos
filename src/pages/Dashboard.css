@@ -1174,3 +1174,380 @@
   .dash-agent-feed { max-height: 250px; }
   .dash-timeline { max-height: 250px; }
 }
+
+/* ══════════════════════════════════════════════
+   CINEMATIC DASHBOARD ENHANCEMENTS
+   Museum-grade premium effects
+   ══════════════════════════════════════════════ */
+
+/* ── Animated background grid pulse ── */
+.dash::after {
+  content: '';
+  position: fixed; inset: 0;
+  background:
+    radial-gradient(ellipse at 15% 80%, rgba(124,58,237,0.04) 0%, transparent 60%),
+    radial-gradient(ellipse at 85% 30%, rgba(167,139,250,0.03) 0%, transparent 50%);
+  pointer-events: none;
+  z-index: 0;
+  animation: bgPulse 8s ease-in-out infinite;
+}
+@keyframes bgPulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+/* ── Metric cards — enhanced hover glow ── */
+.dash-metric {
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.dash-metric:hover {
+  transform: translateY(-4px) scale(1.01);
+  box-shadow: 0 12px 40px rgba(124,58,237,0.12), 0 0 0 1px rgba(167,139,250,0.15);
+}
+.dash-metric::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 10%; right: 10%; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(167,139,250,0.15), transparent);
+  opacity: 0;
+  transition: opacity 0.35s;
+}
+.dash-metric:hover::after {
+  opacity: 1;
+}
+
+/* ── Metric value glow text ── */
+.dash-metric.purple .dash-metric-value {
+  text-shadow: 0 0 30px rgba(167,139,250,0.25);
+}
+.dash-metric.cyan .dash-metric-value {
+  text-shadow: 0 0 30px rgba(103,232,249,0.2);
+}
+.dash-metric.green .dash-metric-value {
+  text-shadow: 0 0 30px rgba(167,139,250,0.2);
+}
+.dash-metric.orange .dash-metric-value {
+  text-shadow: 0 0 30px rgba(196,181,252,0.2);
+}
+
+/* ── Metric icon float ── */
+.dash-metric-icon {
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.dash-metric:hover .dash-metric-icon {
+  transform: scale(1.15) rotate(-5deg);
+}
+
+/* ── Panel cards — enhanced glass ── */
+.dash-panel {
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+}
+.dash-panel::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(167,139,250,0.12), transparent);
+}
+.dash-panel:hover {
+  border-color: var(--line-hi);
+  box-shadow: 0 8px 32px rgba(124,58,237,0.08);
+}
+
+/* ── Agent rows — enhanced interaction ── */
+.dash-agent-row {
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  border-left: 2px solid transparent;
+}
+.dash-agent-row:hover {
+  background: rgba(124,58,237,0.06);
+  border-left-color: var(--accent);
+  padding-left: 20px;
+}
+
+/* ── Status dot enhanced glow ── */
+.dash-status-dot.running {
+  box-shadow: 0 0 8px var(--status-live), 0 0 16px rgba(167,139,250,0.2);
+}
+.dash-status-dot.error {
+  box-shadow: 0 0 8px var(--status-error), 0 0 16px rgba(248,113,113,0.2);
+}
+
+/* ── Timeline items — slide reveal ── */
+.dash-tl-item {
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  border-left: 2px solid transparent;
+}
+.dash-tl-item:hover {
+  background: rgba(124,58,237,0.05);
+  border-left-color: var(--accent);
+  transform: translateX(4px);
+}
+
+/* ── Agent cards — premium hover ── */
+.dash-agent-card {
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+}
+.dash-agent-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; height: 2px;
+  background: var(--gradient-hero);
+  opacity: 0;
+  transition: opacity 0.4s;
+  border-radius: 16px 16px 0 0;
+}
+.dash-agent-card:hover::before {
+  opacity: 1;
+}
+.dash-agent-card:hover {
+  transform: translateY(-6px) scale(1.01);
+  box-shadow: 0 16px 48px rgba(124,58,237,0.18), 0 0 0 1px rgba(167,139,250,0.2);
+}
+.dash-agent-card:hover .dash-agent-stat-val {
+  text-shadow: 0 0 20px rgba(167,139,250,0.3);
+}
+
+/* ── Workspace cards — enhanced ── */
+.dash-ws-card {
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.dash-ws-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 36px rgba(124,58,237,0.12);
+}
+
+/* ── Usage bar glow ── */
+.dash-usage {
+  transition: all 0.3s ease;
+}
+.dash-usage:hover {
+  border-color: var(--line-hi);
+  box-shadow: 0 4px 20px rgba(124,58,237,0.08);
+}
+.dash-usage-fill {
+  box-shadow: 0 0 12px rgba(124,58,237,0.3);
+}
+
+/* ── Capture panel enhanced ── */
+.dash-capture-panel {
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.dash-capture-panel:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(124,58,237,0.12), 0 8px 32px rgba(124,58,237,0.1);
+}
+.dash-capture-submit {
+  position: relative;
+  overflow: hidden;
+}
+.dash-capture-submit::after {
+  content: '';
+  position: absolute;
+  top: 0; left: -100%;
+  width: 50%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent);
+  transition: left 0.6s;
+}
+.dash-capture-submit:hover::after {
+  left: 150%;
+}
+
+/* ── Sidebar — enhanced glass & glow ── */
+.dash-sidebar {
+  background: rgba(5,5,12,0.97);
+  backdrop-filter: blur(40px) saturate(1.4);
+}
+.dash-brand-icon {
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s;
+}
+.dash-brand-icon:hover {
+  transform: scale(1.1) rotate(-5deg);
+  box-shadow: 0 4px 20px var(--accent-glow);
+}
+
+/* ── Nav buttons — enhanced active state ── */
+.dash-nav-btn {
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.dash-nav-btn.active {
+  background: rgba(124,58,237,0.14);
+  box-shadow: inset 0 0 20px rgba(124,58,237,0.05);
+}
+.dash-nav-btn:hover {
+  transform: translateX(2px);
+}
+
+/* ── Filter pills — enhanced ── */
+.dash-filter-pill {
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.dash-filter-pill.active {
+  box-shadow: 0 0 16px var(--accent-glow), 0 2px 8px rgba(124,58,237,0.3);
+}
+.dash-filter-pill:hover:not(.active) {
+  transform: translateY(-1px);
+}
+
+/* ── Observation rows — enhanced ── */
+.dash-obs-row {
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  border-left: 2px solid transparent;
+}
+.dash-obs-row:hover {
+  border-left-color: var(--accent);
+  background: rgba(124,58,237,0.04);
+  transform: translateX(2px);
+}
+.dash-obs-icon-wrap {
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.dash-obs-row:hover .dash-obs-icon-wrap {
+  transform: scale(1.1);
+}
+
+/* ── Command Palette — enhanced glass ── */
+.cmd-backdrop {
+  backdrop-filter: blur(24px) saturate(1.5);
+}
+.cmd-modal {
+  box-shadow: 0 40px 100px rgba(0,0,0,0.85), 0 0 80px rgba(124,58,237,0.08), 0 0 0 1px rgba(167,139,250,0.1);
+  animation: modalEntrance 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes modalEntrance {
+  from { opacity: 0; transform: scale(0.94) translateY(12px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+.cmd-item {
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  border-left: 2px solid transparent;
+}
+.cmd-item:hover {
+  background: rgba(124,58,237,0.08);
+  border-left-color: var(--accent);
+  transform: translateX(2px);
+}
+
+/* ── Topbar — enhanced glass ── */
+.dash-topbar {
+  backdrop-filter: blur(40px) saturate(1.5);
+  background: rgba(0,0,0,0.88);
+}
+.dash-topbar-capture {
+  position: relative;
+  overflow: hidden;
+}
+.dash-topbar-capture::before {
+  content: '';
+  position: absolute;
+  top: 0; left: -100%;
+  width: 50%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+  animation: topbarShimmer 3s ease-in-out infinite;
+}
+@keyframes topbarShimmer {
+  0% { left: -100%; }
+  50%, 100% { left: 200%; }
+}
+
+/* ── Settings — enhanced ── */
+.dash-settings-section {
+  transition: all 0.3s ease;
+}
+.dash-settings-section:hover {
+  border-color: var(--line-hi);
+}
+.dash-settings-row {
+  transition: all 0.2s ease;
+}
+.dash-settings-row:hover {
+  background: rgba(124,58,237,0.03);
+}
+
+/* ── Upgrade CTA — enhanced glow ── */
+.dash-upgrade-cta {
+  transition: all 0.3s ease;
+}
+.dash-upgrade-cta:hover {
+  box-shadow: 0 8px 40px rgba(124,58,237,0.15);
+  border-color: var(--line-hi);
+}
+
+/* ── Empty state icon bounce ── */
+.dash-empty-icon {
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.dash-empty:hover .dash-empty-icon {
+  transform: scale(1.2) rotate(-5deg);
+  filter: grayscale(0);
+}
+
+/* ── Scrollbar styling ── */
+.dash-body::-webkit-scrollbar,
+.dash-nav::-webkit-scrollbar,
+.dash-agent-feed::-webkit-scrollbar,
+.dash-timeline::-webkit-scrollbar,
+.dash-obs-list::-webkit-scrollbar {
+  width: 4px;
+}
+.dash-body::-webkit-scrollbar-track,
+.dash-nav::-webkit-scrollbar-track,
+.dash-agent-feed::-webkit-scrollbar-track,
+.dash-timeline::-webkit-scrollbar-track,
+.dash-obs-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+.dash-body::-webkit-scrollbar-thumb,
+.dash-nav::-webkit-scrollbar-thumb,
+.dash-agent-feed::-webkit-scrollbar-thumb,
+.dash-timeline::-webkit-scrollbar-thumb,
+.dash-obs-list::-webkit-scrollbar-thumb {
+  background: rgba(124,58,237,0.15);
+  border-radius: 4px;
+}
+.dash-body::-webkit-scrollbar-thumb:hover,
+.dash-nav::-webkit-scrollbar-thumb:hover,
+.dash-agent-feed::-webkit-scrollbar-thumb:hover,
+.dash-timeline::-webkit-scrollbar-thumb:hover,
+.dash-obs-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(124,58,237,0.3);
+}
+
+/* ── Plan chip pulse ── */
+.dash-plan-chip {
+  transition: all 0.3s ease;
+}
+.dash-plan-chip:hover {
+  border-color: var(--accent);
+  box-shadow: 0 0 12px rgba(124,58,237,0.1);
+}
+
+/* ── Content area entrance ── */
+.dash-content {
+  animation: contentFadeIn 0.4s ease-out;
+}
+@keyframes contentFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Button ripple effect ── */
+.btn-primary {
+  position: relative;
+  overflow: hidden;
+}
+.btn-primary::after {
+  content: '';
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 0; height: 0;
+  background: rgba(255,255,255,0.15);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  transition: width 0.5s, height 0.5s;
+}
+.btn-primary:active::after {
+  width: 200px; height: 200px;
+}
+

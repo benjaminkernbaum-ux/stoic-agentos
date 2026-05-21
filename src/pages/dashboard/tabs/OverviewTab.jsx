@@ -1,3 +1,4 @@
+import AnimatedCounter from '../../../components/AnimatedCounter';
 import { STATUS_COLORS, TYPE_ICONS, CAPTURE_HINTS } from '../constants';
 
 export default function OverviewTab({ stats, agents, observations, liveAgents, errorAgents, usage, usagePct, planName, captureForm, setCaptureForm, captureLoading, handleCapture, handleSeedDemo, seedLoading, setShowAgentModal, setActiveTab, placeholderIdx, onCaptureRef }) {
@@ -11,7 +12,7 @@ export default function OverviewTab({ stats, agents, observations, liveAgents, e
             <div className="dash-metric-icon">🤖</div>
             <span className="dash-metric-trend neutral">TOTAL</span>
           </div>
-          <div className="dash-metric-value">{stats.agents || agents.length}</div>
+          <div className="dash-metric-value"><AnimatedCounter end={stats.agents || agents.length} color="var(--accent-bright)" duration={1200} /></div>
           <div className="dash-metric-label">Agents</div>
           <div className="dash-metric-sub">{liveAgents} running · {errorAgents} errors</div>
         </div>
@@ -21,7 +22,7 @@ export default function OverviewTab({ stats, agents, observations, liveAgents, e
             <div className="dash-metric-icon">📦</div>
             <span className="dash-metric-trend neutral">REPOS</span>
           </div>
-          <div className="dash-metric-value">{stats.workspaces || 0}</div>
+          <div className="dash-metric-value"><AnimatedCounter end={stats.workspaces || 0} color="#67e8f9" duration={1200} /></div>
           <div className="dash-metric-label">Workspaces</div>
           <div className="dash-metric-sub">Connected repositories</div>
         </div>
@@ -33,7 +34,7 @@ export default function OverviewTab({ stats, agents, observations, liveAgents, e
               {observations.length > 0 ? `+${Math.min(observations.length, 99)}` : 'NEW'}
             </span>
           </div>
-          <div className="dash-metric-value">{stats.observations || observations.length}</div>
+          <div className="dash-metric-value"><AnimatedCounter end={stats.observations || observations.length} color="var(--accent-bright)" duration={1200} /></div>
           <div className="dash-metric-label">Observations</div>
           <div className="dash-metric-sub">This month</div>
         </div>
@@ -43,7 +44,7 @@ export default function OverviewTab({ stats, agents, observations, liveAgents, e
             <div className="dash-metric-icon">💡</div>
             <span className="dash-metric-trend neutral">STORED</span>
           </div>
-          <div className="dash-metric-value">{stats.knowledgeItems || 0}</div>
+          <div className="dash-metric-value"><AnimatedCounter end={stats.knowledgeItems || 0} color="var(--accent-bright)" duration={1200} /></div>
           <div className="dash-metric-label">Knowledge Items</div>
           <div className="dash-metric-sub">Persistent insights</div>
         </div>

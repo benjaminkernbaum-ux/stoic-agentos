@@ -2,7 +2,7 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen, activeTab, setAct
   return (
     <aside className={`dash-sidebar${sidebarOpen ? '' : ' collapsed'}`}>
       <div className="dash-brand">
-        <div className="dash-brand-icon">⚡</div>
+        <div className="dash-brand-icon" style={{ animation: 'pulse-dot 3s ease-in-out infinite' }}>⚡</div>
         {sidebarOpen && (
           <>
             <span className="dash-brand-name">AgentOS</span>
