@@ -10,9 +10,22 @@
  *    → 0.006500  (in USD)
  */
 
+interface ModelPricing {
+  input: number;
+  output: number;
+}
+
+interface ProviderPricing {
+  [model: string]: ModelPricing;
+}
+
+interface PricingTable {
+  [provider: string]: ProviderPricing;
+}
+
 // ── Pricing Table (USD per 1M tokens) ──────────────────
 // Source: provider pricing pages as of May 2026
-const PRICING = {
+const PRICING: PricingTable = {
   openai: {
     'gpt-4o':            { input: 2.50,  output: 10.00 },
     'gpt-4o-mini':       { input: 0.15,  output: 0.60  },
@@ -61,7 +74,7 @@ const PRICING = {
 };
 
 // ── Fallback pricing for unknown models ──
-const FALLBACK_PRICING = { input: 1.00, output: 3.00 };
+const FALLBACK_PRICING: ModelPricing = { input: 1.00, output: 3.00 };
 
 /**
  * Calculate the USD cost for a single LLM call.
@@ -72,7 +85,7 @@ const FALLBACK_PRICING = { input: 1.00, output: 3.00 };
  * @param {number} completionTokens - Output/completion token count
  * @returns {number} Cost in USD (up to 6 decimal places)
  */
-export function calculateCost(provider, model, promptTokens = 0, completionTokens = 0) {
+export function calculateCost(provider: string, model: string, promptTokens: number = 0, completionTokens: number = 0): number {
   const providerPricing = PRICING[provider?.toLowerCase()];
   const modelPricing = providerPricing?.[model?.toLowerCase()] || findFuzzyModel(providerPricing, model) || FALLBACK_PRICING;
 
@@ -86,7 +99,7 @@ export function calculateCost(provider, model, promptTokens = 0, completionToken
  * Try fuzzy-matching the model name (handles version suffixes, dates, etc.)
  * e.g. "gpt-4o-2024-08-06" → matches "gpt-4o"
  */
-function findFuzzyModel(providerPricing, model) {
+function findFuzzyModel(providerPricing: ProviderPricing | undefined, model: string): ModelPricing | null {
   if (!providerPricing || !model) return null;
   const lower = model.toLowerCase();
 
@@ -108,8 +121,8 @@ function findFuzzyModel(providerPricing, model) {
  * List all supported providers and models
  * @returns {Object} Provider → model list
  */
-export function getSupportedModels() {
-  const result = {};
+export function getSupportedModels(): Record<string, string[]> {
+  const result: Record<string, string[]> = {};
   for (const [provider, models] of Object.entries(PRICING)) {
     result[provider] = Object.keys(models);
   }

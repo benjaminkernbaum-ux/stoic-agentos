@@ -16,7 +16,7 @@ vi.mock('@anthropic-ai/sdk', () => ({
 }));
 
 describe('anthropic.js', () => {
-  let mod;
+  let mod: any;
 
   beforeEach(async () => {
     rpcMock.mockReset();
@@ -222,10 +222,10 @@ describe('anthropic.js', () => {
         stop_reason: 'end_turn',
       });
 
-      await mod.complete({}, { model: 'fast', messages: [], thinking: true, endpoint: 't' });
+      await mod.complete({}, { model: 'fast', system: '', messages: [], thinking: true, endpoint: 't' });
       expect(createMock.mock.calls[0][0].thinking).toBeUndefined();
 
-      await mod.complete({}, { model: 'smart', messages: [], thinking: true, endpoint: 't' });
+      await mod.complete({}, { model: 'smart', system: '', messages: [], thinking: true, endpoint: 't' });
       expect(createMock.mock.calls[1][0].thinking).toEqual({ type: 'adaptive' });
     });
 
@@ -245,7 +245,7 @@ describe('anthropic.js', () => {
         stop_reason: 'end_turn',
       });
 
-      const result = await mod.complete({}, { model: 'smart', messages: [], endpoint: 't' });
+      const result = await mod.complete({}, { model: 'smart', system: '', messages: [], endpoint: 't' });
       expect(result.text).toBe('first\nsecond');
     });
   });

@@ -1,19 +1,21 @@
 import { Router } from 'express';
+import type { Request, Response } from 'express';
 import express from 'express';
 import { authenticate } from '../middleware/auth.js';
 import { supabase } from '../middleware/db.js';
+import type { AuthenticatedRequest } from '../types.js';
 
 const router = Router();
 const API_VERSION = 'v1';
 const STRIPE_SECRET = process.env.STRIPE_SECRET_KEY || '';
 
-const STRIPE_PRICES = {
+const STRIPE_PRICES: Record<string, string> = {
   pro: process.env.STRIPE_PRO_PRICE_ID || 'price_pro_monthly',
   team: process.env.STRIPE_TEAM_PRICE_ID || 'price_team_monthly',
 };
 
 // ── Checkout Session ──
-router.post(`/api/${API_VERSION}/billing/checkout`, authenticate, async (req, res) => {
+router.post(`/api/${API_VERSION}/billing/checkout`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
   if (!STRIPE_SECRET) return res.status(503).json({ error: 'Stripe not configured' });
 
   try {
@@ -30,7 +32,7 @@ router.post(`/api/${API_VERSION}/billing/checkout`, authenticate, async (req, re
         metadata: { org_id: req.org.id, org_name: req.org.name },
       });
       customerId = customer.id;
-      await supabase.from('organizations')
+      await supabase!.from('organizations')
         .update({ stripe_customer_id: customerId })
         .eq('id', req.org.id);
     }
@@ -46,14 +48,14 @@ router.post(`/api/${API_VERSION}/billing/checkout`, authenticate, async (req, re
     });
 
     res.json({ url: session.url, sessionId: session.id });
-  } catch (err) {
-    console.error('Stripe checkout error:', err.message);
-    res.status(500).json({ error: 'Failed to create checkout session', detail: err.message });
+  } catch (err: unknown) {
+    console.error('Stripe checkout error:', (err as Error).message);
+    res.status(500).json({ error: 'Failed to create checkout session', detail: (err as Error).message });
   }
 });
 
 // ── Customer Portal ──
-router.post(`/api/${API_VERSION}/billing/portal`, authenticate, async (req, res) => {
+router.post(`/api/${API_VERSION}/billing/portal`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
   if (!STRIPE_SECRET) return res.status(503).json({ error: 'Stripe not configured' });
 
   try {
@@ -68,13 +70,13 @@ router.post(`/api/${API_VERSION}/billing/portal`, authenticate, async (req, res)
     });
 
     res.json({ url: portal.url });
-  } catch (err) {
+  } catch (err: unknown) {
     res.status(500).json({ error: 'Failed to create portal session' });
   }
 });
 
 // ── Stripe Webhook ──
-router.post('/webhooks/stripe', express.raw({ type: 'application/json' }), async (req, res) => {
+router.post('/webhooks/stripe', express.raw({ type: 'application/json' }), async (req: Request, res: Response) => {
   if (!STRIPE_SECRET) return res.status(503).send('Stripe not configured');
 
   try {
@@ -82,32 +84,32 @@ router.post('/webhooks/stripe', express.raw({ type: 'application/json' }), async
     const stripe = new Stripe(STRIPE_SECRET);
     const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
-    let event;
+    let event: Record<string, unknown>;
     if (endpointSecret) {
-      const sig = req.headers['stripe-signature'];
-      event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
+      const sig = req.headers['stripe-signature'] as string;
+      event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret) as unknown as Record<string, unknown>;
     } else {
       event = req.body;
     }
 
     switch (event.type) {
       case 'checkout.session.completed': {
-        const session = event.data.object;
-        const orgId = session.metadata?.org_id;
+        const session = (event.data as Record<string, unknown>).object as Record<string, unknown>;
+        const orgId = (session.metadata as Record<string, string>)?.org_id;
         if (orgId) {
           let detectedPlan = 'pro';
           if (session.subscription) {
             try {
-              const sub = await stripe.subscriptions.retrieve(session.subscription);
-              const priceId = sub.items?.data?.[0]?.price?.id;
+              const sub = await stripe.subscriptions.retrieve(session.subscription as string);
+              const priceId = ((sub as any).items?.data?.[0]?.price?.id) as string | undefined;
               if (priceId === STRIPE_PRICES.team) detectedPlan = 'team';
               else if (priceId === STRIPE_PRICES.pro) detectedPlan = 'pro';
               console.log(`🔍 Detected price ${priceId} → plan: ${detectedPlan}`);
-            } catch (subErr) {
-              console.error('Could not retrieve subscription for plan detection:', subErr.message);
+            } catch (subErr: unknown) {
+              console.error('Could not retrieve subscription for plan detection:', (subErr as Error).message);
             }
           }
-          await supabase.from('organizations').update({
+          await supabase!.from('organizations').update({
             plan: detectedPlan,
             stripe_customer_id: session.customer,
             stripe_subscription_id: session.subscription,
@@ -119,21 +121,21 @@ router.post('/webhooks/stripe', express.raw({ type: 'application/json' }), async
       }
 
       case 'customer.subscription.updated': {
-        const sub = event.data.object;
-        const customerId = sub.customer;
-        const { data: org } = await supabase.from('organizations')
+        const sub = (event.data as Record<string, unknown>).object as Record<string, unknown>;
+        const customerId = sub.customer as string;
+        const { data: org } = await supabase!.from('organizations')
           .select('id')
           .eq('stripe_customer_id', customerId)
           .single();
         if (org) {
           let plan = 'free';
           if (sub.status === 'active' || sub.status === 'trialing') {
-            const priceId = sub.items?.data?.[0]?.price?.id;
+            const priceId = ((sub as any).items?.data?.[0]?.price?.id) as string | undefined;
             if (priceId === STRIPE_PRICES.team) plan = 'team';
             else if (priceId === STRIPE_PRICES.pro) plan = 'pro';
             else plan = 'pro';
           }
-          await supabase.from('organizations').update({
+          await supabase!.from('organizations').update({
             plan,
             stripe_subscription_id: sub.id,
             updated_at: new Date().toISOString(),
@@ -144,13 +146,13 @@ router.post('/webhooks/stripe', express.raw({ type: 'application/json' }), async
       }
 
       case 'customer.subscription.deleted': {
-        const sub = event.data.object;
-        const { data: org } = await supabase.from('organizations')
+        const sub = (event.data as Record<string, unknown>).object as Record<string, unknown>;
+        const { data: org } = await supabase!.from('organizations')
           .select('id')
-          .eq('stripe_customer_id', sub.customer)
+          .eq('stripe_customer_id', sub.customer as string)
           .single();
         if (org) {
-          await supabase.from('organizations').update({
+          await supabase!.from('organizations').update({
             plan: 'free',
             stripe_subscription_id: null,
             updated_at: new Date().toISOString(),
@@ -165,9 +167,9 @@ router.post('/webhooks/stripe', express.raw({ type: 'application/json' }), async
     }
 
     res.json({ received: true });
-  } catch (err) {
-    console.error('Webhook error:', err.message);
-    res.status(400).json({ error: err.message });
+  } catch (err: unknown) {
+    console.error('Webhook error:', (err as Error).message);
+    res.status(400).json({ error: (err as Error).message });
   }
 });
 

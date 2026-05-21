@@ -1,25 +1,27 @@
 import { Router } from 'express';
+import type { Response } from 'express';
 import { authenticate } from '../middleware/auth.js';
 import { supabase, checkLimit, PLAN_LIMITS } from '../middleware/db.js';
+import type { AuthenticatedRequest } from '../types.js';
 
 const router = Router();
 const API_VERSION = 'v1';
 
 // ── Create Observation ──
-router.post(`/api/${API_VERSION}/observations`, authenticate, async (req, res) => {
+router.post(`/api/${API_VERSION}/observations`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { workspace, agent, type, title, content, metadata } = req.body;
     if (!type || !title) return res.status(400).json({ error: 'type and title required' });
 
     // Check observation limit
     const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
-    const { count } = await supabase
+    const { count } = await supabase!
       .from('observations')
       .select('*', { count: 'exact', head: true })
       .eq('org_id', req.org.id)
       .gte('created_at', monthStart);
 
-    if (!checkLimit(req.org.plan, 'observations', count)) {
+    if (!checkLimit(req.org.plan, 'observations', count ?? 0)) {
       return res.status(429).json({
         error: 'Observation limit reached',
         limit: PLAN_LIMITS[req.org.plan]?.observations,
@@ -28,7 +30,7 @@ router.post(`/api/${API_VERSION}/observations`, authenticate, async (req, res) =
       });
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await supabase!
       .from('observations')
       .insert({
         org_id: req.org.id,
@@ -58,7 +60,7 @@ router.post(`/api/${API_VERSION}/observations`, authenticate, async (req, res) =
           .slice(0, 80);
 
         // Check if entity already exists
-        const { data: existing } = await supabase
+        const { data: existing } = await supabase!
           .from('knowledge_items')
           .select('id, content')
           .eq('org_id', req.org.id)
@@ -69,19 +71,19 @@ router.post(`/api/${API_VERSION}/observations`, authenticate, async (req, res) =
         if (existing) {
           // Append to existing knowledge item
           const updated = `${existing.content}\n\n---\n**[${new Date().toISOString().slice(0, 10)}]** ${title}\n${content || ''}`.slice(0, 5000);
-          await supabase
+          await supabase!
             .from('knowledge_items')
             .update({ content: updated, updated_at: new Date().toISOString() })
             .eq('id', existing.id);
         } else {
           // Check knowledge item limit
-          const { count: kiCount } = await supabase
+          const { count: kiCount } = await supabase!
             .from('knowledge_items')
             .select('*', { count: 'exact', head: true })
             .eq('org_id', req.org.id);
 
           if (checkLimit(req.org.plan, 'knowledge_items', kiCount || 0)) {
-            await supabase.from('knowledge_items').insert({
+            await supabase!.from('knowledge_items').insert({
               org_id: req.org.id,
               name: entityName,
               summary: `Auto-extracted from ${type}: ${title.slice(0, 100)}`,
@@ -90,53 +92,53 @@ router.post(`/api/${API_VERSION}/observations`, authenticate, async (req, res) =
             console.log(`🧠 Auto-memory: created "${entityName}" from ${type}`);
           }
         }
-      } catch (memErr) {
+      } catch (memErr: unknown) {
         // Non-critical — don't fail the observation
-        console.error('Auto-memory error (non-fatal):', memErr.message);
+        console.error('Auto-memory error (non-fatal):', (memErr as Error).message);
       }
     }
 
     res.status(201).json(data);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+  } catch (err: unknown) {
+    res.status(500).json({ error: (err as Error).message });
   }
 });
 
 // ── List Observations ──
-router.get(`/api/${API_VERSION}/observations`, authenticate, async (req, res) => {
+router.get(`/api/${API_VERSION}/observations`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { limit = 50, offset = 0, type, workspace, agent } = req.query;
-    let query = supabase
+    let query = supabase!
       .from('observations')
       .select('*')
       .eq('org_id', req.org.id)
       .order('created_at', { ascending: false })
-      .range(+offset, +offset + +limit - 1);
+      .range(+(offset as string), +(offset as string) + +(limit as string) - 1);
 
-    if (type) query = query.eq('type', type);
-    if (workspace) query = query.eq('workspace_id', workspace);
-    if (agent) query = query.eq('agent_id', agent);
+    if (type) query = query.eq('type', type as string);
+    if (workspace) query = query.eq('workspace_id', workspace as string);
+    if (agent) query = query.eq('agent_id', agent as string);
 
     const { data, error } = await query;
     if (error) throw error;
     res.json(data || []);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+  } catch (err: unknown) {
+    res.status(500).json({ error: (err as Error).message });
   }
 });
 
 // ── Delete Observation ──
-router.delete(`/api/${API_VERSION}/observations/:id`, authenticate, async (req, res) => {
+router.delete(`/api/${API_VERSION}/observations/:id`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { error } = await supabase
+    const { error } = await supabase!
       .from('observations')
       .delete()
       .eq('id', req.params.id)
       .eq('org_id', req.org.id);
     if (error) throw error;
     res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+  } catch (err: unknown) {
+    res.status(500).json({ error: (err as Error).message });
   }
 });
 

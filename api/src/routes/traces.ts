@@ -17,10 +17,12 @@
  */
 
 import { Router } from 'express';
+import type { Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { authenticate } from '../middleware/auth.js';
 import { supabase, checkLimit, PLAN_LIMITS } from '../middleware/db.js';
 import { calculateCost } from '../middleware/cost.js';
+import type { AuthenticatedRequest } from '../types.js';
 
 const router = Router();
 const API_VERSION = 'v1';
@@ -33,20 +35,20 @@ const API_VERSION = 'v1';
  * POST /api/v1/traces — Start a new trace
  * Body: { name, agent?, trace_id?, metadata? }
  */
-router.post(`/api/${API_VERSION}/traces`, authenticate, async (req, res) => {
+router.post(`/api/${API_VERSION}/traces`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { name, agent, trace_id, metadata } = req.body;
     if (!name) return res.status(400).json({ error: 'name is required' });
 
     // Check monthly trace limit
     const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
-    const { count } = await supabase
+    const { count } = await supabase!
       .from('traces')
       .select('*', { count: 'exact', head: true })
       .eq('org_id', req.org.id)
       .gte('created_at', monthStart);
 
-    if (!checkLimit(req.org.plan, 'traces', count)) {
+    if (!checkLimit(req.org.plan, 'traces', count ?? 0)) {
       return res.status(429).json({
         error: 'Monthly trace limit reached',
         limit: PLAN_LIMITS[req.org.plan]?.traces,
@@ -55,7 +57,7 @@ router.post(`/api/${API_VERSION}/traces`, authenticate, async (req, res) => {
       });
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await supabase!
       .from('traces')
       .insert({
         org_id: req.org.id,
@@ -73,9 +75,9 @@ router.post(`/api/${API_VERSION}/traces`, authenticate, async (req, res) => {
 
     console.log(`📊 Trace started: ${name} [${data.trace_id}]`);
     res.status(201).json(data);
-  } catch (err) {
-    console.error('Trace create error:', err.message);
-    res.status(500).json({ error: err.message });
+  } catch (err: unknown) {
+    console.error('Trace create error:', (err as Error).message);
+    res.status(500).json({ error: (err as Error).message });
   }
 });
 
@@ -83,10 +85,10 @@ router.post(`/api/${API_VERSION}/traces`, authenticate, async (req, res) => {
  * PATCH /api/v1/traces/:id — End/update a trace
  * Body: { status?, duration_ms?, metadata? }
  */
-router.patch(`/api/${API_VERSION}/traces/:id`, authenticate, async (req, res) => {
+router.patch(`/api/${API_VERSION}/traces/:id`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { status, duration_ms, metadata } = req.body;
-    const updates = {};
+    const updates: Record<string, unknown> = {};
 
     if (status) {
       updates.status = status;
@@ -97,7 +99,7 @@ router.patch(`/api/${API_VERSION}/traces/:id`, authenticate, async (req, res) =>
     if (duration_ms !== undefined) updates.duration_ms = duration_ms;
     if (metadata) updates.metadata = metadata;
 
-    const { data, error } = await supabase
+    const { data, error } = await supabase!
       .from('traces')
       .update(updates)
       .eq('id', req.params.id)
@@ -109,9 +111,9 @@ router.patch(`/api/${API_VERSION}/traces/:id`, authenticate, async (req, res) =>
     if (!data) return res.status(404).json({ error: 'Trace not found' });
 
     res.json(data);
-  } catch (err) {
-    console.error('Trace update error:', err.message);
-    res.status(500).json({ error: err.message });
+  } catch (err: unknown) {
+    console.error('Trace update error:', (err as Error).message);
+    res.status(500).json({ error: (err as Error).message });
   }
 });
 
@@ -119,27 +121,27 @@ router.patch(`/api/${API_VERSION}/traces/:id`, authenticate, async (req, res) =>
  * GET /api/v1/traces — List traces with filtering
  * Query: limit, offset, status, agent, from, to
  */
-router.get(`/api/${API_VERSION}/traces`, authenticate, async (req, res) => {
+router.get(`/api/${API_VERSION}/traces`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { limit = 50, offset = 0, agent, status, from, to } = req.query;
 
-    let query = supabase
+    let query = supabase!
       .from('traces')
       .select('*')
       .eq('org_id', req.org.id)
       .order('created_at', { ascending: false })
-      .range(+offset, +offset + +limit - 1);
+      .range(+(offset as string), +(offset as string) + +(limit as string) - 1);
 
-    if (agent) query = query.eq('agent', agent);
-    if (status) query = query.eq('status', status);
-    if (from) query = query.gte('started_at', from);
-    if (to) query = query.lte('started_at', to);
+    if (agent) query = query.eq('agent', agent as string);
+    if (status) query = query.eq('status', status as string);
+    if (from) query = query.gte('started_at', from as string);
+    if (to) query = query.lte('started_at', to as string);
 
     const { data, error } = await query;
     if (error) throw error;
     res.json(data || []);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+  } catch (err: unknown) {
+    res.status(500).json({ error: (err as Error).message });
   }
 });
 
@@ -151,25 +153,25 @@ router.get(`/api/${API_VERSION}/traces`, authenticate, async (req, res) => {
  * GET /api/v1/traces/analytics — Rich analytics with breakdowns
  * Query: period (7d|30d|90d), agent?
  */
-router.get(`/api/${API_VERSION}/traces/analytics`, authenticate, async (req, res) => {
+router.get(`/api/${API_VERSION}/traces/analytics`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { period = '30d', agent } = req.query;
-    const days = parseInt(period) || 30;
+    const days = parseInt(period as string) || 30;
     const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
 
     // Trace aggregates
-    let traceQuery = supabase
+    let traceQuery = supabase!
       .from('traces')
       .select('status, duration_ms, total_tokens, total_cost_usd, span_count, agent')
       .eq('org_id', req.org.id)
       .gte('created_at', since);
-    if (agent) traceQuery = traceQuery.eq('agent', agent);
+    if (agent) traceQuery = traceQuery.eq('agent', agent as string);
 
     const { data: traces, error: traceErr } = await traceQuery;
     if (traceErr) throw traceErr;
 
     // Span aggregates (model breakdown)
-    let spanQuery = supabase
+    let spanQuery = supabase!
       .from('spans')
       .select('provider, model, prompt_tokens, completion_tokens, total_tokens, cost_usd, latency_ms, status')
       .eq('org_id', req.org.id)
@@ -180,25 +182,25 @@ router.get(`/api/${API_VERSION}/traces/analytics`, authenticate, async (req, res
 
     // Compute aggregates
     const totalTraces = traces?.length || 0;
-    const successTraces = traces?.filter(t => t.status === 'success').length || 0;
-    const errorTraces = traces?.filter(t => t.status === 'error').length || 0;
-    const totalTokens = traces?.reduce((sum, t) => sum + (t.total_tokens || 0), 0) || 0;
-    const totalCost = traces?.reduce((sum, t) => sum + parseFloat(t.total_cost_usd || 0), 0) || 0;
+    const successTraces = traces?.filter((t: Record<string, unknown>) => t.status === 'success').length || 0;
+    const errorTraces = traces?.filter((t: Record<string, unknown>) => t.status === 'error').length || 0;
+    const totalTokens = traces?.reduce((sum: number, t: Record<string, unknown>) => sum + ((t.total_tokens as number) || 0), 0) || 0;
+    const totalCost = traces?.reduce((sum: number, t: Record<string, unknown>) => sum + parseFloat((t.total_cost_usd as string) || '0'), 0) || 0;
     const avgLatency = totalTraces
-      ? Math.round(traces.reduce((sum, t) => sum + (t.duration_ms || 0), 0) / totalTraces)
+      ? Math.round(traces!.reduce((sum: number, t: Record<string, unknown>) => sum + ((t.duration_ms as number) || 0), 0) / totalTraces)
       : 0;
     const totalSpans = spans?.length || 0;
 
     // Model breakdown
-    const modelMap = {};
-    spans?.forEach(s => {
+    const modelMap: Record<string, { provider: string; model: string; calls: number; tokens: number; cost: number; errors: number }> = {};
+    spans?.forEach((s: Record<string, unknown>) => {
       const key = `${s.provider}/${s.model}`;
       if (!modelMap[key]) {
-        modelMap[key] = { provider: s.provider, model: s.model, calls: 0, tokens: 0, cost: 0, errors: 0 };
+        modelMap[key] = { provider: s.provider as string, model: s.model as string, calls: 0, tokens: 0, cost: 0, errors: 0 };
       }
       modelMap[key].calls++;
-      modelMap[key].tokens += s.total_tokens || 0;
-      modelMap[key].cost += parseFloat(s.cost_usd || 0);
+      modelMap[key].tokens += (s.total_tokens as number) || 0;
+      modelMap[key].cost += parseFloat((s.cost_usd as string) || '0');
       if (s.status === 'error') modelMap[key].errors++;
     });
     const modelBreakdown = Object.values(modelMap)
@@ -206,15 +208,15 @@ router.get(`/api/${API_VERSION}/traces/analytics`, authenticate, async (req, res
       .map(m => ({ ...m, cost: parseFloat(m.cost.toFixed(6)) }));
 
     // Agent breakdown
-    const agentMap = {};
-    traces?.forEach(t => {
-      const name = t.agent || 'unknown';
+    const agentMap: Record<string, { agent: string; traces: number; tokens: number; cost: number; errors: number }> = {};
+    traces?.forEach((t: Record<string, unknown>) => {
+      const name = (t.agent as string) || 'unknown';
       if (!agentMap[name]) {
         agentMap[name] = { agent: name, traces: 0, tokens: 0, cost: 0, errors: 0 };
       }
       agentMap[name].traces++;
-      agentMap[name].tokens += t.total_tokens || 0;
-      agentMap[name].cost += parseFloat(t.total_cost_usd || 0);
+      agentMap[name].tokens += (t.total_tokens as number) || 0;
+      agentMap[name].cost += parseFloat((t.total_cost_usd as string) || '0');
       if (t.status === 'error') agentMap[name].errors++;
     });
     const agentBreakdown = Object.values(agentMap)
@@ -241,9 +243,9 @@ router.get(`/api/${API_VERSION}/traces/analytics`, authenticate, async (req, res
       by_model: modelBreakdown,
       by_agent: agentBreakdown,
     });
-  } catch (err) {
-    console.error('Analytics error:', err.message);
-    res.status(500).json({ error: err.message });
+  } catch (err: unknown) {
+    console.error('Analytics error:', (err as Error).message);
+    res.status(500).json({ error: (err as Error).message });
   }
 });
 
@@ -251,56 +253,56 @@ router.get(`/api/${API_VERSION}/traces/analytics`, authenticate, async (req, res
  * GET /api/v1/traces/stats — Quick stats (lighter than analytics)
  * Query: from?, to?
  */
-router.get(`/api/${API_VERSION}/traces/stats`, authenticate, async (req, res) => {
+router.get(`/api/${API_VERSION}/traces/stats`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { from, to } = req.query;
 
-    let query = supabase
+    let query = supabase!
       .from('traces')
       .select('*')
       .eq('org_id', req.org.id)
       .order('created_at', { ascending: false })
       .limit(1000);
 
-    if (from) query = query.gte('started_at', from);
-    if (to) query = query.lte('started_at', to);
+    if (from) query = query.gte('started_at', from as string);
+    if (to) query = query.lte('started_at', to as string);
 
     const { data: traces, error } = await query;
     if (error) throw error;
 
     const allTraces = traces || [];
     const totalTraces = allTraces.length;
-    const totalTokens = allTraces.reduce((s, t) => s + (t.total_tokens || 0), 0);
-    const totalCost = allTraces.reduce((s, t) => s + parseFloat(t.total_cost_usd || 0), 0);
+    const totalTokens = allTraces.reduce((s: number, t: Record<string, unknown>) => s + ((t.total_tokens as number) || 0), 0);
+    const totalCost = allTraces.reduce((s: number, t: Record<string, unknown>) => s + parseFloat((t.total_cost_usd as string) || '0'), 0);
     const avgLatency = totalTraces > 0
-      ? Math.round(allTraces.reduce((s, t) => s + (t.duration_ms || 0), 0) / totalTraces)
+      ? Math.round(allTraces.reduce((s: number, t: Record<string, unknown>) => s + ((t.duration_ms as number) || 0), 0) / totalTraces)
       : 0;
-    const errorCount = allTraces.filter(t => t.status === 'error').length;
-    const errorRate = totalTraces > 0 ? (errorCount / totalTraces * 100).toFixed(1) : 0;
+    const errorCount = allTraces.filter((t: Record<string, unknown>) => t.status === 'error').length;
+    const errorRate = totalTraces > 0 ? (errorCount / totalTraces * 100).toFixed(1) : '0';
 
     // Provider + model breakdown from spans
-    const { data: spans } = await supabase
+    const { data: spans } = await supabase!
       .from('spans')
       .select('provider, model, total_tokens, cost_usd')
       .eq('org_id', req.org.id)
       .order('created_at', { ascending: false })
       .limit(5000);
 
-    const providerBreakdown = {};
-    const modelBreakdown = {};
+    const providerBreakdown: Record<string, { calls: number; tokens: number; cost: number }> = {};
+    const modelBreakdown: Record<string, { calls: number; tokens: number; cost: number }> = {};
 
-    (spans || []).forEach(sp => {
-      const p = sp.provider || 'unknown';
+    (spans || []).forEach((sp: Record<string, unknown>) => {
+      const p = (sp.provider as string) || 'unknown';
       if (!providerBreakdown[p]) providerBreakdown[p] = { calls: 0, tokens: 0, cost: 0 };
       providerBreakdown[p].calls++;
-      providerBreakdown[p].tokens += sp.total_tokens || 0;
-      providerBreakdown[p].cost += parseFloat(sp.cost_usd || 0);
+      providerBreakdown[p].tokens += (sp.total_tokens as number) || 0;
+      providerBreakdown[p].cost += parseFloat((sp.cost_usd as string) || '0');
 
-      const m = sp.model || 'unknown';
+      const m = (sp.model as string) || 'unknown';
       if (!modelBreakdown[m]) modelBreakdown[m] = { calls: 0, tokens: 0, cost: 0 };
       modelBreakdown[m].calls++;
-      modelBreakdown[m].tokens += sp.total_tokens || 0;
-      modelBreakdown[m].cost += parseFloat(sp.cost_usd || 0);
+      modelBreakdown[m].tokens += (sp.total_tokens as number) || 0;
+      modelBreakdown[m].cost += parseFloat((sp.cost_usd as string) || '0');
     });
 
     res.json({
@@ -314,8 +316,8 @@ router.get(`/api/${API_VERSION}/traces/stats`, authenticate, async (req, res) =>
       providers: providerBreakdown,
       models: modelBreakdown,
     });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+  } catch (err: unknown) {
+    res.status(500).json({ error: (err as Error).message });
   }
 });
 
@@ -326,12 +328,12 @@ router.get(`/api/${API_VERSION}/traces/stats`, authenticate, async (req, res) =>
 /**
  * GET /api/v1/traces/:traceId — Get single trace + all spans
  */
-router.get(`/api/${API_VERSION}/traces/:traceId`, authenticate, async (req, res) => {
+router.get(`/api/${API_VERSION}/traces/:traceId`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { traceId } = req.params;
 
     // Try by trace_id first, then by UUID id
-    let traceResult = await supabase
+    let traceResult = await supabase!
       .from('traces')
       .select('*')
       .eq('org_id', req.org.id)
@@ -340,7 +342,7 @@ router.get(`/api/${API_VERSION}/traces/:traceId`, authenticate, async (req, res)
 
     if (traceResult.error || !traceResult.data) {
       // Try by UUID
-      traceResult = await supabase
+      traceResult = await supabase!
         .from('traces')
         .select('*')
         .eq('org_id', req.org.id)
@@ -354,7 +356,7 @@ router.get(`/api/${API_VERSION}/traces/:traceId`, authenticate, async (req, res)
 
     const trace = traceResult.data;
 
-    const { data: spans, error: spanErr } = await supabase
+    const { data: spans, error: spanErr } = await supabase!
       .from('spans')
       .select('*')
       .eq('trace_id', trace.id)
@@ -363,8 +365,8 @@ router.get(`/api/${API_VERSION}/traces/:traceId`, authenticate, async (req, res)
     if (spanErr) throw spanErr;
 
     res.json({ ...trace, spans: spans || [] });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+  } catch (err: unknown) {
+    res.status(500).json({ error: (err as Error).message });
   }
 });
 
@@ -380,7 +382,7 @@ router.get(`/api/${API_VERSION}/traces/:traceId`, authenticate, async (req, res)
  *
  * Auto-calculates cost_usd and rolls up parent trace totals.
  */
-router.post(`/api/${API_VERSION}/traces/:id/spans`, authenticate, async (req, res) => {
+router.post(`/api/${API_VERSION}/traces/:id/spans`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const traceId = req.params.id;
     const {
@@ -395,7 +397,7 @@ router.post(`/api/${API_VERSION}/traces/:id/spans`, authenticate, async (req, re
     }
 
     // Verify trace exists and belongs to org
-    const { data: trace, error: traceErr } = await supabase
+    const { data: trace, error: traceErr } = await supabase!
       .from('traces')
       .select('id, org_id, total_tokens, total_cost_usd, span_count')
       .eq('id', traceId)
@@ -411,7 +413,7 @@ router.post(`/api/${API_VERSION}/traces/:id/spans`, authenticate, async (req, re
     const costUsd = calculateCost(provider, model, prompt_tokens, completion_tokens);
 
     // Insert span
-    const { data: span, error: spanErr } = await supabase
+    const { data: span, error: spanErr } = await supabase!
       .from('spans')
       .insert({
         org_id: req.org.id,
@@ -437,7 +439,7 @@ router.post(`/api/${API_VERSION}/traces/:id/spans`, authenticate, async (req, re
     if (spanErr) throw spanErr;
 
     // Roll-up: update parent trace totals
-    await supabase
+    await supabase!
       .from('traces')
       .update({
         total_tokens: (trace.total_tokens || 0) + totalTokens,
@@ -448,9 +450,9 @@ router.post(`/api/${API_VERSION}/traces/:id/spans`, authenticate, async (req, re
 
     console.log(`📊 Span added: ${provider}/${model} — ${totalTokens} tok — $${costUsd}`);
     res.status(201).json(span);
-  } catch (err) {
-    console.error('Span create error:', err.message);
-    res.status(500).json({ error: err.message });
+  } catch (err: unknown) {
+    console.error('Span create error:', (err as Error).message);
+    res.status(500).json({ error: (err as Error).message });
   }
 });
 
@@ -469,7 +471,7 @@ router.post(`/api/${API_VERSION}/traces/:id/spans`, authenticate, async (req, re
  * Server-side cost calculation: if span.cost_usd is missing or 0,
  * we compute it from provider/model/tokens automatically.
  */
-router.post(`/api/${API_VERSION}/traces/ingest`, authenticate, async (req, res) => {
+router.post(`/api/${API_VERSION}/traces/ingest`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { trace, spans } = req.body;
     if (!trace || !trace.trace_id || !trace.name) {
@@ -478,13 +480,13 @@ router.post(`/api/${API_VERSION}/traces/ingest`, authenticate, async (req, res) 
 
     // Check monthly trace limit
     const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
-    const { count } = await supabase
+    const { count } = await supabase!
       .from('traces')
       .select('*', { count: 'exact', head: true })
       .eq('org_id', req.org.id)
       .gte('created_at', monthStart);
 
-    if (!checkLimit(req.org.plan, 'traces', count)) {
+    if (!checkLimit(req.org.plan, 'traces', count ?? 0)) {
       return res.status(429).json({
         error: 'Monthly trace limit reached',
         limit: PLAN_LIMITS[req.org.plan]?.traces,
@@ -496,14 +498,14 @@ router.post(`/api/${API_VERSION}/traces/ingest`, authenticate, async (req, res) 
     // ── Server-side cost calculation for each span ──
     let computedTotalTokens = 0;
     let computedTotalCost = 0;
-    const processedSpans = (spans || []).map(s => {
-      const promptTok = s.prompt_tokens || 0;
-      const compTok = s.completion_tokens || 0;
+    const processedSpans = (spans || []).map((s: Record<string, unknown>) => {
+      const promptTok = (s.prompt_tokens as number) || 0;
+      const compTok = (s.completion_tokens as number) || 0;
       const tok = promptTok + compTok;
       // Use SDK-provided cost if available, otherwise compute server-side
-      const cost = s.cost_usd && parseFloat(s.cost_usd) > 0
-        ? parseFloat(s.cost_usd)
-        : calculateCost(s.provider || 'openai', s.model || 'gpt-4o', promptTok, compTok);
+      const cost = s.cost_usd && parseFloat(s.cost_usd as string) > 0
+        ? parseFloat(s.cost_usd as string)
+        : calculateCost((s.provider as string) || 'openai', (s.model as string) || 'gpt-4o', promptTok, compTok);
       computedTotalTokens += tok;
       computedTotalCost += cost;
       return { ...s, total_tokens: tok, cost_usd: cost };
@@ -513,82 +515,51 @@ router.post(`/api/${API_VERSION}/traces/ingest`, authenticate, async (req, res) 
     const finalTokens = computedTotalTokens || trace.total_tokens || 0;
     const finalCost = computedTotalCost || parseFloat(trace.total_cost_usd || 0);
 
-    // Upsert trace — SDK may send updates to a running trace
-    const { data: existingTrace } = await supabase
+    // Upsert trace — atomically creates or updates using UNIQUE(org_id, trace_id)
+    const { data: upsertedTrace, error: upsertErr } = await supabase!
       .from('traces')
-      .select('id, span_count')
-      .eq('org_id', req.org.id)
-      .eq('trace_id', trace.trace_id)
+      .upsert({
+        org_id: req.org.id,
+        trace_id: trace.trace_id,
+        name: trace.name,
+        agent: trace.agent || null,
+        status: trace.status || 'running',
+        duration_ms: trace.duration_ms || null,
+        total_tokens: finalTokens,
+        total_cost_usd: parseFloat(finalCost.toFixed(6)),
+        span_count: processedSpans.length,
+        started_at: trace.started_at || new Date().toISOString(),
+        ended_at: trace.ended_at || null,
+        metadata: trace.metadata || {},
+      }, { onConflict: 'org_id,trace_id' })
+      .select('id')
       .single();
 
-    let traceDbId;
-
-    if (existingTrace) {
-      // Update existing trace
-      const { data: updated, error: updateErr } = await supabase
-        .from('traces')
-        .update({
-          status: trace.status || 'success',
-          duration_ms: trace.duration_ms || null,
-          total_tokens: finalTokens,
-          total_cost_usd: parseFloat(finalCost.toFixed(6)),
-          span_count: (existingTrace.span_count || 0) + processedSpans.length,
-          ended_at: trace.ended_at || new Date().toISOString(),
-          metadata: trace.metadata || {},
-        })
-        .eq('id', existingTrace.id)
-        .select('id')
-        .single();
-
-      if (updateErr) throw updateErr;
-      traceDbId = updated.id;
-    } else {
-      // Insert new trace
-      const { data: newTrace, error: insertErr } = await supabase
-        .from('traces')
-        .insert({
-          org_id: req.org.id,
-          trace_id: trace.trace_id,
-          name: trace.name,
-          agent: trace.agent || null,
-          status: trace.status || 'running',
-          duration_ms: trace.duration_ms || null,
-          total_tokens: finalTokens,
-          total_cost_usd: parseFloat(finalCost.toFixed(6)),
-          span_count: processedSpans.length,
-          started_at: trace.started_at || new Date().toISOString(),
-          ended_at: trace.ended_at || null,
-          metadata: trace.metadata || {},
-        })
-        .select('id')
-        .single();
-
-      if (insertErr) throw insertErr;
-      traceDbId = newTrace.id;
-    }
+    if (upsertErr) throw upsertErr;
+    const traceDbId = upsertedTrace.id;
 
     // Insert spans
     if (processedSpans.length > 0) {
-      const spanRows = processedSpans.map(span => ({
+      const spanRows = processedSpans.map((span: Record<string, unknown>) => ({
         org_id: req.org.id,
         trace_id: traceDbId,
-        span_id: span.span_id || `sp_${uuidv4().replace(/-/g, '').slice(0, 12)}`,
-        provider: span.provider || 'unknown',
-        model: span.model || 'unknown',
-        type: span.type || 'chat.completions',
-        prompt_tokens: span.prompt_tokens || 0,
-        completion_tokens: span.completion_tokens || 0,
-        total_tokens: span.total_tokens || 0,
-        latency_ms: span.latency_ms || null,
-        cost_usd: span.cost_usd || 0,
-        status: span.status || 'success',
-        error_message: span.error_message || null,
-        metadata: span.metadata || {},
-        started_at: span.started_at || new Date().toISOString(),
-        ended_at: span.ended_at || new Date().toISOString(),
+        span_id: (span.span_id as string) || `sp_${uuidv4().replace(/-/g, '').slice(0, 12)}`,
+        provider: (span.provider as string) || 'unknown',
+        model: (span.model as string) || 'unknown',
+        type: (span.type as string) || 'chat.completions',
+        prompt_tokens: (span.prompt_tokens as number) || 0,
+        completion_tokens: (span.completion_tokens as number) || 0,
+        total_tokens: (span.total_tokens as number) || 0,
+        latency_ms: (span.latency_ms as number) || null,
+        cost_usd: (span.cost_usd as number) || 0,
+        status: (span.status as string) || 'success',
+        error_message: (span.error_message as string) || null,
+        metadata: (span.metadata as Record<string, unknown>) || {},
+        started_at: (span.started_at as string) || new Date().toISOString(),
+        ended_at: (span.ended_at as string) || new Date().toISOString(),
       }));
 
-      const { error: spanErr } = await supabase.from('spans').insert(spanRows);
+      const { error: spanErr } = await supabase!.from('spans').insert(spanRows);
       if (spanErr) {
         console.error('Batch span insert error:', spanErr.message);
         // Non-fatal — trace was already created
@@ -604,9 +575,9 @@ router.post(`/api/${API_VERSION}/traces/ingest`, authenticate, async (req, res) 
       total_tokens: finalTokens,
       total_cost_usd: parseFloat(finalCost.toFixed(6)),
     });
-  } catch (err) {
-    console.error('Trace ingest error:', err.message);
-    res.status(500).json({ error: err.message });
+  } catch (err: unknown) {
+    console.error('Trace ingest error:', (err as Error).message);
+    res.status(500).json({ error: (err as Error).message });
   }
 });
 

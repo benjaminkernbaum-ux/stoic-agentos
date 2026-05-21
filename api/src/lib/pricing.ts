@@ -5,7 +5,20 @@
  * Source: https://anthropic.com/pricing — keep in sync when launching new models.
  */
 
-export const PRICING = {
+interface ModelPrice {
+  input: number;
+  output: number;
+}
+
+interface UsageRow {
+  model: string;
+  input_tokens?: number;
+  output_tokens?: number;
+  cache_creation_tokens?: number;
+  cache_read_tokens?: number;
+}
+
+export const PRICING: Record<string, ModelPrice> = {
   'claude-haiku-4-5':  { input: 1.00, output: 5.00 },
   'claude-sonnet-4-6': { input: 3.00, output: 15.00 },
   'claude-opus-4-7':   { input: 5.00, output: 25.00 },
@@ -19,7 +32,7 @@ const CACHE_READ_MULTIPLIER = 0.10;
  * Falls back to Haiku 4.5 pricing for unknown models so the dashboard
  * still renders something useful.
  */
-export function estimateCost(row) {
+export function estimateCost(row: UsageRow): number {
   const p = PRICING[row.model] || PRICING['claude-haiku-4-5'];
   const inputCost = (
     (row.input_tokens || 0) * p.input +

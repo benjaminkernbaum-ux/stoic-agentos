@@ -1,6 +1,8 @@
 import { Router } from 'express';
+import type { Response } from 'express';
 import { authenticate } from '../middleware/auth.js';
 import { supabase } from '../middleware/db.js';
+import type { AuthenticatedRequest } from '../types.js';
 
 const router = Router();
 const API_VERSION = 'v1';
@@ -9,25 +11,25 @@ const API_VERSION = 'v1';
 // KNOWLEDGE GRAPH — Entity & Edge Data
 // ══════════════════════════════════════
 
-router.get(`/api/${API_VERSION}/graph`, authenticate, async (req, res) => {
+router.get(`/api/${API_VERSION}/graph`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const orgId = req.org.id;
 
     // Fetch all sources in parallel
     const [agentRes, kiRes, edgeRes, spanRes, workspaceRes] = await Promise.all([
-      supabase.from('agents').select('id, name, status, module, total_runs').eq('org_id', orgId),
-      supabase.from('knowledge_items').select('id, name, summary').eq('org_id', orgId),
-      supabase.from('knowledge_edges').select('source_entity, target_entity, relationship, weight').eq('org_id', orgId),
-      supabase.from('spans').select('model, provider').eq('org_id', orgId),
-      supabase.from('workspaces').select('id, name, stack').eq('org_id', orgId),
+      supabase!.from('agents').select('id, name, status, module, total_runs').eq('org_id', orgId),
+      supabase!.from('knowledge_items').select('id, name, summary').eq('org_id', orgId),
+      supabase!.from('knowledge_edges').select('source_entity, target_entity, relationship, weight').eq('org_id', orgId),
+      supabase!.from('spans').select('model, provider').eq('org_id', orgId),
+      supabase!.from('workspaces').select('id, name, stack').eq('org_id', orgId),
     ]);
 
-    const nodes = [];
-    const edges = [];
-    const nodeIds = new Set();
+    const nodes: Array<Record<string, unknown>> = [];
+    const edges: Array<Record<string, unknown>> = [];
+    const nodeIds = new Set<string>();
 
     // Agent nodes
-    (agentRes.data || []).forEach(a => {
+    (agentRes.data || []).forEach((a: Record<string, unknown>) => {
       const id = `agent:${a.name}`;
       if (!nodeIds.has(id)) {
         nodeIds.add(id);
@@ -36,15 +38,15 @@ router.get(`/api/${API_VERSION}/graph`, authenticate, async (req, res) => {
           label: a.name,
           type: 'agent',
           status: a.status,
-          mentions: a.total_runs || 1,
+          mentions: (a.total_runs as number) || 1,
         });
       }
     });
 
     // Model nodes (from spans)
-    const modelCounts = {};
-    (spanRes.data || []).forEach(sp => {
-      const key = sp.model || 'unknown';
+    const modelCounts: Record<string, number> = {};
+    (spanRes.data || []).forEach((sp: Record<string, unknown>) => {
+      const key = (sp.model as string) || 'unknown';
       modelCounts[key] = (modelCounts[key] || 0) + 1;
     });
     Object.entries(modelCounts).forEach(([model, count]) => {
@@ -56,7 +58,7 @@ router.get(`/api/${API_VERSION}/graph`, authenticate, async (req, res) => {
     });
 
     // Knowledge item nodes
-    (kiRes.data || []).forEach(ki => {
+    (kiRes.data || []).forEach((ki: Record<string, unknown>) => {
       const id = `entity:${ki.name}`;
       if (!nodeIds.has(id)) {
         nodeIds.add(id);
@@ -65,7 +67,7 @@ router.get(`/api/${API_VERSION}/graph`, authenticate, async (req, res) => {
     });
 
     // Workspace nodes
-    (workspaceRes.data || []).forEach(ws => {
+    (workspaceRes.data || []).forEach((ws: Record<string, unknown>) => {
       const id = `workspace:${ws.name}`;
       if (!nodeIds.has(id)) {
         nodeIds.add(id);
@@ -74,7 +76,7 @@ router.get(`/api/${API_VERSION}/graph`, authenticate, async (req, res) => {
     });
 
     // Knowledge edges
-    (edgeRes.data || []).forEach(e => {
+    (edgeRes.data || []).forEach((e: Record<string, unknown>) => {
       // Ensure source and target nodes exist
       const sourceId = nodeIds.has(`entity:${e.source_entity}`) ? `entity:${e.source_entity}`
         : nodeIds.has(`agent:${e.source_entity}`) ? `agent:${e.source_entity}`
@@ -91,20 +93,20 @@ router.get(`/api/${API_VERSION}/graph`, authenticate, async (req, res) => {
           source: sourceId,
           target: targetId,
           relationship: e.relationship,
-          weight: e.weight || 1,
+          weight: (e.weight as number) || 1,
         });
       }
     });
 
     // Auto-generate agent→model edges from trace data
     // Get traces with both agent and span model info
-    const { data: traceData } = await supabase
+    const { data: traceData } = await supabase!
       .from('traces')
       .select('agent')
       .eq('org_id', orgId)
       .not('agent', 'is', null);
 
-    const agentModelLinks = {};
+    const agentModelLinks: Record<string, number> = {};
     if (traceData) {
       for (const tr of traceData) {
         if (tr.agent) {
@@ -130,8 +132,8 @@ router.get(`/api/${API_VERSION}/graph`, authenticate, async (req, res) => {
       node_count: nodes.length,
       edge_count: edges.length,
     });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+  } catch (err: unknown) {
+    res.status(500).json({ error: (err as Error).message });
   }
 });
 

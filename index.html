@@ -2,20 +2,72 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <link rel="icon" type="image/svg+xml" href="/vite.svg" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- Favicon & Icons -->
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="apple-touch-icon" sizes="512x512" href="/icon-512.png" />
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/manifest.json" />
+
+  <!-- Primary Meta Tags -->
   <title>Stoic AgentOS — AI Agent Operations Platform</title>
   <meta name="description" content="Monitor, orchestrate, and scale your AI agent fleet. Knowledge persistence, auto-capture, multi-workspace management. The operating system for AI agents." />
+  <meta name="keywords" content="AI agents, agent monitoring, LLMOps, agent orchestration, knowledge persistence, AI operations, multi-agent systems, devtools, observability" />
+  <meta name="author" content="Stoic AgentOS" />
+  <meta name="robots" content="index, follow" />
+
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website" />
   <meta property="og:title" content="Stoic AgentOS — Your AI Agents Need a Command Center" />
   <meta property="og:description" content="One platform to monitor agents, persist knowledge, and manage workspaces. Built for teams shipping AI." />
-  <meta property="og:type" content="website" />
+  <meta property="og:image" content="https://stoicagentos.com/og-image.png" />
+  <meta property="og:url" content="https://stoicagentos.com" />
+  <meta property="og:site_name" content="Stoic AgentOS" />
+  <meta property="og:locale" content="en_US" />
+
+  <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Stoic AgentOS — AI Agent Operations Platform" />
+  <meta name="twitter:description" content="Monitor, orchestrate, and scale your AI agent fleet. The operating system for AI agents." />
+  <meta name="twitter:image" content="https://stoicagentos.com/og-image.png" />
+
+  <!-- Theme & Mobile -->
+  <meta name="theme-color" content="#0a0a1a" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Stoic AgentOS" />
+  <link rel="canonical" href="https://stoicagentos.com" />
+
+  <!-- Preconnect for performance -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+
+  <!-- Structured Data (JSON-LD) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Stoic AgentOS",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "Web",
+    "description": "The operating system for AI agent fleets. Monitor, orchestrate, and persist knowledge across your AI agents from a single dashboard.",
+    "url": "https://stoicagentos.com",
+    "offers": {
+      "@type": "AggregateOffer",
+      "lowPrice": "0",
+      "highPrice": "99",
+      "priceCurrency": "USD",
+      "offerCount": "3"
+    }
+  }
+  </script>
 </head>
 <body>
   <div id="root"></div>
   <script type="module" src="/src/main.jsx"></script>
 </body>
 </html>
+

@@ -5,6 +5,7 @@
  */
 
 import express from 'express';
+import type { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import { supabase } from './middleware/db.js';
 
@@ -32,14 +33,22 @@ const API_VERSION = 'v1';
 const app = express();
 
 // ── Middleware ──
-app.use(cors({ origin: true, credentials: true }));
+app.use(cors({
+  origin: [
+    'https://stoicagentos.com',
+    'https://stoic-agentos.vercel.app',
+    'https://stoic-agentos-benjaminkernbaum-uxs-projects.vercel.app',
+    process.env.NODE_ENV === 'development' && 'http://localhost:5173',
+  ].filter(Boolean) as string[],
+  credentials: true,
+}));
 app.use(express.json({ limit: '1mb' }));
 
 // Make supabase accessible via app.locals
 app.locals.supabase = supabase;
 
 // Request logging
-app.use((req, res, next) => {
+app.use((req: Request, res: Response, next: NextFunction) => {
   const start = Date.now();
   res.on('finish', () => {
     const ms = Date.now() - start;

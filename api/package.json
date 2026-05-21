@@ -3,10 +3,11 @@
   "version": "0.1.0",
   "type": "module",
   "description": "Stoic AgentOS — Backend API for AI Agent Operations Platform",
-  "main": "src/server.js",
+  "main": "src/server.ts",
   "scripts": {
-    "dev": "node --watch src/server.js",
-    "start": "node src/server.js",
+    "dev": "tsx watch src/server.ts",
+    "start": "tsx src/server.ts",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest"
   },
@@ -19,6 +20,11 @@
     "uuid": "^11.0.0"
   },
   "devDependencies": {
+    "typescript": "^5.8.0",
+    "tsx": "^4.19.0",
+    "@types/express": "^5.0.0",
+    "@types/cors": "^2.8.17",
+    "@types/uuid": "^10.0.0",
     "vitest": "^2.1.0"
   }
 }

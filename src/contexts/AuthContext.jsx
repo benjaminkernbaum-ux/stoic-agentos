@@ -44,23 +44,34 @@ export function AuthProvider({ children }) {
 
   async function loadOrg(userId) {
     try {
-      const { data: membership } = await supabase
-        .from('org_members')
-        .select('org_id, role, organizations(*)')
-        .eq('user_id', userId)
-        .single();
-
-      if (membership?.organizations) {
-        setOrg({
-          id: membership.organizations.id,
-          name: membership.organizations.name,
-          slug: membership.organizations.slug,
-          plan: membership.organizations.plan,
-          role: membership.role,
-        });
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
         setLoading(false);
+        createDefaultOrg(userId);
+        return;
+      }
+
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'https://stoic-agentos-api-production.up.railway.app'}/api/v1/auth/me`, {
+        headers: { 'Authorization': `Bearer ${session.access_token}` },
+      });
+
+      if (res.ok) {
+        const membership = await res.json();
+        if (membership?.organization) {
+          setOrg({
+            id: membership.organization.id,
+            name: membership.organization.name,
+            slug: membership.organization.slug,
+            plan: membership.organization.plan,
+            role: membership.role,
+          });
+          setLoading(false);
+        } else {
+          setLoading(false);
+          createDefaultOrg(userId);
+        }
       } else {
-        // No org yet — unblock the UI immediately, create org in background
+        // No org yet — create one
         setLoading(false);
         createDefaultOrg(userId);
       }

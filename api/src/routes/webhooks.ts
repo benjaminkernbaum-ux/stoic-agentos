@@ -1,11 +1,13 @@
 import { Router } from 'express';
+import type { Request, Response } from 'express';
 import { supabase } from '../middleware/db.js';
+import type { AuthenticatedRequest } from '../types.js';
 
 const router = Router();
 const API_VERSION = 'v1';
 
 // ── Git Webhook (no auth — uses API key in body) ──
-router.post(`/api/${API_VERSION}/webhooks/git`, async (req, res) => {
+router.post(`/api/${API_VERSION}/webhooks/git`, async (req: Request, res: Response) => {
   try {
     const { api_key, repo, branch, commit_hash, commit_message, author } = req.body;
     if (!api_key || !repo) return res.status(400).json({ error: 'api_key and repo required' });
@@ -32,8 +34,8 @@ router.post(`/api/${API_VERSION}/webhooks/git`, async (req, res) => {
     });
 
     res.status(201).json({ captured: true });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+  } catch (err: unknown) {
+    res.status(500).json({ error: (err as Error).message });
   }
 });
 

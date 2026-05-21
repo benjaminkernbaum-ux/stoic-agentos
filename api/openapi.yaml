@@ -1,0 +1,1134 @@
+openapi: 3.1.0
+info:
+  title: Stoic AgentOS API
+  description: |
+    The Operating System for AI Agent Fleets.
+    Monitor, orchestrate, and persist knowledge across your AI agents from a single API.
+
+    ## Authentication
+    All endpoints (except `/health`) require authentication via Bearer token:
+    - **API Key**: `Authorization: Bearer sk_live_your_key_here`
+    - **JWT**: `Authorization: Bearer <supabase_session_token>`
+
+    ## Rate Limiting
+    Endpoints are rate-limited by plan tier. When limits are exceeded, a `429` response is returned with upgrade information.
+  version: 2.0.0
+  contact:
+    name: Benjamin Kernbaum
+    email: benjamin@stoicagentos.com
+    url: https://stoicagentos.com
+  license:
+    name: MIT
+    url: https://github.com/benjaminkernbaum-ux/stoic-agentos/blob/master/LICENSE
+
+servers:
+  - url: https://stoic-agentos-api.up.railway.app
+    description: Production (Railway)
+  - url: http://localhost:4444
+    description: Local development
+
+tags:
+  - name: Health
+    description: Health check endpoints
+  - name: Auth
+    description: Authentication and user management
+  - name: Agents
+    description: Agent registration, status tracking, and heartbeat
+  - name: Observations
+    description: Event logging — decisions, errors, deployments, discoveries
+  - name: Knowledge
+    description: Persistent knowledge items that survive across agent sessions
+  - name: Workspaces
+    description: Scoped workspace management
+  - name: Traces
+    description: LLM call traces with spans, tokens, latency, and cost
+  - name: Alerts
+    description: Alert rules and alert events
+  - name: Insights
+    description: Claude AI-powered summaries and analysis (BYOK)
+  - name: Stats
+    description: Dashboard statistics and usage metrics
+  - name: Billing
+    description: Stripe checkout, portal, and webhook integration
+  - name: API Keys
+    description: API key management and BYOK Anthropic key storage
+  - name: Graph
+    description: Knowledge entity graph
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      description: API key (sk_live_xxx / sk_test_xxx) or Supabase JWT session token
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          example: "name required"
+
+    RateLimitError:
+      type: object
+      properties:
+        error:
+          type: string
+          example: "Agent limit reached"
+        limit:
+          type: integer
+          example: 5
+        current:
+          type: integer
+          example: 5
+        upgrade_url:
+          type: string
+          example: "https://stoicagentos.com/#pricing"
+
+    Agent:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        org_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          example: "invoice-processor"
+        description:
+          type: string
+          example: "Processes invoices using GPT-4o"
+        module:
+          type: string
+          example: "standalone"
+        status:
+          type: string
+          enum: [idle, running, success, error]
+          example: "running"
+        config:
+          type: object
+          additionalProperties: true
+        last_heartbeat:
+          type: string
+          format: date-time
+        total_runs:
+          type: integer
+          example: 142
+        total_errors:
+          type: integer
+          example: 3
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    Observation:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        org_id:
+          type: string
+          format: uuid
+        workspace_id:
+          type: ["string", "null"]
+          format: uuid
+        agent_id:
+          type: ["string", "null"]
+          format: uuid
+        type:
+          type: string
+          enum: [note, decision, architecture, error, deployment, discovery]
+          example: "decision"
+        title:
+          type: string
+          example: "Switched to GPT-4o-mini for summarization"
+        content:
+          type: string
+          example: "Reduced cost by 40% with no quality loss"
+        metadata:
+          type: object
+          additionalProperties: true
+        importance:
+          type: integer
+          minimum: 1
+          maximum: 10
+        created_at:
+          type: string
+          format: date-time
+
+    KnowledgeItem:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        org_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          example: "Payment service idempotency"
+        summary:
+          type: string
+          example: "Always include X-Idempotency-Key header"
+        content:
+          type: string
+        artifacts:
+          type: array
+          items:
+            type: object
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    Workspace:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        org_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          example: "stoic-crm"
+        path:
+          type: string
+        stack:
+          type: string
+        git_remote:
+          type: string
+        branch:
+          type: string
+          example: "main"
+        created_at:
+          type: string
+          format: date-time
+
+    Trace:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        org_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          example: "summarize-pipeline"
+        agent_name:
+          type: string
+          example: "content-generator"
+        status:
+          type: string
+          enum: [running, success, error]
+        total_tokens:
+          type: integer
+        total_cost_usd:
+          type: number
+          format: float
+        latency_ms:
+          type: integer
+        span_count:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        ended_at:
+          type: ["string", "null"]
+          format: date-time
+        spans:
+          type: array
+          items:
+            $ref: "#/components/schemas/Span"
+
+    Span:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        trace_id:
+          type: string
+          format: uuid
+        provider:
+          type: string
+          enum: [openai, anthropic, google, mistral, deepseek, cohere]
+        model:
+          type: string
+          example: "gpt-4o"
+        prompt_tokens:
+          type: integer
+        completion_tokens:
+          type: integer
+        latency_ms:
+          type: integer
+        cost_usd:
+          type: number
+          format: float
+        status:
+          type: string
+          enum: [success, error]
+        error_message:
+          type: ["string", "null"]
+        created_at:
+          type: string
+          format: date-time
+
+    AlertRule:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        org_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          example: "High error rate"
+        condition:
+          type: object
+        enabled:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+
+    Stats:
+      type: object
+      properties:
+        plan:
+          type: string
+          enum: [free, pro, team, enterprise]
+        agents:
+          type: integer
+        workspaces:
+          type: integer
+        observations:
+          type: integer
+          description: Observations this month
+        knowledgeItems:
+          type: integer
+        observationLimit:
+          type: integer
+        traces_this_month:
+          type: integer
+        trace_limit:
+          type: integer
+        total_cost_this_month:
+          type: number
+          format: float
+        unacknowledged_alerts:
+          type: integer
+
+security:
+  - BearerAuth: []
+
+paths:
+  /health:
+    get:
+      tags: [Health]
+      summary: Health check
+      security: []
+      responses:
+        "200":
+          description: API is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "ok"
+                  version:
+                    type: string
+                    example: "v1"
+                  uptime:
+                    type: number
+                  db:
+                    type: boolean
+
+  /api/v1/agents:
+    post:
+      tags: [Agents]
+      summary: Register a new agent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                  example: "invoice-processor"
+                description:
+                  type: string
+                module:
+                  type: string
+                  example: "standalone"
+                status:
+                  type: string
+                  enum: [idle, running, success, error]
+                config:
+                  type: object
+      responses:
+        "201":
+          description: Agent created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Agent"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          description: Agent limit reached
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RateLimitError"
+
+    get:
+      tags: [Agents]
+      summary: List all registered agents
+      responses:
+        "200":
+          description: List of agents
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Agent"
+
+  /api/v1/agents/{id}:
+    patch:
+      tags: [Agents]
+      summary: Update an agent
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                last_heartbeat:
+                  type: string
+                  format: date-time
+                config:
+                  type: object
+      responses:
+        "200":
+          description: Agent updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Agent"
+
+  /api/v1/agents/heartbeat:
+    post:
+      tags: [Agents]
+      summary: Agent heartbeat (upsert by name)
+      description: Used by the SDK's `wrapAgent()`. Creates the agent if it doesn't exist, otherwise updates status and increments run/error counters.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                  example: "data-pipeline"
+                status:
+                  type: string
+                  enum: [idle, running, success, error]
+                description:
+                  type: string
+                module:
+                  type: string
+      responses:
+        "200":
+          description: Agent updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Agent"
+        "201":
+          description: Agent created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Agent"
+
+  /api/v1/observations:
+    post:
+      tags: [Observations]
+      summary: Capture a new observation
+      description: |
+        Logs an observation event. High-importance types (`architecture`, `decision`, `error`, `deployment`, `discovery`) trigger the Auto-Memory Engine, which extracts entities and auto-creates knowledge items.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [type, title]
+              properties:
+                type:
+                  type: string
+                  enum: [note, decision, architecture, error, deployment, discovery]
+                title:
+                  type: string
+                  example: "Switched to GPT-4o-mini for summarization"
+                content:
+                  type: string
+                workspace:
+                  type: string
+                  format: uuid
+                agent:
+                  type: string
+                  format: uuid
+                metadata:
+                  type: object
+      responses:
+        "201":
+          description: Observation created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Observation"
+        "429":
+          description: Observation limit reached
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RateLimitError"
+
+    get:
+      tags: [Observations]
+      summary: List observations
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: type
+          in: query
+          schema:
+            type: string
+        - name: workspace
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: agent
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: List of observations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Observation"
+
+  /api/v1/observations/{id}:
+    delete:
+      tags: [Observations]
+      summary: Delete an observation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+
+  /api/v1/knowledge-items:
+    get:
+      tags: [Knowledge]
+      summary: List knowledge items
+      responses:
+        "200":
+          description: List of knowledge items
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/KnowledgeItem"
+
+    post:
+      tags: [Knowledge]
+      summary: Create a knowledge item
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                  example: "Payment service uses idempotency keys"
+                summary:
+                  type: string
+                content:
+                  type: string
+                artifacts:
+                  type: array
+                  items:
+                    type: object
+      responses:
+        "201":
+          description: Knowledge item created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KnowledgeItem"
+        "429":
+          description: Knowledge item limit reached
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RateLimitError"
+
+  /api/v1/workspaces:
+    post:
+      tags: [Workspaces]
+      summary: Create a workspace
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                  example: "stoic-crm"
+                path:
+                  type: string
+                stack:
+                  type: string
+                git_remote:
+                  type: string
+                branch:
+                  type: string
+                  default: "main"
+      responses:
+        "201":
+          description: Workspace created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Workspace"
+        "429":
+          description: Workspace limit reached
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RateLimitError"
+
+    get:
+      tags: [Workspaces]
+      summary: List workspaces
+      responses:
+        "200":
+          description: List of workspaces
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Workspace"
+
+  /api/v1/traces:
+    post:
+      tags: [Traces]
+      summary: Ingest a trace with spans
+      description: Records a complete LLM call trace with individual spans for each model invocation.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                  example: "summarize-pipeline"
+                agent_name:
+                  type: string
+                status:
+                  type: string
+                  enum: [running, success, error]
+                spans:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      provider:
+                        type: string
+                      model:
+                        type: string
+                      prompt_tokens:
+                        type: integer
+                      completion_tokens:
+                        type: integer
+                      latency_ms:
+                        type: integer
+                      status:
+                        type: string
+                      error_message:
+                        type: string
+      responses:
+        "201":
+          description: Trace ingested
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Trace"
+
+    get:
+      tags: [Traces]
+      summary: List traces
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        "200":
+          description: List of traces
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Trace"
+
+  /api/v1/traces/{id}:
+    get:
+      tags: [Traces]
+      summary: Get trace detail with spans
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Trace with spans
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Trace"
+
+  /api/v1/alerts:
+    get:
+      tags: [Alerts]
+      summary: List alert rules
+      responses:
+        "200":
+          description: List of alert rules
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AlertRule"
+
+    post:
+      tags: [Alerts]
+      summary: Create an alert rule
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, condition]
+              properties:
+                name:
+                  type: string
+                condition:
+                  type: object
+                enabled:
+                  type: boolean
+                  default: true
+      responses:
+        "201":
+          description: Alert rule created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AlertRule"
+
+  /api/v1/alerts/events:
+    get:
+      tags: [Alerts]
+      summary: List alert events
+      responses:
+        "200":
+          description: List of alert events
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+
+  /api/v1/insights/summarize:
+    post:
+      tags: [Insights]
+      summary: Summarize observations with Claude
+      description: Uses Claude Haiku to generate a concise summary of recent observations.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                observations:
+                  type: array
+                  items:
+                    type: object
+      responses:
+        "200":
+          description: AI-generated summary
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  summary:
+                    type: string
+                  usage:
+                    type: object
+                    properties:
+                      input_tokens:
+                        type: integer
+                      output_tokens:
+                        type: integer
+
+  /api/v1/insights/analyze-agent:
+    post:
+      tags: [Insights]
+      summary: Analyze agent health with Claude
+      description: Uses Claude Sonnet with extended thinking to analyze an agent's behavior and health.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                agent_name:
+                  type: string
+      responses:
+        "200":
+          description: AI-generated analysis
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  analysis:
+                    type: string
+                  thinking:
+                    type: string
+
+  /api/v1/insights/ask:
+    post:
+      tags: [Insights]
+      summary: Ask Claude about your fleet
+      description: Free-form Q&A about your agent fleet, powered by Claude.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [question]
+              properties:
+                question:
+                  type: string
+                  example: "Which agent has the highest error rate this week?"
+      responses:
+        "200":
+          description: AI-generated answer
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  answer:
+                    type: string
+
+  /api/v1/stats:
+    get:
+      tags: [Stats]
+      summary: Dashboard statistics
+      description: Returns aggregate stats for the authenticated organization.
+      responses:
+        "200":
+          description: Dashboard stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Stats"
+
+  /api/v1/billing/checkout:
+    post:
+      tags: [Billing]
+      summary: Create Stripe checkout session
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                plan:
+                  type: string
+                  enum: [pro, team]
+      responses:
+        "200":
+          description: Checkout session URL
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  url:
+                    type: string
+                    format: uri
+
+  /api/v1/billing/portal:
+    post:
+      tags: [Billing]
+      summary: Open Stripe customer portal
+      responses:
+        "200":
+          description: Portal session URL
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  url:
+                    type: string
+                    format: uri
+
+  /api/v1/api-keys:
+    get:
+      tags: [API Keys]
+      summary: List API keys
+      responses:
+        "200":
+          description: List of API keys (keys are masked)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+
+    post:
+      tags: [API Keys]
+      summary: Generate a new API key
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  example: "Production"
+      responses:
+        "201":
+          description: API key created (full key shown only once)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  key:
+                    type: string
+                    example: "sk_live_abc123..."
+
+  /api/v1/api-keys/{id}:
+    delete:
+      tags: [API Keys]
+      summary: Revoke an API key
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Key revoked
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+
+  /api/v1/api-keys/anthropic:
+    get:
+      tags: [API Keys]
+      summary: Get BYOK Anthropic key status
+      responses:
+        "200":
+          description: Key status (masked)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  has_key:
+                    type: boolean
+                  masked_key:
+                    type: string
+                    example: "sk-ant-...XYZ"
+
+    post:
+      tags: [API Keys]
+      summary: Store BYOK Anthropic API key
+      description: Encrypts and stores the key in Supabase Vault.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [api_key]
+              properties:
+                api_key:
+                  type: string
+                  example: "sk-ant-api03-..."
+      responses:
+        "200":
+          description: Key stored
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+
+    delete:
+      tags: [API Keys]
+      summary: Delete BYOK Anthropic key
+      responses:
+        "200":
+          description: Key deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+
+  /api/v1/graph:
+    get:
+      tags: [Graph]
+      summary: Get knowledge entity graph
+      description: Returns nodes and edges for the knowledge graph visualization.
+      responses:
+        "200":
+          description: Graph data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  nodes:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        label:
+                          type: string
+                        type:
+                          type: string
+                  edges:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        source:
+                          type: string
+                        target:
+                          type: string
+                        relationship:
+                          type: string

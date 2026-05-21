@@ -7,27 +7,37 @@
  */
 
 import { Router } from 'express';
+import type { Response } from 'express';
 import { authenticate } from '../middleware/auth.js';
 import { supabase } from '../middleware/db.js';
 import { complete, hasAnthropic, MODELS } from '../lib/anthropic.js';
+import { estimateCost } from '../lib/pricing.js';
+import type { AuthenticatedRequest } from '../types.js';
+
+interface AnthropicError extends Error {
+  code?: string;
+  status?: number;
+  headers?: Record<string, string>;
+}
 
 const router = Router();
 const API_VERSION = 'v1';
 
-function handleAnthropicError(err, res) {
+function handleAnthropicError(err: AnthropicError, res: Response): void {
   if (err.code === 'NO_ANTHROPIC_KEY') {
-    return res.status(402).json({
+    res.status(402).json({
       error: 'Anthropic API key not configured',
       hint: 'Set ANTHROPIC_API_KEY on the platform or POST /api-keys/anthropic for your org',
     });
+    return;
   }
-  if (err.status === 401) return res.status(402).json({ error: 'Invalid Anthropic API key' });
-  if (err.status === 429) return res.status(429).json({ error: 'Anthropic rate limit', retry_after: err.headers?.['retry-after'] });
-  return res.status(500).json({ error: err.message });
+  if (err.status === 401) { res.status(402).json({ error: 'Invalid Anthropic API key' }); return; }
+  if (err.status === 429) { res.status(429).json({ error: 'Anthropic rate limit', retry_after: err.headers?.['retry-after'] }); return; }
+  res.status(500).json({ error: err.message });
 }
 
 // ── Summarize recent observations ──
-router.post(`/api/${API_VERSION}/insights/summarize`, authenticate, async (req, res) => {
+router.post(`/api/${API_VERSION}/insights/summarize`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     if (!hasAnthropic(req.org)) {
       return res.status(402).json({ error: 'No Anthropic API key configured' });
@@ -36,7 +46,7 @@ router.post(`/api/${API_VERSION}/insights/summarize`, authenticate, async (req, 
     const { hours = 24, agent_id, workspace_id } = req.body;
     const since = new Date(Date.now() - hours * 3600 * 1000).toISOString();
 
-    let query = supabase
+    let query = supabase!
       .from('observations')
       .select('type,title,content,importance,created_at,agent_id,workspace_id')
       .eq('org_id', req.org.id)
@@ -56,7 +66,7 @@ router.post(`/api/${API_VERSION}/insights/summarize`, authenticate, async (req, 
     }
 
     const formatted = observations
-      .map((o) => `[${o.type}|imp:${o.importance}] ${o.title}${o.content ? `\n  ${o.content.slice(0, 300)}` : ''}`)
+      .map((o: Record<string, unknown>) => `[${o.type}|imp:${o.importance}] ${o.title}${o.content ? `\n  ${(o.content as string).slice(0, 300)}` : ''}`)
       .join('\n');
 
     const result = await complete(req.org, {
@@ -82,13 +92,13 @@ router.post(`/api/${API_VERSION}/insights/summarize`, authenticate, async (req, 
       model: result.model,
       usage: result.usage,
     });
-  } catch (err) {
-    handleAnthropicError(err, res);
+  } catch (err: unknown) {
+    handleAnthropicError(err as AnthropicError, res);
   }
 });
 
 // ── Analyze a single agent's health ──
-router.post(`/api/${API_VERSION}/insights/analyze-agent`, authenticate, async (req, res) => {
+router.post(`/api/${API_VERSION}/insights/analyze-agent`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     if (!hasAnthropic(req.org)) {
       return res.status(402).json({ error: 'No Anthropic API key configured' });
@@ -97,7 +107,7 @@ router.post(`/api/${API_VERSION}/insights/analyze-agent`, authenticate, async (r
     const { agent_id } = req.body;
     if (!agent_id) return res.status(400).json({ error: 'agent_id required' });
 
-    const { data: agent } = await supabase
+    const { data: agent } = await supabase!
       .from('agents')
       .select('*')
       .eq('id', agent_id)
@@ -105,7 +115,7 @@ router.post(`/api/${API_VERSION}/insights/analyze-agent`, authenticate, async (r
       .single();
     if (!agent) return res.status(404).json({ error: 'Agent not found' });
 
-    const { data: observations } = await supabase
+    const { data: observations } = await supabase!
       .from('observations')
       .select('type,title,content,importance,created_at')
       .eq('org_id', req.org.id)
@@ -115,7 +125,7 @@ router.post(`/api/${API_VERSION}/insights/analyze-agent`, authenticate, async (r
 
     const errorRate = agent.total_runs > 0 ? (agent.total_errors / agent.total_runs) : 0;
     const formatted = (observations || [])
-      .map((o) => `[${o.type}] ${o.title}${o.content ? ` — ${o.content.slice(0, 200)}` : ''}`)
+      .map((o: Record<string, unknown>) => `[${o.type}] ${o.title}${o.content ? ` — ${(o.content as string).slice(0, 200)}` : ''}`)
       .join('\n');
 
     const result = await complete(req.org, {
@@ -145,13 +155,13 @@ router.post(`/api/${API_VERSION}/insights/analyze-agent`, authenticate, async (r
       model: result.model,
       usage: result.usage,
     });
-  } catch (err) {
-    handleAnthropicError(err, res);
+  } catch (err: unknown) {
+    handleAnthropicError(err as AnthropicError, res);
   }
 });
 
 // ── Free-form ask ──
-router.post(`/api/${API_VERSION}/insights/ask`, authenticate, async (req, res) => {
+router.post(`/api/${API_VERSION}/insights/ask`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     if (!hasAnthropic(req.org)) {
       return res.status(402).json({ error: 'No Anthropic API key configured' });
@@ -161,9 +171,9 @@ router.post(`/api/${API_VERSION}/insights/ask`, authenticate, async (req, res) =
     if (!question) return res.status(400).json({ error: 'question required' });
 
     const [{ count: agentCount }, { count: wsCount }, { data: recent }] = await Promise.all([
-      supabase.from('agents').select('*', { count: 'exact', head: true }).eq('org_id', req.org.id),
-      supabase.from('workspaces').select('*', { count: 'exact', head: true }).eq('org_id', req.org.id),
-      supabase
+      supabase!.from('agents').select('*', { count: 'exact', head: true }).eq('org_id', req.org.id),
+      supabase!.from('workspaces').select('*', { count: 'exact', head: true }).eq('org_id', req.org.id),
+      supabase!
         .from('observations')
         .select('type,title,created_at')
         .eq('org_id', req.org.id)
@@ -175,7 +185,7 @@ router.post(`/api/${API_VERSION}/insights/ask`, authenticate, async (req, res) =
       `Organization: ${req.org.name} (plan: ${req.org.plan})\n` +
       `Agents: ${agentCount}, Workspaces: ${wsCount}\n\n` +
       `Last 20 observations:\n` +
-      (recent || []).map((o) => `- [${o.type}] ${o.title}`).join('\n');
+      (recent || []).map((o: Record<string, unknown>) => `- [${o.type}] ${o.title}`).join('\n');
 
     const result = await complete(req.org, {
       model,
@@ -194,20 +204,18 @@ router.post(`/api/${API_VERSION}/insights/ask`, authenticate, async (req, res) =
       model: result.model,
       usage: result.usage,
     });
-  } catch (err) {
-    handleAnthropicError(err, res);
+  } catch (err: unknown) {
+    handleAnthropicError(err as AnthropicError, res);
   }
 });
 
-import { estimateCost } from '../lib/pricing.js';
-
 // ── Usage summary for the dashboard ──
-router.get(`/api/${API_VERSION}/insights/usage`, authenticate, async (req, res) => {
+router.get(`/api/${API_VERSION}/insights/usage`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { days = 30 } = req.query;
     const since = new Date(Date.now() - Number(days) * 86400 * 1000).toISOString();
 
-    const { data, error } = await supabase
+    const { data, error } = await supabase!
       .from('anthropic_usage')
       .select('endpoint,model,input_tokens,output_tokens,cache_read_tokens,cache_creation_tokens,created_at')
       .eq('org_id', req.org.id)
@@ -216,8 +224,8 @@ router.get(`/api/${API_VERSION}/insights/usage`, authenticate, async (req, res) 
     if (error) throw error;
 
     const totals = { calls: 0, input: 0, output: 0, cache_read: 0, cache_creation: 0, cost_usd: 0 };
-    const byEndpoint = {};
-    const byModel = {};
+    const byEndpoint: Record<string, number> = {};
+    const byModel: Record<string, number> = {};
 
     for (const row of data || []) {
       totals.calls += 1;
@@ -239,8 +247,8 @@ router.get(`/api/${API_VERSION}/insights/usage`, authenticate, async (req, res) 
       by_model: byModel,
       recent: (data || []).slice(0, 10),
     });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+  } catch (err: unknown) {
+    res.status(500).json({ error: (err as Error).message });
   }
 });
 
