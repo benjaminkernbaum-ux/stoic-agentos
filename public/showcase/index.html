@@ -1,0 +1,1397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stoic AgentOS — The Operating System for AI Agent Fleets</title>
+<meta name="description" content="Stoic AgentOS: Deploy, orchestrate, and monitor fleets of AI agents. 23 agents, 14 workspaces, persistent memory, knowledge graphs. Deployed on Vercel. Powered by Supabase.">
+<meta property="og:title" content="Stoic AgentOS — Your AI Agents Need a Command Center">
+<meta property="og:description" content="One OS. 23 agents. Infinite scale. Monitor, orchestrate, and scale your AI agent fleet. Knowledge persistence, auto-capture, multi-workspace management.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://stoicagentos.com/showcase">
+<meta property="og:image" content="https://stoicagentos.com/og-image.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Stoic AgentOS — The Operating System for AI Agent Fleets">
+<meta name="twitter:description" content="Monitor, orchestrate, and scale your AI agent fleet. 23 agents, 14 workspaces, persistent memory. Built for teams shipping AI.">
+<meta name="twitter:image" content="https://stoicagentos.com/og-image.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════
+   RESET & BASE
+   ═══════════════════════════════════════════ */
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+html { scroll-behavior:smooth; scrollbar-width:thin; scrollbar-color:#00f0ff22 #0a0a0f; }
+body { background:#0a0a0f; color:#e0e0e8; font-family:'Inter',sans-serif; overflow-x:hidden; -webkit-font-smoothing:antialiased; }
+::-webkit-scrollbar { width:6px; }
+::-webkit-scrollbar-track { background:#0a0a0f; }
+::-webkit-scrollbar-thumb { background:linear-gradient(180deg,#00f0ff44,#ff00aa44); border-radius:3px; }
+canvas { display:block; }
+a { color:inherit; text-decoration:none; }
+
+/* ═══════════════════════════════════════════
+   TYPOGRAPHY
+   ═══════════════════════════════════════════ */
+h1,h2,h3 { font-family:'Space Grotesk',sans-serif; font-weight:700; }
+.mono { font-family:'JetBrains Mono',monospace; }
+
+/* ═══════════════════════════════════════════
+   GLOBAL SECTION STYLING
+   ═══════════════════════════════════════════ */
+.section {
+  position:relative; min-height:100vh; width:100%;
+  display:flex; align-items:center; justify-content:center;
+  overflow:hidden;
+}
+.section-inner {
+  position:relative; z-index:2; max-width:1200px; width:100%;
+  padding:60px 40px; text-align:center;
+}
+.section-reveal { opacity:0; transform:translateY(60px); transition:opacity 1s cubic-bezier(.16,1,.3,1), transform 1s cubic-bezier(.16,1,.3,1); }
+.section-reveal.visible { opacity:1; transform:translateY(0); }
+
+/* ═══════════════════════════════════════════
+   NAV DOTS
+   ═══════════════════════════════════════════ */
+#nav-dots {
+  position:fixed; right:24px; top:50%; transform:translateY(-50%); z-index:9999;
+  display:flex; flex-direction:column; gap:12px;
+}
+.nav-dot {
+  width:10px; height:10px; border-radius:50%; border:1.5px solid #ffffff44;
+  background:transparent; cursor:pointer; transition:all .4s ease; position:relative;
+}
+.nav-dot::after {
+  content:attr(data-label); position:absolute; right:22px; top:50%; transform:translateY(-50%);
+  font-size:11px; font-family:'JetBrains Mono',monospace; color:#ffffff88; white-space:nowrap;
+  opacity:0; transition:opacity .3s; pointer-events:none;
+}
+.nav-dot:hover::after { opacity:1; }
+.nav-dot.active { background:#00f0ff; border-color:#00f0ff; box-shadow:0 0 12px #00f0ff88; transform:scale(1.3); }
+
+/* ═══════════════════════════════════════════
+   SECTION 1 — HERO
+   ═══════════════════════════════════════════ */
+#hero { background:#0a0a0f; }
+#hero-canvas { position:absolute; top:0; left:0; width:100%; height:100%; z-index:1; }
+.hero-content { position:relative; z-index:2; text-align:center; }
+.hero-title {
+  font-size:clamp(3rem,8vw,7rem); letter-spacing:-2px; line-height:1;
+  background:linear-gradient(135deg,#00f0ff,#ff00aa,#00ff88);
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+  background-clip:text; filter:drop-shadow(0 0 40px #00f0ff44);
+}
+.hero-title .char { display:inline-block; opacity:0; transform:translateY(30px); }
+.hero-title .char.show { opacity:1; transform:translateY(0); transition:all .5s cubic-bezier(.16,1,.3,1); }
+.hero-subtitle {
+  font-size:clamp(1rem,2.5vw,1.5rem); color:#ffffff88; margin-top:24px;
+  font-weight:300; letter-spacing:4px; text-transform:uppercase;
+  opacity:0; transition:opacity 1.5s ease 1.5s;
+}
+.hero-subtitle.show { opacity:1; }
+#hero-orb {
+  position:absolute; left:50%; top:50%; width:200px; height:200px;
+  transform:translate(-50%,-50%); border-radius:50%; z-index:1;
+  background:radial-gradient(circle, #00f0ff11 0%, transparent 70%);
+  box-shadow:0 0 80px 30px #00f0ff08, inset 0 0 60px #00f0ff06;
+  animation:breathe 4s ease-in-out infinite;
+  will-change:transform,box-shadow; pointer-events:none;
+}
+@keyframes breathe {
+  0%,100% { transform:translate(-50%,-50%) scale(1); box-shadow:0 0 80px 30px #00f0ff08, inset 0 0 60px #00f0ff06; }
+  50% { transform:translate(-50%,-50%) scale(1.15); box-shadow:0 0 120px 50px #00f0ff15, inset 0 0 80px #00f0ff10; }
+}
+.scroll-indicator {
+  position:absolute; bottom:40px; left:50%; transform:translateX(-50%); z-index:3;
+  display:flex; flex-direction:column; align-items:center; gap:8px;
+  animation:scrollPulse 2s ease-in-out infinite;
+}
+.scroll-indicator span { font-size:11px; letter-spacing:3px; text-transform:uppercase; color:#ffffff44; font-family:'JetBrains Mono',monospace; }
+.scroll-arrow { width:20px; height:20px; border-right:2px solid #00f0ff66; border-bottom:2px solid #00f0ff66; transform:rotate(45deg); }
+@keyframes scrollPulse { 0%,100%{ opacity:.4; transform:translateX(-50%) translateY(0); } 50%{ opacity:1; transform:translateX(-50%) translateY(8px); } }
+
+/* ═══════════════════════════════════════════
+   SECTION 2 — PROBLEM
+   ═══════════════════════════════════════════ */
+#problem { background:linear-gradient(180deg,#0a0a0f,#0d1117); }
+.dead-grid {
+  display:grid; grid-template-columns:repeat(auto-fill,minmax(60px,1fr)); gap:8px;
+  max-width:800px; margin:0 auto 40px;
+}
+.dead-slide {
+  aspect-ratio:16/10; background:#1a1a2e; border-radius:4px; position:relative;
+  transition:all 1.2s cubic-bezier(.16,1,.3,1); overflow:hidden;
+}
+.dead-slide::after {
+  content:''; position:absolute; inset:0;
+  background:linear-gradient(135deg,#ffffff05,transparent);
+}
+.dead-slide.crack {
+  transform:scale(.8) rotate(var(--r,3deg)); opacity:0;
+  filter:blur(4px);
+}
+.dead-slide.glow {
+  background:linear-gradient(135deg,#00f0ff22,#ff00aa22);
+  box-shadow:0 0 20px #00f0ff11;
+  border:1px solid #00f0ff33;
+}
+.problem-text { font-size:clamp(1.2rem,3vw,1.8rem); color:#ffffff99; line-height:1.7; max-width:700px; margin:0 auto; }
+.counter-big {
+  font-family:'Space Grotesk',sans-serif; font-size:clamp(2.5rem,6vw,5rem);
+  font-weight:700; margin:30px 0 10px;
+  background:linear-gradient(90deg,#ffaa00,#ff00aa);
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+}
+.counter-label { font-size:1rem; color:#ffffff55; letter-spacing:2px; text-transform:uppercase; }
+
+/* ═══════════════════════════════════════════
+   SECTION 3 — VISION
+   ═══════════════════════════════════════════ */
+#vision { background:#0a0a0f; }
+#vision-canvas { position:absolute; top:0; left:0; width:100%; height:100%; z-index:1; }
+.vision-keywords {
+  position:relative; z-index:2; display:flex; flex-wrap:wrap;
+  justify-content:center; gap:20px 40px; margin-top:30px;
+}
+.vision-kw {
+  font-family:'Space Grotesk',sans-serif; font-size:clamp(1rem,2.5vw,1.6rem);
+  font-weight:600; opacity:0; transform:translateY(20px) scale(.9);
+  transition:all .8s cubic-bezier(.16,1,.3,1); padding:8px 16px;
+  border-radius:8px; position:relative;
+}
+.vision-kw.show { opacity:1; transform:translateY(0) scale(1); }
+.vision-kw::after {
+  content:''; position:absolute; bottom:0; left:0; width:0; height:2px;
+  transition:width .8s ease .3s;
+}
+.vision-kw.show::after { width:100%; }
+
+/* ═══════════════════════════════════════════
+   SECTION 4 — AGENT ANATOMY
+   ═══════════════════════════════════════════ */
+#anatomy { background:linear-gradient(180deg,#0a0a0f,#0d1117); }
+.anatomy-container { position:relative; max-width:600px; margin:40px auto 0; }
+.anatomy-layer {
+  position:relative; padding:24px 32px; margin:8px 0; border-radius:12px;
+  border:1px solid transparent; cursor:pointer;
+  transition:all .5s cubic-bezier(.16,1,.3,1); overflow:hidden;
+  opacity:0; transform:translateX(-40px);
+}
+.anatomy-layer.show { opacity:1; transform:translateX(0); }
+.anatomy-layer::before {
+  content:''; position:absolute; inset:0; border-radius:12px; opacity:.06;
+  transition:opacity .3s;
+}
+.anatomy-layer:hover::before { opacity:.15; }
+.anatomy-layer:hover { transform:scale(1.03); border-color:var(--c); }
+.anatomy-label { font-family:'Space Grotesk',sans-serif; font-size:1.2rem; font-weight:600; }
+.anatomy-desc {
+  font-size:.85rem; color:#ffffff55; margin-top:4px; max-height:0;
+  overflow:hidden; transition:max-height .5s, opacity .5s; opacity:0;
+}
+.anatomy-layer:hover .anatomy-desc, .anatomy-layer.expanded .anatomy-desc { max-height:100px; opacity:1; }
+.anatomy-pulse {
+  position:absolute; right:20px; top:50%; transform:translateY(-50%);
+  width:10px; height:10px; border-radius:50%;
+  animation:anatomyPulse 2s ease-in-out infinite;
+}
+@keyframes anatomyPulse {
+  0%,100%{ box-shadow:0 0 0 0 var(--c); } 50%{ box-shadow:0 0 0 8px transparent; }
+}
+.anatomy-flow {
+  position:absolute; left:50%; width:2px; height:8px; background:var(--c);
+  opacity:.3; bottom:-8px; transform:translateX(-50%);
+}
+.anatomy-breathe { animation:anatomyBreathe 5s ease-in-out infinite; }
+@keyframes anatomyBreathe { 0%,100%{transform:scale(1)} 50%{transform:scale(1.02)} }
+
+/* ═══════════════════════════════════════════
+   SECTION 5 — FLEET ORCHESTRATION
+   ═══════════════════════════════════════════ */
+#fleet { background:#0d1117; }
+.fleet-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:16px; margin-top:40px; }
+.agent-card {
+  background:#0a0a0f; border:1px solid #ffffff11; border-radius:12px;
+  padding:20px; text-align:left; position:relative; overflow:hidden;
+  transition:all .4s; opacity:0; transform:translateY(20px);
+}
+.agent-card.show { opacity:1; transform:translateY(0); }
+.agent-card:hover { border-color:#00f0ff44; transform:translateY(-4px); box-shadow:0 8px 30px #00f0ff11; }
+.agent-status { display:flex; align-items:center; gap:8px; margin-bottom:12px; }
+.status-dot { width:8px; height:8px; border-radius:50%; animation:statusBlink 2s infinite; }
+.status-dot.active { background:#00ff88; box-shadow:0 0 8px #00ff88; }
+.status-dot.idle { background:#ffaa00; box-shadow:0 0 8px #ffaa00; animation-duration:3s; }
+.status-dot.processing { background:#00f0ff; box-shadow:0 0 8px #00f0ff; animation-duration:1s; }
+.status-dot.error { background:#ff4444; box-shadow:0 0 8px #ff4444; animation-duration:.5s; }
+@keyframes statusBlink { 0%,100%{opacity:1} 50%{opacity:.4} }
+.agent-name { font-family:'JetBrains Mono',monospace; font-size:.8rem; color:#ffffff88; }
+.agent-task { font-size:.75rem; color:#ffffff44; margin-top:8px; }
+.agent-bar { height:3px; border-radius:2px; margin-top:12px; background:#ffffff11; overflow:hidden; }
+.agent-bar-fill { height:100%; border-radius:2px; transition:width 2s ease; }
+
+.fleet-metrics { display:flex; justify-content:center; gap:40px; flex-wrap:wrap; margin-top:40px; }
+.fleet-metric { text-align:center; }
+.fleet-metric-val { font-family:'Space Grotesk',sans-serif; font-size:2rem; font-weight:700; }
+.fleet-metric-label { font-size:.75rem; color:#ffffff55; margin-top:4px; text-transform:uppercase; letter-spacing:2px; }
+
+.radar-container { position:absolute; right:5%; top:15%; width:150px; height:150px; opacity:.3; }
+.radar-circle { position:absolute; inset:0; border:1px solid #00f0ff22; border-radius:50%; }
+.radar-sweep {
+  position:absolute; top:50%; left:50%; width:50%; height:2px; transform-origin:left center;
+  background:linear-gradient(90deg,#00f0ff88,transparent);
+  animation:radarSweep 3s linear infinite;
+}
+@keyframes radarSweep { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+
+/* ═══════════════════════════════════════════
+   SECTION 6 — NEURAL MESH
+   ═══════════════════════════════════════════ */
+#mesh { background:#0a0a0f; }
+#mesh-canvas { position:absolute; top:0; left:0; width:100%; height:100%; z-index:1; }
+.mesh-text {
+  position:relative; z-index:2; font-size:clamp(1.2rem,3vw,2rem);
+  color:#ffffff66; font-weight:300; letter-spacing:1px;
+}
+.mesh-text em { font-style:normal; color:#00f0ff; }
+
+/* ═══════════════════════════════════════════
+   SECTION 7 — DATA ECOSYSTEMS
+   ═══════════════════════════════════════════ */
+#data { background:linear-gradient(180deg,#0d1117,#0a0a0f); }
+.charts-container { display:flex; flex-wrap:wrap; justify-content:center; gap:40px; margin-top:40px; }
+.bar-chart { display:flex; align-items:flex-end; gap:12px; height:200px; }
+.bar-col { display:flex; flex-direction:column; align-items:center; gap:8px; }
+.bar {
+  width:40px; border-radius:6px 6px 0 0; transition:height 1.5s cubic-bezier(.34,1.56,.64,1);
+  position:relative; height:0;
+}
+.bar-label { font-family:'JetBrains Mono',monospace; font-size:.65rem; color:#ffffff55; }
+.radial-chart { position:relative; width:200px; height:200px; }
+.radial-chart canvas { width:100%; height:100%; }
+.radial-center {
+  position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+  font-family:'Space Grotesk',sans-serif; font-size:1.5rem; font-weight:700; color:#00f0ff;
+}
+.data-text { font-size:clamp(1rem,2.5vw,1.5rem); color:#ffffff77; margin-top:40px; line-height:1.8; }
+.data-text em { font-style:normal; color:#00ff88; }
+
+/* ═══════════════════════════════════════════
+   SECTION 8 — PERFORMANCE
+   ═══════════════════════════════════════════ */
+#performance { background:#0a0a0f; position:relative; }
+#matrix-canvas { position:absolute; top:0; left:0; width:100%; height:100%; z-index:1; opacity:.15; }
+.perf-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:40px; position:relative; z-index:2; }
+.perf-stat { text-align:center; padding:40px 20px; }
+.perf-val {
+  font-family:'Space Grotesk',sans-serif; font-size:clamp(3rem,7vw,5rem);
+  font-weight:700; line-height:1; filter:drop-shadow(0 0 30px var(--glow));
+}
+.perf-label { font-size:.9rem; color:#ffffff66; margin-top:12px; letter-spacing:2px; text-transform:uppercase; }
+
+/* ═══════════════════════════════════════════
+   SECTION 9 — ARCHITECTURE
+   ═══════════════════════════════════════════ */
+#architecture { background:linear-gradient(180deg,#0a0a0f,#0d1117); }
+.stack-container { max-width:700px; margin:40px auto 0; position:relative; }
+.stack-layer {
+  padding:28px 32px; margin:6px 0; border-radius:12px; display:flex;
+  align-items:center; gap:16px; position:relative; overflow:hidden;
+  opacity:0; transition:all .8s cubic-bezier(.16,1,.3,1);
+}
+.stack-layer.from-left { transform:translateX(-100px); }
+.stack-layer.from-right { transform:translateX(100px); }
+.stack-layer.show { opacity:1; transform:translateX(0); }
+.stack-icon { font-size:1.5rem; }
+.stack-label { font-family:'Space Grotesk',sans-serif; font-size:1.1rem; font-weight:600; }
+.stack-desc { font-size:.8rem; color:#ffffff55; }
+.stack-particles {
+  position:absolute; right:20px; top:50%; transform:translateY(-50%);
+  display:flex; gap:4px;
+}
+.stack-particle {
+  width:4px; height:4px; border-radius:50%; animation:stackFloat 2s ease-in-out infinite;
+}
+@keyframes stackFloat {
+  0%,100%{transform:translateY(0);opacity:.3} 50%{transform:translateY(-10px);opacity:1}
+}
+
+/* ═══════════════════════════════════════════
+   SECTION 10 — TIMELINE
+   ═══════════════════════════════════════════ */
+#timeline { background:#0d1117; }
+.timeline-track {
+  position:relative; max-width:900px; margin:60px auto 0; padding:0 20px;
+  display:flex; justify-content:space-between; align-items:flex-start;
+}
+.timeline-line {
+  position:absolute; top:20px; left:40px; right:40px; height:2px; background:#ffffff11;
+}
+.timeline-line-fill {
+  height:100%; width:0; background:linear-gradient(90deg,#00f0ff,#ff00aa,#00ff88,#ffaa00);
+  transition:width 2s cubic-bezier(.16,1,.3,1);
+  box-shadow:0 0 10px #00f0ff44;
+}
+.timeline-item { text-align:center; position:relative; z-index:2; flex:1; }
+.timeline-dot {
+  width:16px; height:16px; border-radius:50%; background:#1a1a2e; border:2px solid #ffffff22;
+  margin:12px auto 16px; position:relative; transition:all .6s cubic-bezier(.16,1,.3,1);
+}
+.timeline-dot.active {
+  border-color:var(--c); background:var(--c);
+  box-shadow:0 0 20px var(--c);
+}
+.timeline-year { font-family:'JetBrains Mono',monospace; font-size:.85rem; font-weight:700; color:var(--c); }
+.timeline-title { font-family:'Space Grotesk',sans-serif; font-size:1rem; margin-top:8px; color:#ffffffcc; }
+.timeline-desc {
+  font-size:.8rem; color:#ffffff44; margin-top:8px; max-height:0;
+  overflow:hidden; transition:all .8s; opacity:0;
+}
+.timeline-item.active .timeline-desc { max-height:80px; opacity:1; }
+
+/* ═══════════════════════════════════════════
+   SECTION 11 — FUTURE
+   ═══════════════════════════════════════════ */
+#future { background:#0a0a0f; }
+.future-split { display:grid; grid-template-columns:1fr 1fr; gap:40px; margin-top:40px; min-height:400px; }
+.future-old {
+  background:#1a1a2e; border-radius:16px; padding:40px; display:flex;
+  flex-direction:column; align-items:center; justify-content:center;
+  position:relative; overflow:hidden; transition:all 2s;
+}
+.future-old.dissolve { filter:grayscale(1) blur(8px) brightness(.3); opacity:.2; transform:scale(.9); }
+.future-old-slide { width:80%; aspect-ratio:16/10; background:#252540; border-radius:4px; margin:8px 0; }
+.future-old-label { color:#ffffff33; margin-top:16px; font-size:.9rem; }
+.future-new {
+  background:linear-gradient(135deg,#0d111766,#0a0a0f66); border:1px solid #00f0ff22;
+  border-radius:16px; padding:40px; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; position:relative; overflow:hidden;
+  transition:all 2s;
+}
+.future-new.bloom { border-color:#00f0ff66; box-shadow:0 0 60px #00f0ff11, inset 0 0 60px #00f0ff06; }
+.future-new-vis { width:100%; height:200px; position:relative; }
+.future-new canvas { width:100%; height:100%; border-radius:8px; }
+.future-new-label { color:#00f0ff; margin-top:16px; font-size:.9rem; font-weight:600; }
+.future-question {
+  font-size:clamp(1.2rem,3vw,2rem); color:#ffffff88; margin-top:40px; font-weight:300;
+}
+.future-question em { font-style:normal; color:#ff00aa; }
+
+@media(max-width:768px){
+  .future-split { grid-template-columns:1fr; }
+}
+
+/* ═══════════════════════════════════════════
+   SECTION 12 — CTA
+   ═══════════════════════════════════════════ */
+#cta { background:#0a0a0f; min-height:100vh; }
+#galaxy-canvas { position:absolute; top:0; left:0; width:100%; height:100%; z-index:1; }
+.cta-content { position:relative; z-index:2; }
+.cta-headline {
+  font-size:clamp(1.5rem,4vw,2.8rem); font-weight:300; color:#ffffffcc; line-height:1.6;
+  max-width:700px; margin:0 auto;
+}
+.cta-headline em { font-style:normal; font-weight:700; color:#00f0ff; }
+.cta-button {
+  display:inline-block; margin-top:50px; padding:20px 60px; font-family:'Space Grotesk',sans-serif;
+  font-size:1.2rem; font-weight:600; color:#0a0a0f; background:linear-gradient(135deg,#00f0ff,#00ff88);
+  border:none; border-radius:60px; cursor:pointer; position:relative; overflow:hidden;
+  transition:all .4s; text-decoration:none;
+}
+.cta-button:hover { transform:scale(1.05); box-shadow:0 0 40px #00f0ff44; }
+.cta-button::before {
+  content:''; position:absolute; inset:-3px; border-radius:60px; padding:3px;
+  background:linear-gradient(135deg,#00f0ff,#ff00aa,#00ff88,#ffaa00);
+  -webkit-mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite:xor; mask-composite:exclude;
+  animation:borderRotate 3s linear infinite;
+  background-size:300% 300%;
+}
+@keyframes borderRotate { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
+.cta-footer {
+  margin-top:80px; font-size:.8rem; color:#ffffff33; letter-spacing:2px;
+  font-family:'JetBrains Mono',monospace;
+}
+
+/* ═══════════════════════════════════════════
+   UTILITY ANIMATIONS
+   ═══════════════════════════════════════════ */
+@keyframes fadeInUp {
+  from { opacity:0; transform:translateY(40px); }
+  to { opacity:1; transform:translateY(0); }
+}
+@keyframes glowPulse {
+  0%,100%{ filter:drop-shadow(0 0 20px var(--glow)); }
+  50%{ filter:drop-shadow(0 0 40px var(--glow)); }
+}
+
+/* ═══════════════════════════════════════════
+   RESPONSIVE
+   ═══════════════════════════════════════════ */
+@media(max-width:768px){
+  .section-inner { padding:40px 20px; }
+  #nav-dots { right:12px; }
+  .nav-dot::after { display:none; }
+  .fleet-grid { grid-template-columns:1fr 1fr; }
+  .perf-grid { grid-template-columns:1fr 1fr; gap:20px; }
+  .bar { width:28px; }
+  .timeline-track { flex-direction:column; gap:20px; align-items:flex-start; }
+  .timeline-line { display:none; }
+  .radar-container { display:none; }
+}
+@media(max-width:480px){
+  .fleet-grid { grid-template-columns:1fr; }
+  .perf-grid { grid-template-columns:1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════
+     NAV DOTS
+     ═══════════════════════════════════════════ -->
+<nav id="nav-dots"></nav>
+<a href="https://stoicagentos.com" style="position:fixed;top:20px;left:24px;z-index:9999;font-family:'JetBrains Mono',monospace;font-size:.7rem;color:#ffffff44;text-decoration:none;letter-spacing:1px;transition:color .3s;padding:8px 16px;border-radius:8px;background:#ffffff06;border:1px solid #ffffff11" onmouseover="this.style.color='#00f0ff';this.style.borderColor='#00f0ff33'" onmouseout="this.style.color='#ffffff44';this.style.borderColor='#ffffff11'">← stoicagentos.com</a>
+
+<!-- ═══════════════════════════════════════════
+     SECTION 1 — HERO
+     ═══════════════════════════════════════════ -->
+<section id="hero" class="section" data-nav="Neural Awakening">
+  <canvas id="hero-canvas"></canvas>
+  <div id="hero-orb"></div>
+  <div class="hero-content section-inner">
+    <h1 class="hero-title" id="hero-title"></h1>
+    <p class="hero-subtitle" id="hero-subtitle">The Operating System for AI Agent Fleets · 23 Agents · Deployed on Vercel</p>
+  </div>
+  <div class="scroll-indicator">
+    <span>Scroll to explore</span>
+    <div class="scroll-arrow"></div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════
+     SECTION 2 — PROBLEM
+     ═══════════════════════════════════════════ -->
+<section id="problem" class="section" data-nav="The Problem">
+  <div class="section-inner section-reveal">
+    <div class="dead-grid" id="dead-grid"></div>
+    <p class="problem-text">Teams spent months building <em style="color:#ff00aa;font-style:normal">fragile agent pipelines</em>, losing memory between sessions, and <em style="color:#ffaa00;font-style:normal">flying blind without observability</em>.</p>
+    <div class="counter-big" id="counter-slides">0</div>
+    <div class="counter-label">Agent sessions lost daily without persistent memory</div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════
+     SECTION 3 — VISION
+     ═══════════════════════════════════════════ -->
+<section id="vision" class="section" data-nav="The Vision">
+  <canvas id="vision-canvas"></canvas>
+  <div class="section-inner">
+    <h2 class="section-reveal" style="font-size:clamp(2rem,5vw,3.5rem);color:#ffffffdd;">What If Your Agents Could <span style="color:#00f0ff">Think Together</span>?</h2>
+    <div class="vision-keywords" id="vision-keywords">
+      <span class="vision-kw" style="color:#00f0ff;--c:#00f0ff" data-delay="0">Fleet Orchestration</span>
+      <span class="vision-kw" style="color:#ff00aa;--c:#ff00aa" data-delay="100">Persistent Memory</span>
+      <span class="vision-kw" style="color:#00ff88;--c:#00ff88" data-delay="200">Knowledge Graphs</span>
+      <span class="vision-kw" style="color:#ffaa00;--c:#ffaa00" data-delay="300">Heartbeat Monitoring</span>
+      <span class="vision-kw" style="color:#00f0ff;--c:#00f0ff" data-delay="400">Auto-Scaling</span>
+      <span class="vision-kw" style="color:#ff00aa;--c:#ff00aa" data-delay="500">3-Line SDK</span>
+      <span class="vision-kw" style="color:#00ff88;--c:#00ff88" data-delay="600">Error Tracking</span>
+      <span class="vision-kw" style="color:#ffaa00;--c:#ffaa00" data-delay="700">Multi-Workspace</span>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════
+     SECTION 4 — AGENT ANATOMY
+     ═══════════════════════════════════════════ -->
+<section id="anatomy" class="section" data-nav="Agent Anatomy">
+  <div class="section-inner">
+    <h2 class="section-reveal" style="font-size:clamp(2rem,5vw,3rem);margin-bottom:10px;">Inside <span style="color:#00f0ff">AgentOS</span></h2>
+    <p class="section-reveal" style="color:#ffffff55;margin-bottom:20px;">The runtime architecture powering every agent in your fleet</p>
+    <div class="anatomy-container anatomy-breathe" id="anatomy-container">
+      <div class="anatomy-layer" style="--c:#00f0ff;background:#00f0ff08;border-color:#00f0ff22" data-delay="0">
+        <div class="anatomy-pulse" style="--c:#00f0ff;background:#00f0ff"></div>
+        <div class="anatomy-label" style="color:#00f0ff">⦿ Ingestion Layer</div>
+        <div class="anatomy-desc">Captures webhooks, API events, and real-time data streams. The stoic-agentos-sdk connects with 3 lines of code.</div>
+        <div class="anatomy-flow" style="--c:#00f0ff"></div>
+      </div>
+      <div class="anatomy-layer" style="--c:#ff00aa;background:#ff00aa08;border-color:#ff00aa22" data-delay="100">
+        <div class="anatomy-pulse" style="--c:#ff00aa;background:#ff00aa"></div>
+        <div class="anatomy-label" style="color:#ff00aa">⧫ Orchestration Engine</div>
+        <div class="anatomy-desc">Task routing, load balancing, and inter-agent messaging via n8n workflows. 23 agents coordinated in real time.</div>
+        <div class="anatomy-flow" style="--c:#ff00aa"></div>
+      </div>
+      <div class="anatomy-layer" style="--c:#00ff88;background:#00ff8808;border-color:#00ff8822" data-delay="200">
+        <div class="anatomy-pulse" style="--c:#00ff88;background:#00ff88"></div>
+        <div class="anatomy-label" style="color:#00ff88">◈ Persistent Memory</div>
+        <div class="anatomy-desc">Supabase + PostgreSQL backend stores episodic memory, knowledge graphs, and vector embeddings across sessions.</div>
+        <div class="anatomy-flow" style="--c:#00ff88"></div>
+      </div>
+      <div class="anatomy-layer" style="--c:#ffaa00;background:#ffaa0008;border-color:#ffaa0022" data-delay="300">
+        <div class="anatomy-pulse" style="--c:#ffaa00;background:#ffaa00"></div>
+        <div class="anatomy-label" style="color:#ffaa00">⬡ Execution Runtime</div>
+        <div class="anatomy-desc">Railway-hosted services execute tasks: API calls, content generation, CRM ops, and TikTok automation pipelines.</div>
+        <div class="anatomy-flow" style="--c:#ffaa00"></div>
+      </div>
+      <div class="anatomy-layer" style="--c:#aa66ff;background:#aa66ff08;border-color:#aa66ff22" data-delay="400">
+        <div class="anatomy-pulse" style="--c:#aa66ff;background:#aa66ff"></div>
+        <div class="anatomy-label" style="color:#aa66ff">◉ Observability</div>
+        <div class="anatomy-desc">Heartbeat monitoring, error tracking, usage analytics, and billing — deployed live on Vercel at stoic-agentos.vercel.app.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════
+     SECTION 5 — FLEET ORCHESTRATION
+     ═══════════════════════════════════════════ -->
+<section id="fleet" class="section" data-nav="Fleet Command">
+  <div class="radar-container">
+    <div class="radar-circle"></div>
+    <div class="radar-circle" style="inset:20%"></div>
+    <div class="radar-circle" style="inset:40%"></div>
+    <div class="radar-sweep"></div>
+  </div>
+  <div class="section-inner">
+    <h2 class="section-reveal" style="font-size:clamp(2rem,5vw,3rem);">Command <span style="color:#00f0ff">Center</span></h2>
+    <p class="section-reveal" style="color:#ffffff55;">23 agents · 14 workspaces · Live on stoicagentos.com/dashboard</p>
+    <div class="fleet-grid" id="fleet-grid"></div>
+    <div class="fleet-metrics section-reveal">
+      <div class="fleet-metric"><div class="fleet-metric-val mono" style="color:#00ff88" data-count="23">0</div><div class="fleet-metric-label">Agents Deployed</div></div>
+      <div class="fleet-metric"><div class="fleet-metric-val mono" style="color:#00f0ff" data-count="14">0</div><div class="fleet-metric-label">Workspaces</div></div>
+      <div class="fleet-metric"><div class="fleet-metric-val mono" style="color:#ff00aa" data-count="100" data-suffix="K+">0</div><div class="fleet-metric-label">Views Generated</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════
+     SECTION 6 — NEURAL MESH
+     ═══════════════════════════════════════════ -->
+<section id="mesh" class="section" data-nav="Neural Mesh">
+  <canvas id="mesh-canvas"></canvas>
+  <div class="section-inner">
+    <p class="mesh-text section-reveal">Every agent <em>connected</em>. Every signal <em>processed</em>.<br><span style="font-size:0.6em;color:#ffffff33;display:block;margin-top:16px;font-family:'JetBrains Mono',monospace">npm install @stoic/agentos-sdk · wrapAgent() · 3 lines to connect</span></p>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════
+     SECTION 7 — DATA ECOSYSTEMS
+     ═══════════════════════════════════════════ -->
+<section id="data" class="section" data-nav="Data Ecosystems">
+  <div class="section-inner">
+    <h2 class="section-reveal" style="font-size:clamp(2rem,5vw,3rem);">Live Fleet <span style="color:#00ff88">Analytics</span></h2>
+    <div class="charts-container section-reveal">
+      <div class="bar-chart" id="bar-chart"></div>
+      <div class="radial-chart"><canvas id="radial-canvas" width="200" height="200"></canvas><div class="radial-center" id="radial-val">0%</div></div>
+    </div>
+    <p class="data-text section-reveal">Agent <em>health</em> in real time. Usage <em>analytics</em> per workspace. Billing that <em>auto-scales</em>.</p>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════
+     SECTION 8 — PERFORMANCE
+     ═══════════════════════════════════════════ -->
+<section id="performance" class="section" data-nav="Raw Power">
+  <canvas id="matrix-canvas"></canvas>
+  <div class="section-inner">
+    <h2 class="section-reveal" style="font-size:clamp(1.5rem,4vw,2.5rem);margin-bottom:50px;color:#ffffff88;">Raw <span style="color:#00f0ff">Power</span></h2>
+    <div class="perf-grid section-reveal">
+      <div class="perf-stat">
+        <div class="perf-val" style="color:#00f0ff;--glow:#00f0ff66" data-perf="3">0</div>
+        <div class="perf-label">Lines to Integrate</div>
+      </div>
+      <div class="perf-stat">
+        <div class="perf-val" style="color:#00ff88;--glow:#00ff8866" data-perf="23">0</div>
+        <div class="perf-label">Active Agents</div>
+      </div>
+      <div class="perf-stat">
+        <div class="perf-val" style="color:#ff00aa;--glow:#ff00aa66" data-perf="14">0</div>
+        <div class="perf-label">Workspaces</div>
+      </div>
+      <div class="perf-stat">
+        <div class="perf-val" style="color:#ffaa00;--glow:#ffaa0066" data-perf="100K+">0</div>
+        <div class="perf-label">Views Generated</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════
+     SECTION 9 — ARCHITECTURE
+     ═══════════════════════════════════════════ -->
+<section id="architecture" class="section" data-nav="The Stack">
+  <div class="section-inner">
+    <h2 class="section-reveal" style="font-size:clamp(2rem,5vw,3rem);">The Production <span style="color:#ff00aa">Stack</span></h2>
+    <div class="stack-container" id="stack-container">
+      <div class="stack-layer from-right" style="background:#ffaa0011;border:1px solid #ffaa0033">
+        <div class="stack-icon">▲</div>
+        <div><div class="stack-label" style="color:#ffaa00">Vercel — Frontend & Edge</div><div class="stack-desc">stoic-agentos.vercel.app · SSR dashboards, real-time UI, edge functions, instant deploys</div></div>
+        <div class="stack-particles"><span class="stack-particle" style="background:#ffaa00;animation-delay:0s"></span><span class="stack-particle" style="background:#ffaa00;animation-delay:.3s"></span><span class="stack-particle" style="background:#ffaa00;animation-delay:.6s"></span></div>
+      </div>
+      <div class="stack-layer from-left" style="background:#00ff8811;border:1px solid #00ff8833">
+        <div class="stack-icon">◈</div>
+        <div><div class="stack-label" style="color:#00ff88">Supabase — Backend & Auth</div><div class="stack-desc">PostgreSQL database, vector embeddings, Row-Level Security, real-time subscriptions, auth</div></div>
+        <div class="stack-particles"><span class="stack-particle" style="background:#00ff88;animation-delay:.1s"></span><span class="stack-particle" style="background:#00ff88;animation-delay:.4s"></span><span class="stack-particle" style="background:#00ff88;animation-delay:.7s"></span></div>
+      </div>
+      <div class="stack-layer from-right" style="background:#ff00aa11;border:1px solid #ff00aa33">
+        <div class="stack-icon">🚂</div>
+        <div><div class="stack-label" style="color:#ff00aa">Railway — Services & Workers</div><div class="stack-desc">Node.js + Python microservices, background workers, FFmpeg pipelines, auto-scaling</div></div>
+        <div class="stack-particles"><span class="stack-particle" style="background:#ff00aa;animation-delay:.2s"></span><span class="stack-particle" style="background:#ff00aa;animation-delay:.5s"></span><span class="stack-particle" style="background:#ff00aa;animation-delay:.8s"></span></div>
+      </div>
+      <div class="stack-layer from-left" style="background:#00f0ff11;border:1px solid #00f0ff33">
+        <div class="stack-icon">⦿</div>
+        <div><div class="stack-label" style="color:#00f0ff">n8n — Workflow Automation</div><div class="stack-desc">Visual workflow builder, agent-to-agent messaging, webhook triggers, 400+ integrations</div></div>
+        <div class="stack-particles"><span class="stack-particle" style="background:#00f0ff;animation-delay:.15s"></span><span class="stack-particle" style="background:#00f0ff;animation-delay:.45s"></span><span class="stack-particle" style="background:#00f0ff;animation-delay:.75s"></span></div>
+      </div>
+      <div class="stack-layer from-right" style="background:#aa66ff11;border:1px solid #aa66ff33">
+        <div class="stack-icon">◉</div>
+        <div><div class="stack-label" style="color:#aa66ff">@stoic/agentos-sdk — Integration</div><div class="stack-desc">npm install @stoic/agentos-sdk · wrapAgent() in 3 lines · TypeScript + JavaScript + Python</div></div>
+        <div class="stack-particles"><span class="stack-particle" style="background:#aa66ff;animation-delay:.25s"></span><span class="stack-particle" style="background:#aa66ff;animation-delay:.55s"></span><span class="stack-particle" style="background:#aa66ff;animation-delay:.85s"></span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════
+     SECTION 10 — TIMELINE
+     ═══════════════════════════════════════════ -->
+<section id="timeline" class="section" data-nav="Evolution">
+  <div class="section-inner">
+    <h2 class="section-reveal" style="font-size:clamp(2rem,5vw,3rem);">Ecosystem <span style="color:#00f0ff">Evolution</span></h2>
+    <div class="timeline-track section-reveal" id="timeline-track">
+      <div class="timeline-line"><div class="timeline-line-fill" id="timeline-fill"></div></div>
+      <div class="timeline-item" data-idx="0">
+        <div class="timeline-year" style="--c:#00f0ff">StoicCRM</div>
+        <div class="timeline-dot" style="--c:#00f0ff"></div>
+        <div class="timeline-title">Sales Command Center</div>
+        <div class="timeline-desc">12 autonomous sales agents. AI-powered lead scoring. The first fleet in production.</div>
+      </div>
+      <div class="timeline-item" data-idx="1">
+        <div class="timeline-year" style="--c:#ff00aa">Command Center</div>
+        <div class="timeline-dot" style="--c:#ff00aa"></div>
+        <div class="timeline-title">Second Brain</div>
+        <div class="timeline-desc">23 agents, 14 workspaces, knowledge graph, memory engine. The orchestration hub.</div>
+      </div>
+      <div class="timeline-item" data-idx="2">
+        <div class="timeline-year" style="--c:#00ff88">Fetok</div>
+        <div class="timeline-dot" style="--c:#00ff88"></div>
+        <div class="timeline-title">Content Automation</div>
+        <div class="timeline-desc">Cinematic TikTok pipeline: FFmpeg + TTS + OBS. 100K+ views via autonomous agents.</div>
+      </div>
+      <div class="timeline-item" data-idx="3">
+        <div class="timeline-year" style="--c:#ffaa00">AgentOS</div>
+        <div class="timeline-dot" style="--c:#ffaa00"></div>
+        <div class="timeline-title">The Operating System</div>
+        <div class="timeline-desc">Open-source on GitHub. Deployed on Vercel. Featured on Hacker News. The OS that unifies it all.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════
+     SECTION 11 — FUTURE
+     ═══════════════════════════════════════════ -->
+<section id="future" class="section" data-nav="Ecosystem">
+  <div class="section-inner">
+    <h2 class="section-reveal" style="font-size:clamp(2rem,5vw,3rem);">Live <span style="color:#ff00aa">Ecosystem</span></h2>
+    <div class="future-split section-reveal">
+      <div class="future-old" id="future-old" style="background:linear-gradient(135deg,#0d111788,#0a0a0f88);border:1px solid #00f0ff22;border-radius:16px">
+        <div style="font-size:2rem;margin-bottom:12px">🧠</div>
+        <div style="font-family:'Space Grotesk',sans-serif;font-size:1.3rem;font-weight:600;color:#00f0ff;margin-bottom:8px">stoic-agentos.vercel.app</div>
+        <div style="font-size:.85rem;color:#ffffff66;line-height:1.6">The core OS dashboard. Real-time monitoring, error tracking, heartbeat, persistent memory, multi-workspace, billing.</div>
+        <div style="margin-top:16px;font-family:'JetBrains Mono',monospace;font-size:.7rem;color:#00ff88;padding:8px 16px;background:#00ff8811;border-radius:8px;border:1px solid #00ff8822">npm install @stoic/agentos-sdk</div>
+      </div>
+      <div class="future-new" id="future-new">
+        <div class="future-new-vis"><canvas id="future-canvas"></canvas></div>
+        <div style="font-family:'Space Grotesk',sans-serif;font-size:1.3rem;font-weight:600;color:#ff00aa;margin-top:12px">stoicagentos.com/dashboard</div>
+        <div style="font-size:.85rem;color:#ffffff66;margin-top:4px">23 agents · 14 workspaces · Knowledge graph · Memory engine</div>
+      </div>
+    </div>
+    <p class="future-question section-reveal">Every product in the ecosystem runs on <em>AgentOS</em>.</p>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════
+     SECTION 12 — CTA
+     ═══════════════════════════════════════════ -->
+<section id="cta" class="section" data-nav="Deploy">
+  <canvas id="galaxy-canvas"></canvas>
+  <div class="section-inner cta-content">
+    <p class="cta-headline section-reveal">One OS. <em>23 agents</em>. Infinite scale.<br>Deploy your fleet today.</p>
+    <div class="section-reveal" style="transition-delay:.3s;display:flex;gap:20px;justify-content:center;flex-wrap:wrap">
+      <a href="https://stoicagentos.com/signup" class="cta-button" style="background:linear-gradient(135deg,#00f0ff,#00ff88)">🚀 Start Free</a>
+      <a href="https://github.com/benjaminkernbaum-ux/stoic-agentos" target="_blank" class="cta-button" style="background:linear-gradient(135deg,#ff00aa,#ffaa00)">⭐ Star on GitHub</a>
+    </div>
+    <div class="section-reveal" style="transition-delay:.5s;margin-top:30px;padding:20px 32px;background:#ffffff06;border:1px solid #ffffff11;border-radius:12px;display:inline-block;text-align:left;max-width:540px">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:.75rem;color:#ffffff44;margin-bottom:8px">// npm install @stoic/agentos-sdk</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:.8rem;line-height:1.8">
+        <span style="color:#ff00aa">import</span> <span style="color:#00f0ff">{ AgentOS }</span> <span style="color:#ff00aa">from</span> <span style="color:#00ff88">'@stoic/agentos-sdk'</span>;<br>
+        <span style="color:#00f0ff">const os</span> = <span style="color:#ffaa00">new AgentOS</span>({ <span style="color:#ffffff55">apiKey:</span> <span style="color:#00ff88">'sk_live_xxx'</span> });<br>
+        <span style="color:#00f0ff">const agent</span> = <span style="color:#00f0ff">os</span>.<span style="color:#ffaa00">wrapAgent</span>(<span style="color:#00ff88">'invoice-processor'</span>, <span style="color:#ffffff55">handler</span>);
+      </div>
+    </div>
+    <div class="cta-footer section-reveal" style="transition-delay:.8s">Stoic AgentOS © 2026 — Open Source · Vercel · Supabase · Railway · github.com/benjaminkernbaum-ux</div>
+  </div>
+</section>
+
+<script>
+/* ═══════════════════════════════════════════
+   UTILITIES
+   ═══════════════════════════════════════════ */
+const lerp = (a,b,t) => a + (b - a) * t;
+const rand = (min,max) => Math.random() * (max - min) + min;
+const dist = (x1,y1,x2,y2) => Math.sqrt((x2-x1)**2 + (y2-y1)**2);
+const clamp = (v,min,max) => Math.min(Math.max(v,min),max);
+let mouse = { x: -9999, y: -9999 };
+document.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; });
+
+function resizeCanvas(canvas) {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  canvas.style.width = rect.width + 'px';
+  canvas.style.height = rect.height + 'px';
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  return { w: rect.width, h: rect.height, ctx, dpr };
+}
+
+/* ═══════════════════════════════════════════
+   NAV DOTS
+   ═══════════════════════════════════════════ */
+const sections = document.querySelectorAll('.section');
+const navDots = document.getElementById('nav-dots');
+sections.forEach((sec, i) => {
+  const dot = document.createElement('div');
+  dot.className = 'nav-dot';
+  dot.dataset.label = sec.dataset.nav || '';
+  dot.addEventListener('click', () => sec.scrollIntoView({ behavior:'smooth' }));
+  navDots.appendChild(dot);
+});
+const dots = navDots.querySelectorAll('.nav-dot');
+
+const navObserver = new IntersectionObserver(entries => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      const idx = [...sections].indexOf(entry.target);
+      dots.forEach((d,i) => d.classList.toggle('active', i === idx));
+    }
+  });
+}, { threshold: 0.3 });
+sections.forEach(sec => navObserver.observe(sec));
+
+/* ═══════════════════════════════════════════
+   SECTION REVEAL (Intersection Observer)
+   ═══════════════════════════════════════════ */
+const revealObserver = new IntersectionObserver(entries => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) entry.target.classList.add('visible');
+  });
+}, { threshold: 0.15 });
+document.querySelectorAll('.section-reveal').forEach(el => revealObserver.observe(el));
+
+/* ═══════════════════════════════════════════
+   SECTION 1 — HERO: Neural Network Canvas
+   ═══════════════════════════════════════════ */
+(function heroInit() {
+  const canvas = document.getElementById('hero-canvas');
+  let { w, h, ctx } = resizeCanvas(canvas);
+  const nodes = [];
+  const NODE_COUNT = 80;
+  for (let i = 0; i < NODE_COUNT; i++) {
+    nodes.push({
+      x: rand(0, w), y: rand(0, h),
+      vx: rand(-0.3, 0.3), vy: rand(-0.3, 0.3),
+      r: rand(2, 5), phase: rand(0, Math.PI * 2)
+    });
+  }
+
+  function draw(t) {
+    ctx.clearRect(0, 0, w, h);
+    // Update
+    nodes.forEach(n => {
+      n.x += n.vx; n.y += n.vy;
+      if (n.x < 0 || n.x > w) n.vx *= -1;
+      if (n.y < 0 || n.y > h) n.vy *= -1;
+      n.x = clamp(n.x, 0, w);
+      n.y = clamp(n.y, 0, h);
+    });
+    // Connections
+    const maxDist = 150;
+    for (let i = 0; i < nodes.length; i++) {
+      for (let j = i + 1; j < nodes.length; j++) {
+        const d = dist(nodes[i].x, nodes[i].y, nodes[j].x, nodes[j].y);
+        if (d < maxDist) {
+          const alpha = (1 - d / maxDist) * 0.25;
+          const shimmer = 0.5 + 0.5 * Math.sin(t * 0.002 + i + j);
+          ctx.strokeStyle = `rgba(0,240,255,${alpha * shimmer})`;
+          ctx.lineWidth = 0.5;
+          ctx.beginPath();
+          ctx.moveTo(nodes[i].x, nodes[i].y);
+          ctx.lineTo(nodes[j].x, nodes[j].y);
+          ctx.stroke();
+        }
+      }
+    }
+    // Nodes
+    nodes.forEach(n => {
+      const pulse = 0.6 + 0.4 * Math.sin(t * 0.003 + n.phase);
+      const glow = n.r * 3 * pulse;
+      const grad = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, glow);
+      grad.addColorStop(0, `rgba(0,240,255,${0.8 * pulse})`);
+      grad.addColorStop(1, 'rgba(0,240,255,0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, glow, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = `rgba(0,240,255,${0.9 * pulse})`;
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, n.r * pulse, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
+
+  window.addEventListener('resize', () => { ({ w, h, ctx } = resizeCanvas(canvas)); });
+
+  // Orb mouse reaction
+  const orb = document.getElementById('hero-orb');
+  document.addEventListener('mousemove', e => {
+    const rect = document.getElementById('hero').getBoundingClientRect();
+    if (e.clientY < rect.top || e.clientY > rect.bottom) return;
+    const dx = (e.clientX - w / 2) * 0.03;
+    const dy = (e.clientY - rect.top - h / 2) * 0.03;
+    orb.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(${1 + Math.abs(dx + dy) * 0.002})`;
+  });
+
+  // Typing effect
+  const title = document.getElementById('hero-title');
+  const text = 'STOIC AgentOS';
+  text.split('').forEach((ch, i) => {
+    const span = document.createElement('span');
+    span.className = 'char';
+    span.textContent = ch === ' ' ? '\u00A0' : ch;
+    title.appendChild(span);
+    setTimeout(() => span.classList.add('show'), 400 + i * 80);
+  });
+  setTimeout(() => document.getElementById('hero-subtitle').classList.add('show'), 400 + text.length * 80 + 200);
+})();
+
+/* ═══════════════════════════════════════════
+   SECTION 2 — PROBLEM: Dead Grid
+   ═══════════════════════════════════════════ */
+(function problemInit() {
+  const grid = document.getElementById('dead-grid');
+  for (let i = 0; i < 48; i++) {
+    const el = document.createElement('div');
+    el.className = 'dead-slide';
+    el.style.setProperty('--r', rand(-8, 8) + 'deg');
+    el.dataset.idx = i;
+    grid.appendChild(el);
+  }
+  const slides = grid.querySelectorAll('.dead-slide');
+
+  const obs = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      slides.forEach((s, i) => {
+        setTimeout(() => s.classList.add('crack'), i * 30);
+        setTimeout(() => { s.classList.remove('crack'); s.classList.add('glow'); }, 1500 + i * 40);
+      });
+      // Counter
+      animateCounter(document.getElementById('counter-slides'), 0, 2.5, 2000, 1, 'B');
+      obs.unobserve(entry.target);
+    });
+  }, { threshold: 0.3 });
+  obs.observe(document.getElementById('problem'));
+})();
+
+function animateCounter(el, from, to, duration, decimals = 0, suffix = '') {
+  const start = performance.now();
+  function update(now) {
+    const t = clamp((now - start) / duration, 0, 1);
+    const eased = 1 - Math.pow(1 - t, 3);
+    const val = lerp(from, to, eased);
+    el.textContent = val.toFixed(decimals) + ' ' + suffix;
+    if (t < 1) requestAnimationFrame(update);
+  }
+  requestAnimationFrame(update);
+}
+
+/* ═══════════════════════════════════════════
+   SECTION 3 — VISION: Particle Morphing
+   ═══════════════════════════════════════════ */
+(function visionInit() {
+  const canvas = document.getElementById('vision-canvas');
+  let { w, h, ctx } = resizeCanvas(canvas);
+  const particles = [];
+  const COUNT = 200;
+  for (let i = 0; i < COUNT; i++) {
+    particles.push({
+      x: rand(0, w), y: rand(0, h),
+      vx: rand(-0.5, 0.5), vy: rand(-0.5, 0.5),
+      r: rand(1, 3), hue: rand(160, 320), phase: rand(0, Math.PI * 2)
+    });
+  }
+
+  function draw(t) {
+    ctx.clearRect(0, 0, w, h);
+    const cx = w / 2 + Math.sin(t * 0.0005) * 100;
+    const cy = h / 2 + Math.cos(t * 0.0007) * 80;
+    particles.forEach(p => {
+      // Organic attraction toward center
+      const dx = cx - p.x, dy = cy - p.y;
+      const d = Math.sqrt(dx * dx + dy * dy) || 1;
+      const force = 0.02;
+      p.vx += (dx / d) * force + Math.sin(t * 0.001 + p.phase) * 0.02;
+      p.vy += (dy / d) * force + Math.cos(t * 0.001 + p.phase) * 0.02;
+      p.vx *= 0.98; p.vy *= 0.98;
+      p.x += p.vx; p.y += p.vy;
+      if (p.x < 0) p.x = w; if (p.x > w) p.x = 0;
+      if (p.y < 0) p.y = h; if (p.y > h) p.y = 0;
+      const pulse = 0.5 + 0.5 * Math.sin(t * 0.002 + p.phase);
+      ctx.fillStyle = `hsla(${p.hue + Math.sin(t * 0.001) * 30},100%,60%,${0.4 * pulse})`;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r * (1 + pulse * 0.5), 0, Math.PI * 2);
+      ctx.fill();
+    });
+    requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
+  window.addEventListener('resize', () => { ({ w, h, ctx } = resizeCanvas(canvas)); });
+
+  // Keywords reveal
+  const kwObs = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      document.querySelectorAll('.vision-kw').forEach((kw, i) => {
+        setTimeout(() => kw.classList.add('show'), parseInt(kw.dataset.delay) + i * 150);
+      });
+      kwObs.unobserve(entry.target);
+    });
+  }, { threshold: 0.3 });
+  kwObs.observe(document.getElementById('vision'));
+})();
+
+/* ═══════════════════════════════════════════
+   SECTION 4 — ANATOMY: Layer Reveal
+   ═══════════════════════════════════════════ */
+(function anatomyInit() {
+  const obs = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      document.querySelectorAll('.anatomy-layer').forEach((layer, i) => {
+        setTimeout(() => layer.classList.add('show'), parseInt(layer.dataset.delay) + i * 120);
+      });
+      obs.unobserve(entry.target);
+    });
+  }, { threshold: 0.2 });
+  obs.observe(document.getElementById('anatomy'));
+})();
+
+/* ═══════════════════════════════════════════
+   SECTION 5 — FLEET: Agent Cards
+   ═══════════════════════════════════════════ */
+(function fleetInit() {
+  const grid = document.getElementById('fleet-grid');
+  const agents = [
+    { name:'content-writer-01', status:'active', task:'Generating blog post #4721 for StoicCRM campaign', progress:87, color:'#00ff88' },
+    { name:'lead-scorer-03', status:'processing', task:'Scoring 12K inbound leads from LinkedIn pipeline', progress:54, color:'#00f0ff' },
+    { name:'fetok-renderer-07', status:'active', task:'FFmpeg pipeline: rendering TikTok clip #892', progress:92, color:'#00ff88' },
+    { name:'memory-engine-12', status:'idle', task:'Awaiting new knowledge graph sync...', progress:0, color:'#ffaa00' },
+    { name:'tts-narrator-05', status:'processing', task:'Text-to-speech: stoic philosophy episode 47', progress:31, color:'#00f0ff' },
+    { name:'heartbeat-monitor', status:'error', task:'Agent crm-syncer-09 missed 3 heartbeats', progress:12, color:'#ff4444' },
+    { name:'knowledge-graph-22', status:'active', task:'Building entity relations from Command Center data', progress:68, color:'#00ff88' },
+    { name:'deploy-watcher-15', status:'active', task:'Monitoring Vercel deploy: stoic-agentos@3.2.1', progress:95, color:'#00ff88' },
+  ];
+  agents.forEach((a, i) => {
+    const card = document.createElement('div');
+    card.className = 'agent-card';
+    card.style.transitionDelay = (i * 0.1) + 's';
+    card.innerHTML = `
+      <div class="agent-status"><div class="status-dot ${a.status}"></div><span class="mono" style="font-size:.7rem;color:#ffffff88;text-transform:uppercase">${a.status}</span></div>
+      <div class="agent-name">${a.name}</div>
+      <div class="agent-task">${a.task}</div>
+      <div class="agent-bar"><div class="agent-bar-fill" style="width:0%;background:${a.color}"></div></div>
+    `;
+    grid.appendChild(card);
+  });
+
+  const obs = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      document.querySelectorAll('.agent-card').forEach((card, i) => {
+        setTimeout(() => {
+          card.classList.add('show');
+          const fill = card.querySelector('.agent-bar-fill');
+          fill.style.width = agents[i].progress + '%';
+        }, i * 100);
+      });
+      // Metrics
+      document.querySelectorAll('.fleet-metric-val').forEach(el => {
+        const to = parseFloat(el.dataset.count);
+        const suffix = el.dataset.suffix || '';
+        const dec = parseInt(el.dataset.decimals) || 0;
+        animateCounter(el, 0, to, 2000, dec, suffix);
+      });
+      obs.unobserve(entry.target);
+    });
+  }, { threshold: 0.2 });
+  obs.observe(document.getElementById('fleet'));
+})();
+
+/* ═══════════════════════════════════════════
+   SECTION 6 — NEURAL MESH: Boids
+   ═══════════════════════════════════════════ */
+(function meshInit() {
+  const canvas = document.getElementById('mesh-canvas');
+  let { w, h, ctx } = resizeCanvas(canvas);
+  const boids = [];
+  const COUNT = 180;
+  for (let i = 0; i < COUNT; i++) {
+    boids.push({
+      x: rand(0, w), y: rand(0, h),
+      vx: rand(-1, 1), vy: rand(-1, 1)
+    });
+  }
+  const maxSpeed = 1.8, maxDist = 120, mouseRadius = 150;
+
+  function draw(t) {
+    ctx.clearRect(0, 0, w, h);
+    const meshRect = canvas.parentElement.getBoundingClientRect();
+    const mx = mouse.x - meshRect.left;
+    const my = mouse.y - meshRect.top;
+
+    boids.forEach(b => {
+      let sx = 0, sy = 0, ax = 0, ay = 0, cx = 0, cy = 0;
+      let sc = 0, ac = 0, cc = 0;
+      boids.forEach(o => {
+        if (o === b) return;
+        const d = dist(b.x, b.y, o.x, o.y);
+        if (d < 30) { sx += b.x - o.x; sy += b.y - o.y; sc++; }
+        if (d < 60) { ax += o.vx; ay += o.vy; ac++; }
+        if (d < maxDist) { cx += o.x; cy += o.y; cc++; }
+      });
+      if (sc > 0) { b.vx += sx / sc * 0.05; b.vy += sy / sc * 0.05; }
+      if (ac > 0) { b.vx += (ax / ac - b.vx) * 0.02; b.vy += (ay / ac - b.vy) * 0.02; }
+      if (cc > 0) { b.vx += (cx / cc - b.x) * 0.001; b.vy += (cy / cc - b.y) * 0.001; }
+
+      // Mouse scatter
+      const md = dist(b.x, b.y, mx, my);
+      if (md < mouseRadius && md > 0) {
+        b.vx += (b.x - mx) / md * 2;
+        b.vy += (b.y - my) / md * 2;
+      }
+
+      const speed = Math.sqrt(b.vx ** 2 + b.vy ** 2);
+      if (speed > maxSpeed) { b.vx = b.vx / speed * maxSpeed; b.vy = b.vy / speed * maxSpeed; }
+      b.x += b.vx; b.y += b.vy;
+      if (b.x < 0) b.x = w; if (b.x > w) b.x = 0;
+      if (b.y < 0) b.y = h; if (b.y > h) b.y = 0;
+    });
+
+    // Lines
+    for (let i = 0; i < boids.length; i++) {
+      for (let j = i + 1; j < boids.length; j++) {
+        const d = dist(boids[i].x, boids[i].y, boids[j].x, boids[j].y);
+        if (d < maxDist) {
+          const alpha = (1 - d / maxDist) * 0.2;
+          ctx.strokeStyle = `rgba(0,240,255,${alpha})`;
+          ctx.lineWidth = 0.5;
+          ctx.beginPath();
+          ctx.moveTo(boids[i].x, boids[i].y);
+          ctx.lineTo(boids[j].x, boids[j].y);
+          ctx.stroke();
+        }
+      }
+    }
+    // Dots
+    boids.forEach(b => {
+      ctx.fillStyle = 'rgba(0,240,255,0.7)';
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, 2, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
+  window.addEventListener('resize', () => { ({ w, h, ctx } = resizeCanvas(canvas)); });
+})();
+
+/* ═══════════════════════════════════════════
+   SECTION 7 — DATA: Charts
+   ═══════════════════════════════════════════ */
+(function dataInit() {
+  // Bar chart
+  const barData = [
+    { label:'CRM', value:65, color:'#00f0ff' },
+    { label:'Fetok', value:82, color:'#ff00aa' },
+    { label:'CMD', value:45, color:'#00ff88' },
+    { label:'SDK', value:93, color:'#ffaa00' },
+    { label:'n8n', value:71, color:'#aa66ff' },
+    { label:'API', value:88, color:'#00f0ff' },
+  ];
+  const barChart = document.getElementById('bar-chart');
+  barData.forEach(d => {
+    const col = document.createElement('div');
+    col.className = 'bar-col';
+    col.innerHTML = `<div class="bar" style="background:${d.color};height:0;box-shadow:0 0 15px ${d.color}44" data-h="${d.value * 1.8}"></div><div class="bar-label">${d.label}</div>`;
+    barChart.appendChild(col);
+  });
+
+  // Radial chart
+  const radialCanvas = document.getElementById('radial-canvas');
+  const rctx = radialCanvas.getContext('2d');
+  let radialProgress = 0;
+  let radialTarget = 0;
+
+  function drawRadial() {
+    radialProgress += (radialTarget - radialProgress) * 0.03;
+    const cw = 200, ch = 200, r = 75, lw = 12;
+    rctx.clearRect(0, 0, cw, ch);
+    // Background ring
+    rctx.strokeStyle = '#ffffff11';
+    rctx.lineWidth = lw;
+    rctx.lineCap = 'round';
+    rctx.beginPath();
+    rctx.arc(cw/2, ch/2, r, 0, Math.PI * 2);
+    rctx.stroke();
+    // Progress ring
+    const grad = rctx.createLinearGradient(0, 0, cw, ch);
+    grad.addColorStop(0, '#00f0ff');
+    grad.addColorStop(0.5, '#ff00aa');
+    grad.addColorStop(1, '#00ff88');
+    rctx.strokeStyle = grad;
+    rctx.lineWidth = lw;
+    rctx.lineCap = 'round';
+    rctx.beginPath();
+    rctx.arc(cw/2, ch/2, r, -Math.PI/2, -Math.PI/2 + (Math.PI * 2 * radialProgress / 100));
+    rctx.stroke();
+    // Glow
+    rctx.shadowColor = '#00f0ff';
+    rctx.shadowBlur = 15;
+    rctx.strokeStyle = 'rgba(0,240,255,0.3)';
+    rctx.lineWidth = lw + 4;
+    rctx.beginPath();
+    rctx.arc(cw/2, ch/2, r, -Math.PI/2, -Math.PI/2 + (Math.PI * 2 * radialProgress / 100));
+    rctx.stroke();
+    rctx.shadowBlur = 0;
+    document.getElementById('radial-val').textContent = Math.round(radialProgress) + '%';
+    if (Math.abs(radialProgress - radialTarget) > 0.5) requestAnimationFrame(drawRadial);
+  }
+
+  const dataObs = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      // Animate bars with spring
+      document.querySelectorAll('.bar').forEach((bar, i) => {
+        setTimeout(() => { bar.style.height = bar.dataset.h + 'px'; }, i * 150);
+      });
+      // Animate radial
+      radialTarget = 87;
+      requestAnimationFrame(drawRadial);
+      dataObs.unobserve(entry.target);
+    });
+  }, { threshold: 0.3 });
+  dataObs.observe(document.getElementById('data'));
+})();
+
+/* ═══════════════════════════════════════════
+   SECTION 8 — PERFORMANCE: Matrix Rain
+   ═══════════════════════════════════════════ */
+(function matrixInit() {
+  const canvas = document.getElementById('matrix-canvas');
+  let { w, h, ctx } = resizeCanvas(canvas);
+  const fontSize = 14;
+  const cols = Math.floor(w / fontSize);
+  const drops = new Array(cols).fill(1);
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@#$%^&*(){}[]|;:<>?/~`±§∞≈≠∑∏∂∫'.split('');
+
+  function draw() {
+    ctx.fillStyle = 'rgba(10,10,15,0.05)';
+    ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = '#00f0ff';
+    ctx.font = fontSize + 'px JetBrains Mono, monospace';
+    for (let i = 0; i < drops.length; i++) {
+      const char = chars[Math.floor(Math.random() * chars.length)];
+      ctx.fillStyle = `rgba(0,240,255,${rand(0.1, 0.4)})`;
+      ctx.fillText(char, i * fontSize, drops[i] * fontSize);
+      if (drops[i] * fontSize > h && Math.random() > 0.975) drops[i] = 0;
+      drops[i]++;
+    }
+    requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
+  window.addEventListener('resize', () => {
+    ({ w, h, ctx } = resizeCanvas(canvas));
+    drops.length = Math.floor(w / fontSize);
+    for (let i = 0; i < drops.length; i++) if (!drops[i]) drops[i] = 1;
+  });
+
+  // Performance counters
+  const perfObs = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      document.querySelectorAll('.perf-val').forEach((el, i) => {
+        const target = el.dataset.perf;
+        setTimeout(() => { el.textContent = target; el.style.animation = 'glowPulse 2s ease-in-out infinite'; }, i * 300);
+      });
+      perfObs.unobserve(entry.target);
+    });
+  }, { threshold: 0.3 });
+  perfObs.observe(document.getElementById('performance'));
+})();
+
+/* ═══════════════════════════════════════════
+   SECTION 9 — ARCHITECTURE: Stack Reveal
+   ═══════════════════════════════════════════ */
+(function archInit() {
+  const obs = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      document.querySelectorAll('.stack-layer').forEach((layer, i) => {
+        setTimeout(() => layer.classList.add('show'), i * 200);
+      });
+      obs.unobserve(entry.target);
+    });
+  }, { threshold: 0.2 });
+  obs.observe(document.getElementById('architecture'));
+})();
+
+/* ═══════════════════════════════════════════
+   SECTION 10 — TIMELINE: Progressive Reveal
+   ═══════════════════════════════════════════ */
+(function timelineInit() {
+  const fill = document.getElementById('timeline-fill');
+  const items = document.querySelectorAll('.timeline-item');
+  const obs = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      items.forEach((item, i) => {
+        setTimeout(() => {
+          item.classList.add('active');
+          item.querySelector('.timeline-dot').classList.add('active');
+          fill.style.width = ((i + 1) / items.length * 100) + '%';
+        }, i * 500);
+      });
+      obs.unobserve(entry.target);
+    });
+  }, { threshold: 0.3 });
+  obs.observe(document.getElementById('timeline'));
+})();
+
+/* ═══════════════════════════════════════════
+   SECTION 11 — FUTURE: Dissolve & Bloom
+   ═══════════════════════════════════════════ */
+(function futureInit() {
+  // Mini particle canvas for the "new" side
+  const fCanvas = document.getElementById('future-canvas');
+  const fCtx = fCanvas.getContext('2d');
+  const fw = 400, fh = 200;
+  fCanvas.width = fw; fCanvas.height = fh;
+  const fParticles = [];
+  for (let i = 0; i < 60; i++) {
+    fParticles.push({
+      x: rand(0, fw), y: rand(0, fh),
+      vx: rand(-0.5, 0.5), vy: rand(-0.5, 0.5),
+      r: rand(1, 3), hue: rand(160, 200)
+    });
+  }
+
+  function drawFuture(t) {
+    fCtx.clearRect(0, 0, fw, fh);
+    fParticles.forEach(p => {
+      p.x += p.vx; p.y += p.vy;
+      if (p.x < 0 || p.x > fw) p.vx *= -1;
+      if (p.y < 0 || p.y > fh) p.vy *= -1;
+      const pulse = 0.5 + 0.5 * Math.sin(t * 0.003 + p.hue);
+      fCtx.fillStyle = `hsla(${p.hue},100%,60%,${0.6 * pulse})`;
+      fCtx.beginPath();
+      fCtx.arc(p.x, p.y, p.r * (1 + pulse * 0.5), 0, Math.PI * 2);
+      fCtx.fill();
+    });
+    // Connections
+    for (let i = 0; i < fParticles.length; i++) {
+      for (let j = i + 1; j < fParticles.length; j++) {
+        const d = dist(fParticles[i].x, fParticles[i].y, fParticles[j].x, fParticles[j].y);
+        if (d < 80) {
+          fCtx.strokeStyle = `rgba(0,240,255,${(1 - d / 80) * 0.3})`;
+          fCtx.lineWidth = 0.5;
+          fCtx.beginPath();
+          fCtx.moveTo(fParticles[i].x, fParticles[i].y);
+          fCtx.lineTo(fParticles[j].x, fParticles[j].y);
+          fCtx.stroke();
+        }
+      }
+    }
+    requestAnimationFrame(drawFuture);
+  }
+  requestAnimationFrame(drawFuture);
+
+  const obs = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      setTimeout(() => document.getElementById('future-old').classList.add('dissolve'), 500);
+      setTimeout(() => document.getElementById('future-new').classList.add('bloom'), 800);
+      obs.unobserve(entry.target);
+    });
+  }, { threshold: 0.3 });
+  obs.observe(document.getElementById('future'));
+})();
+
+/* ═══════════════════════════════════════════
+   SECTION 12 — CTA: Galaxy Swirl
+   ═══════════════════════════════════════════ */
+(function galaxyInit() {
+  const canvas = document.getElementById('galaxy-canvas');
+  let { w, h, ctx } = resizeCanvas(canvas);
+  const stars = [];
+  const COUNT = 400;
+  for (let i = 0; i < COUNT; i++) {
+    const angle = rand(0, Math.PI * 2);
+    const radius = rand(20, Math.min(w, h) * 0.45);
+    stars.push({
+      angle, radius,
+      speed: rand(0.0003, 0.002) * (1 + (300 - Math.min(radius, 300)) / 300),
+      size: rand(0.5, 2.5),
+      hue: rand(160, 320),
+      brightness: rand(0.3, 1)
+    });
+  }
+
+  function draw(t) {
+    ctx.fillStyle = 'rgba(10,10,15,0.08)';
+    ctx.fillRect(0, 0, w, h);
+    const cx = w / 2, cy = h / 2;
+    stars.forEach(s => {
+      s.angle += s.speed;
+      const wobble = Math.sin(t * 0.001 + s.angle * 3) * 5;
+      const x = cx + Math.cos(s.angle) * (s.radius + wobble);
+      const y = cy + Math.sin(s.angle) * (s.radius + wobble) * 0.6; // elliptical
+      const pulse = 0.6 + 0.4 * Math.sin(t * 0.002 + s.angle);
+      ctx.fillStyle = `hsla(${s.hue + Math.sin(t * 0.0005) * 20},100%,70%,${s.brightness * pulse})`;
+      ctx.beginPath();
+      ctx.arc(x, y, s.size * pulse, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
+  window.addEventListener('resize', () => { ({ w, h, ctx } = resizeCanvas(canvas)); });
+})();
+
+/* ═══════════════════════════════════════════
+   PERFORMANCE: Only animate visible canvases
+   ═══════════════════════════════════════════ */
+// For simplicity and to ensure smoothness, all canvases
+// run but use lightweight draw calls. On lower-end devices,
+// the canvas clear + minimal draw is still performant.
+
+console.log('%c🧠 Stoic AgentOS', 'font-size:24px;font-weight:bold;color:#00f0ff;text-shadow:0 0 20px #00f0ff;');
+console.log('%cThe Operating System for AI Agent Fleets', 'font-size:12px;color:#ffffff88;');
+console.log('%c▲ Vercel · ◈ Supabase · 🚂 Railway · ⦿ n8n', 'font-size:11px;color:#00ff88;');
+</script>
+</body>
+</html>

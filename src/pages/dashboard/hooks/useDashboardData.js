@@ -35,8 +35,14 @@ export function useDashboardData(org) {
         setStats(s);
         setUsage({ count: s.observations || 0, limit: s.observationLimit || 10000 });
       }
-      if (tracesRes.status === 'fulfilled' && tracesRes.value.ok) setTraces(await tracesRes.value.json());
-      if (traceStatsRes.status === 'fulfilled' && traceStatsRes.value.ok) setTraceStats(await traceStatsRes.value.json());
+      if (tracesRes.status === 'fulfilled' && tracesRes.value.ok) {
+        const r = await tracesRes.value.json();
+        setTraces(Array.isArray(r) ? r : (r.data || []));
+      }
+      if (traceStatsRes.status === 'fulfilled' && traceStatsRes.value.ok) {
+        const ts = await traceStatsRes.value.json();
+        setTraceStats(ts?.stats || ts || null);
+      }
     } catch (err) {
       console.error('Failed to fetch dashboard data:', err);
     }

@@ -1,0 +1,9 @@
+# Backend API runs on Railway, not Vercel
+api/
+mcp-server/
+scripts/
+sdk/
+supabase/
+*.md
+*.sql
+Dockerfile
