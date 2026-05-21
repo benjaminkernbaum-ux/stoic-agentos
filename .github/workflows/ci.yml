@@ -105,3 +105,52 @@ jobs:
           temporaryPublicStorage: true
           configPath: '.lighthouserc.json'
 
+  migrate-lint:
+    name: Validate SQL Migrations
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_migrations
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate migration SQL syntax
+        env:
+          PGPASSWORD: postgres
+        run: |
+          echo "══ Validating SQL migration files ══"
+          ERRORS=0
+          for f in api/supabase/*.sql api/migrations/*.sql; do
+            if [ -f "$f" ]; then
+              echo "  Checking: $f"
+              # Use PostgreSQL to parse-check each file (dry-run)
+              if ! psql -h localhost -U postgres -d test_migrations -f "$f" --set ON_ERROR_STOP=1 2>&1; then
+                echo "  ❌ FAILED: $f"
+                ERRORS=$((ERRORS + 1))
+              else
+                echo "  ✅ OK: $f"
+              fi
+            fi
+          done
+          if [ $ERRORS -gt 0 ]; then
+            echo "❌ $ERRORS migration(s) failed validation"
+            exit 1
+          fi
+          echo "✅ All migrations valid"
+      - name: List migration inventory
+        run: |
+          echo "══ Migration Inventory ══"
+          echo "--- api/supabase/ ---"
+          ls -la api/supabase/*.sql 2>/dev/null || echo "  (none)"
+          echo "--- api/migrations/ ---"
+          ls -la api/migrations/*.sql 2>/dev/null || echo "  (none)"
+
