@@ -1,6 +1,217 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { BRAIN_FILTERS, TYPE_ICONS } from '../constants';
 import { supabase, API_BASE } from '../../../lib/supabase';
+
+// ── Hot Cache Panel (LLM Wiki pattern from claude-obsidian) ──
+function HotCachePanel() {
+  const [cache, setCache] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const [error, setError] = useState(null);
+
+  const getToken = async () =>
+    (await supabase.auth.getSession()).data.session?.access_token;
+
+  const fetchCache = async () => {
+    const token = await getToken();
+    if (!token) { setLoading(false); return; }
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/insights/hot-cache`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const body = await res.json();
+      if (res.ok) setCache(body);
+      else setError(body.error);
+    } catch (e) {
+      setError(e.message);
+    }
+    setLoading(false);
+  };
+
+  const refreshCache = async () => {
+    setRefreshing(true);
+    setError(null);
+    const token = await getToken();
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/insights/hot-cache/refresh`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      });
+      const body = await res.json();
+      if (res.ok) {
+        setCache(body);
+        setExpanded(true);
+      } else {
+        setError(body.error || `HTTP ${res.status}`);
+      }
+    } catch (e) {
+      setError(e.message);
+    }
+    setRefreshing(false);
+  };
+
+  useEffect(() => { fetchCache(); }, []);
+
+  // Relative time helper
+  const timeAgo = (iso) => {
+    if (!iso) return 'never';
+    const ms = Date.now() - new Date(iso).getTime();
+    const mins = Math.floor(ms / 60000);
+    if (mins < 1) return 'just now';
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    const days = Math.floor(hrs / 24);
+    return `${days}d ago`;
+  };
+
+  if (loading) return null;
+  if (cache?.status === 'unavailable') return null;
+
+  const isFresh = cache?.status === 'fresh';
+  const isStale = cache?.status === 'stale';
+  const isEmpty = cache?.status === 'empty' || !cache?.hot_cache;
+  const hasContent = cache?.hot_cache && cache.hot_cache.length > 0;
+
+  return (
+    <div
+      className="dash-panel"
+      style={{
+        marginBottom: 16,
+        borderLeft: `2px solid ${isFresh ? 'var(--accent-green)' : isStale ? 'var(--accent-orange)' : 'var(--border-glow)'}`,
+        transition: 'border-color 0.3s',
+      }}
+    >
+      {/* Header */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          cursor: hasContent ? 'pointer' : 'default',
+          padding: hasContent && expanded ? '0 0 12px 0' : 0,
+        }}
+        onClick={() => hasContent && setExpanded(!expanded)}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span style={{ fontSize: 18, filter: 'drop-shadow(0 0 6px rgba(0,230,138,0.3))' }}>⚡</span>
+          <div>
+            <div style={{ fontWeight: 600, fontSize: 13, display: 'flex', alignItems: 'center', gap: 8 }}>
+              Hot Cache
+              {/* Status badge */}
+              {hasContent && (
+                <span
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 600,
+                    padding: '2px 8px',
+                    borderRadius: 99,
+                    background: isFresh
+                      ? 'rgba(0,230,138,0.12)'
+                      : 'rgba(255,159,67,0.12)',
+                    color: isFresh ? 'var(--accent-green)' : 'var(--accent-orange)',
+                    border: `1px solid ${isFresh ? 'rgba(0,230,138,0.25)' : 'rgba(255,159,67,0.25)'}`,
+                    animation: isStale ? 'pulse-dot 2s infinite' : 'none',
+                  }}
+                >
+                  {isFresh ? '● Fresh' : '● Stale'}
+                </span>
+              )}
+            </div>
+            <div style={{ fontSize: 11, opacity: 0.55 }}>
+              {hasContent
+                ? `${cache.word_count} words · Updated ${timeAgo(cache.updated_at)}`
+                : 'Pre-synthesized context for instant insights'}
+            </div>
+          </div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {hasContent && (
+            <button
+              onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'var(--text-secondary)',
+                cursor: 'pointer',
+                fontSize: 12,
+                opacity: 0.6,
+                transition: 'opacity 0.15s',
+              }}
+            >
+              {expanded ? '▲' : '▼'}
+            </button>
+          )}
+          <button
+            className="btn btn-sm"
+            onClick={(e) => { e.stopPropagation(); refreshCache(); }}
+            disabled={refreshing}
+            style={{
+              background: refreshing ? 'rgba(155,89,255,0.08)' : 'rgba(0,230,138,0.08)',
+              border: `1px solid ${refreshing ? 'rgba(155,89,255,0.2)' : 'rgba(0,230,138,0.2)'}`,
+              color: refreshing ? 'var(--accent-purple)' : 'var(--accent-green)',
+              transition: 'all 0.2s',
+            }}
+          >
+            {refreshing ? (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ display: 'inline-block', width: 12, height: 12, border: '2px solid rgba(155,89,255,0.3)', borderTopColor: 'var(--accent-purple)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                Synthesizing...
+              </span>
+            ) : (
+              isEmpty ? '⚡ Generate' : '↻ Refresh'
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* Error */}
+      {error && (
+        <div style={{ color: '#ff4757', fontSize: 12, padding: '8px 12px', background: 'rgba(255,71,87,0.08)', borderRadius: 6, marginTop: 8 }}>
+          {error}
+        </div>
+      )}
+
+      {/* Expanded cache content */}
+      {expanded && hasContent && (
+        <div
+          style={{
+            fontSize: 13,
+            lineHeight: 1.75,
+            whiteSpace: 'pre-wrap',
+            color: 'rgba(255,255,255,0.82)',
+            padding: '14px 16px',
+            background: 'rgba(255,255,255,0.02)',
+            borderRadius: 8,
+            border: '1px solid var(--border)',
+            maxHeight: 400,
+            overflowY: 'auto',
+            position: 'relative',
+          }}
+        >
+          {/* Subtle gradient fade at bottom when scrollable */}
+          <div style={{
+            position: 'sticky',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: 24,
+            background: 'linear-gradient(transparent, rgba(22,22,31,0.8))',
+            pointerEvents: 'none',
+            marginTop: -24,
+          }} />
+          {cache.hot_cache}
+        </div>
+      )}
+
+      {/* Inline keyframes for spinner */}
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+      `}</style>
+    </div>
+  );
+}
 
 function InsightsPanel() {
   const [hours, setHours] = useState(168);
@@ -87,6 +298,7 @@ export default function BrainTab({ observations, brainFilter, setBrainFilter, ob
 
   return (
     <div className="dash-content">
+      <HotCachePanel />
       <InsightsPanel />
       <div className="dash-panel">
         {/* Search bar */}
