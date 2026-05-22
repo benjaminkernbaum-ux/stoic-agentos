@@ -1,6 +1,14 @@
 import AnimatedCounter from '../../../components/AnimatedCounter';
 import { STATUS_COLORS, TYPE_ICONS, CAPTURE_HINTS } from '../constants';
 
+const CAPTURE_TYPES = [
+  { value: 'note', icon: '📝', label: 'Note' },
+  { value: 'decision', icon: '🎯', label: 'Decision' },
+  { value: 'discovery', icon: '🔬', label: 'Discovery' },
+  { value: 'concept', icon: '💡', label: 'Concept' },
+  { value: 'error', icon: '⚠️', label: 'Error' },
+];
+
 export default function OverviewTab({ stats, agents, observations, liveAgents, errorAgents, usage, usagePct, planName, captureForm, setCaptureForm, captureLoading, handleCapture, handleSeedDemo, seedLoading, setShowAgentModal, setActiveTab, placeholderIdx, onCaptureRef }) {
   return (
     <div className="dash-content">
@@ -159,30 +167,51 @@ export default function OverviewTab({ stats, agents, observations, liveAgents, e
           <span className="dash-capture-terminal">~/agentos $</span>
           <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.2)', marginLeft: 'auto' }}>Quick Capture</span>
         </div>
-        <form onSubmit={handleCapture} className="dash-capture-body">
-          <select
-            value={captureForm.type}
-            onChange={e => setCaptureForm({ ...captureForm, type: e.target.value })}
-            className="dash-capture-select"
-          >
-            <option value="note">📌 Note</option>
-            <option value="decision">🧭 Decision</option>
-            <option value="architecture">🏗️ Architecture</option>
-            <option value="deployment">🚀 Deployment</option>
-            <option value="discovery">💡 Discovery</option>
-            <option value="error">❌ Error</option>
-          </select>
+        <form onSubmit={handleCapture} className="dash-capture-body" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
+            {CAPTURE_TYPES.map(ct => {
+              const isActive = captureForm.type === ct.value;
+              return (
+                <button
+                  key={ct.value}
+                  type="button"
+                  onClick={() => setCaptureForm({ ...captureForm, type: ct.value })}
+                  style={{
+                    padding: '4px 10px',
+                    fontSize: 11,
+                    borderRadius: 16,
+                    border: `1px solid ${isActive ? 'rgba(167,139,250,0.5)' : 'rgba(255,255,255,0.1)'}`,
+                    background: isActive ? 'rgba(167,139,250,0.2)' : 'transparent',
+                    color: isActive ? '#a78bfa' : 'rgba(255,255,255,0.35)',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                    lineHeight: 1.4,
+                    fontFamily: 'inherit',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 4,
+                  }}
+                >
+                  <span>{ct.icon}</span>
+                  <span>{ct.label}</span>
+                </button>
+              );
+            })}
+          </div>
+          <div style={{ display: 'flex', gap: 8, width: '100%' }}>
           <input
             type="text"
             placeholder={CAPTURE_HINTS[placeholderIdx]}
             value={captureForm.title}
             onChange={e => setCaptureForm({ ...captureForm, title: e.target.value })}
             className="dash-capture-input"
+            style={{ flex: 1 }}
             required
           />
           <button type="submit" className="dash-capture-submit" disabled={captureLoading}>
             {captureLoading ? '...' : 'Capture →'}
           </button>
+          </div>
         </form>
       </div>
     </div>

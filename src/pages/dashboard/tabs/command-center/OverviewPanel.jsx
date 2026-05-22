@@ -8,6 +8,21 @@ export default function OverviewPanel({ agents = [], workspaces = [], observatio
   const deployedAgents = agents.filter(a => a.status === 'success').length;
   const pendingAgents = agents.filter(a => a.status === 'idle' || a.status === 'paused').length;
 
+  // Vault Health metrics
+  const totalItems = observations.length + agents.length + workspaces.length;
+  const recentObs = observations.filter(o => {
+    const age = Date.now() - new Date(o.created_at).getTime();
+    return age < 7 * 24 * 60 * 60 * 1000;
+  }).length;
+  const agentsWithErrors = agents.filter(a => a.status === 'error').length;
+  const staleAgents = agents.filter(a => a.status === 'idle' && a.total_runs === 0).length;
+  const healthScore = totalItems === 0 ? 0 : Math.min(100, Math.round(
+    (recentObs > 0 ? 25 : 0) +
+    (agents.length > 0 ? 25 : 0) +
+    (workspaces.length > 0 ? 25 : 0) +
+    (agentsWithErrors === 0 ? 25 : Math.max(0, 25 - agentsWithErrors * 5))
+  ));
+
   const heroStats = [
     { label: 'WORKSPACES', value: String(workspaces.length || stats.workspaces || 0), detail: 'Connected repositories', color: colors.accentBlue },
     { label: 'AI AGENTS', value: String(agents.length || stats.agents || 0), detail: `${liveAgents} live · ${deployedAgents} deployed · ${pendingAgents} pending`, color: colors.accentGreen },
@@ -204,6 +219,186 @@ export default function OverviewPanel({ agents = [], workspaces = [], observatio
           <p>Add workspaces from the Workspaces tab to manage your repositories.</p>
         </div>
       )}
+
+      {/* Vault Health */}
+      <div style={{ ...shared.sectionHeader, marginTop: 28 }}>
+        <div style={shared.sectionTitle}>
+          🩺 Vault Health{' '}
+          <span
+            style={{
+              ...shared.badge,
+              background:
+                healthScore > 75
+                  ? 'rgba(0,230,138,0.12)'
+                  : healthScore > 50
+                  ? 'rgba(255,159,67,0.12)'
+                  : 'rgba(255,71,87,0.12)',
+              color:
+                healthScore > 75
+                  ? colors.accentGreen
+                  : healthScore > 50
+                  ? colors.accentOrange
+                  : colors.accentRed,
+            }}
+          >
+            {healthScore}%
+          </span>
+        </div>
+      </div>
+
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(4, 1fr)',
+          gap: 16,
+          marginBottom: 20,
+        }}
+      >
+        {/* Knowledge Activity */}
+        <div
+          style={{
+            ...shared.card,
+            borderRadius: 12,
+            padding: 16,
+            ...(hoveredCard === 'vh-0' ? shared.cardHover : {}),
+          }}
+          onMouseEnter={() => setHoveredCard('vh-0')}
+          onMouseLeave={() => setHoveredCard(null)}
+        >
+          <div style={{ fontSize: 22, marginBottom: 8 }}>🧠</div>
+          <div
+            style={{
+              fontSize: 28,
+              fontWeight: 800,
+              letterSpacing: -1,
+              color:
+                recentObs > 3
+                  ? colors.accentGreen
+                  : recentObs > 0
+                  ? colors.accentOrange
+                  : colors.textDim,
+            }}
+          >
+            {recentObs}
+          </div>
+          <div style={shared.label}>Knowledge Activity</div>
+          <div style={{ fontSize: 11, color: colors.textSecondary }}>
+            observations this week
+          </div>
+        </div>
+
+        {/* Agent Health */}
+        <div
+          style={{
+            ...shared.card,
+            borderRadius: 12,
+            padding: 16,
+            ...(hoveredCard === 'vh-1' ? shared.cardHover : {}),
+          }}
+          onMouseEnter={() => setHoveredCard('vh-1')}
+          onMouseLeave={() => setHoveredCard(null)}
+        >
+          <div style={{ fontSize: 22, marginBottom: 8 }}>🤖</div>
+          <div
+            style={{
+              fontSize: 28,
+              fontWeight: 800,
+              letterSpacing: -1,
+              color:
+                agentsWithErrors === 0
+                  ? colors.accentGreen
+                  : colors.accentRed,
+            }}
+          >
+            {agents.length - agentsWithErrors}/{agents.length}
+          </div>
+          <div style={shared.label}>Agent Health</div>
+          <div style={{ fontSize: 11, color: colors.textSecondary }}>
+            healthy agents
+          </div>
+        </div>
+
+        {/* Stale Items */}
+        <div
+          style={{
+            ...shared.card,
+            borderRadius: 12,
+            padding: 16,
+            ...(hoveredCard === 'vh-2' ? shared.cardHover : {}),
+          }}
+          onMouseEnter={() => setHoveredCard('vh-2')}
+          onMouseLeave={() => setHoveredCard(null)}
+        >
+          <div style={{ fontSize: 22, marginBottom: 8 }}>⚠️</div>
+          <div
+            style={{
+              fontSize: 28,
+              fontWeight: 800,
+              letterSpacing: -1,
+              color:
+                staleAgents === 0
+                  ? colors.accentGreen
+                  : colors.accentOrange,
+            }}
+          >
+            {staleAgents}
+          </div>
+          <div style={shared.label}>Stale Items</div>
+          <div style={{ fontSize: 11, color: colors.textSecondary }}>
+            idle agents with 0 runs
+          </div>
+        </div>
+
+        {/* Coverage */}
+        <div
+          style={{
+            ...shared.card,
+            borderRadius: 12,
+            padding: 16,
+            ...(hoveredCard === 'vh-3' ? shared.cardHover : {}),
+          }}
+          onMouseEnter={() => setHoveredCard('vh-3')}
+          onMouseLeave={() => setHoveredCard(null)}
+        >
+          <div style={{ fontSize: 22, marginBottom: 8 }}>📦</div>
+          <div
+            style={{
+              fontSize: 28,
+              fontWeight: 800,
+              letterSpacing: -1,
+              color: colors.accentBlue,
+            }}
+          >
+            {workspaces.length}
+          </div>
+          <div style={shared.label}>Coverage</div>
+          <div style={{ fontSize: 11, color: colors.textSecondary }}>
+            workspaces covered
+          </div>
+        </div>
+      </div>
+
+      {/* Health Score Progress Bar */}
+      <div
+        style={{
+          width: '100%',
+          height: 6,
+          borderRadius: 3,
+          background: colors.border,
+          overflow: 'hidden',
+          marginBottom: 28,
+        }}
+      >
+        <div
+          style={{
+            width: `${healthScore}%`,
+            height: '100%',
+            borderRadius: 3,
+            background: colors.accentPurple,
+            transition: 'width 0.6s ease',
+          }}
+        />
+      </div>
     </div>
   );
 }
