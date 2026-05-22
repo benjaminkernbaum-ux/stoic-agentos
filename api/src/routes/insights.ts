@@ -4,6 +4,9 @@
  * POST /insights/summarize         — summarize recent observations
  * POST /insights/analyze-agent     — diagnose an agent's recent runs
  * POST /insights/ask               — free-form Q&A grounded in org data
+ * GET  /insights/usage             — token usage dashboard
+ * GET  /insights/hot-cache         — read the org's hot cache
+ * POST /insights/hot-cache/refresh — regenerate the org's hot cache
  */
 
 import { Router } from 'express';
@@ -160,32 +163,52 @@ router.post(`/api/${API_VERSION}/insights/analyze-agent`, authenticate, async (r
   }
 });
 
-// ── Free-form ask ──
+// ── Free-form ask (hot-cache-first) ──
 router.post(`/api/${API_VERSION}/insights/ask`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     if (!hasAnthropic(req.org)) {
       return res.status(402).json({ error: 'No Anthropic API key configured' });
     }
 
-    const { question, model = 'fast' } = req.body;
+    const { question, model = 'fast', force_fresh = false } = req.body;
     if (!question) return res.status(400).json({ error: 'question required' });
 
-    const [{ count: agentCount }, { count: wsCount }, { data: recent }] = await Promise.all([
-      supabase!.from('agents').select('*', { count: 'exact', head: true }).eq('org_id', req.org.id),
-      supabase!.from('workspaces').select('*', { count: 'exact', head: true }).eq('org_id', req.org.id),
-      supabase!
-        .from('observations')
-        .select('type,title,created_at')
-        .eq('org_id', req.org.id)
-        .order('created_at', { ascending: false })
-        .limit(20),
-    ]);
+    // Hot cache path: use the pre-synthesized summary when fresh
+    const cacheUsable = !force_fresh
+      && typeof req.org.hot_cache === 'string'
+      && req.org.hot_cache.length > 0
+      && req.org.hot_cache_stale === false;
 
-    const context =
-      `Organization: ${req.org.name} (plan: ${req.org.plan})\n` +
-      `Agents: ${agentCount}, Workspaces: ${wsCount}\n\n` +
-      `Last 20 observations:\n` +
-      (recent || []).map((o: Record<string, unknown>) => `- [${o.type}] ${o.title}`).join('\n');
+    let context: string;
+    let contextSource: 'hot_cache' | 'live';
+
+    if (cacheUsable) {
+      // Fast path — read from the org's hot cache (~500 words vs 20 obs)
+      context =
+        `Organization: ${req.org.name} (plan: ${req.org.plan})\n\n` +
+        `=== Hot Cache (synthesized summary) ===\n${req.org.hot_cache}\n` +
+        `=== Last refreshed: ${req.org.hot_cache_updated_at || 'unknown'} ===`;
+      contextSource = 'hot_cache';
+    } else {
+      // Fallback — live-fetch observations (original behavior)
+      const [{ count: agentCount }, { count: wsCount }, { data: recent }] = await Promise.all([
+        supabase!.from('agents').select('*', { count: 'exact', head: true }).eq('org_id', req.org.id),
+        supabase!.from('workspaces').select('*', { count: 'exact', head: true }).eq('org_id', req.org.id),
+        supabase!
+          .from('observations')
+          .select('type,title,created_at')
+          .eq('org_id', req.org.id)
+          .order('created_at', { ascending: false })
+          .limit(20),
+      ]);
+
+      context =
+        `Organization: ${req.org.name} (plan: ${req.org.plan})\n` +
+        `Agents: ${agentCount}, Workspaces: ${wsCount}\n\n` +
+        `Last 20 observations:\n` +
+        (recent || []).map((o: Record<string, unknown>) => `- [${o.type}] ${o.title}`).join('\n');
+      contextSource = 'live';
+    }
 
     const result = await complete(req.org, {
       model,
@@ -201,6 +224,146 @@ router.post(`/api/${API_VERSION}/insights/ask`, authenticate, async (req: Authen
 
     res.json({
       answer: result.text,
+      context_source: contextSource,
+      model: result.model,
+      usage: result.usage,
+    });
+  } catch (err: unknown) {
+    handleAnthropicError(err as AnthropicError, res);
+  }
+});
+
+// ── Get hot cache status ──
+router.get(`/api/${API_VERSION}/insights/hot-cache`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    // If hot_cache column doesn't exist (migration not run), degrade gracefully
+    if (typeof req.org.hot_cache === 'undefined') {
+      return res.json({
+        status: 'unavailable',
+        hint: 'Run migration_005_hot_cache.sql to enable',
+      });
+    }
+
+    const hasCache = typeof req.org.hot_cache === 'string' && req.org.hot_cache.length > 0;
+
+    res.json({
+      status: hasCache ? (req.org.hot_cache_stale ? 'stale' : 'fresh') : 'empty',
+      hot_cache: req.org.hot_cache || null,
+      updated_at: req.org.hot_cache_updated_at || null,
+      stale: req.org.hot_cache_stale ?? true,
+      word_count: hasCache ? req.org.hot_cache!.split(/\s+/).length : 0,
+    });
+  } catch (err: unknown) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+// ── Refresh hot cache ──
+router.post(`/api/${API_VERSION}/insights/hot-cache/refresh`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    if (!supabase) {
+      return res.status(500).json({ error: 'Database not configured' });
+    }
+
+    // Check if migration has been applied — if hot_cache is undefined the column doesn't exist
+    if (typeof req.org.hot_cache === 'undefined') {
+      return res.status(503).json({
+        error: 'Hot cache not available — migration_005_hot_cache.sql has not been applied',
+        hint: 'Run the migration in the Supabase SQL editor, then retry',
+      });
+    }
+
+    if (!hasAnthropic(req.org)) {
+      return res.status(402).json({ error: 'No Anthropic API key configured' });
+    }
+
+    // Fetch recent observations (7-day window, max 150)
+    const since = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString();
+    const { data: observations, error: obsError } = await supabase
+      .from('observations')
+      .select('type,title,content,importance,agent_id,created_at')
+      .eq('org_id', req.org.id)
+      .gte('created_at', since)
+      .order('created_at', { ascending: false })
+      .limit(150);
+
+    if (obsError) throw obsError;
+
+    if (!observations || observations.length === 0) {
+      // Nothing to summarize — clear any old cache
+      await supabase
+        .from('organizations')
+        .update({
+          hot_cache: null,
+          hot_cache_updated_at: new Date().toISOString(),
+          hot_cache_stale: false,
+        })
+        .eq('id', req.org.id);
+
+      return res.json({
+        status: 'empty',
+        hot_cache: null,
+        observation_count: 0,
+        message: 'No observations in the last 7 days to summarize',
+      });
+    }
+
+    // Format observations for Claude
+    const formatted = observations
+      .map((o: Record<string, unknown>) =>
+        `[${o.type}|imp:${o.importance}] ${o.title}${o.content ? ` — ${(o.content as string).slice(0, 200)}` : ''}`
+      )
+      .join('\n');
+
+    // Generate the hot cache summary via Claude Haiku
+    const result = await complete(req.org, {
+      model: 'fast',
+      maxTokens: 800,
+      endpoint: 'hot-cache-refresh',
+      system:
+        'You are an AI operations analyst. Synthesize the provided observation log into a dense rolling summary ' +
+        '(~500 words max). Structure it as:\n\n' +
+        '**Last Updated**: [current date]\n' +
+        '**Key Facts**: top 5-8 most important active facts about this agent fleet\n' +
+        '**Recent Changes**: significant events from the last few days\n' +
+        '**Active Threads**: ongoing issues, patterns, or trends to monitor\n\n' +
+        'Be concrete — cite agent names, observation types, and specific details. ' +
+        'This summary will be used as context for future questions, so include anything a colleague would need ' +
+        'to quickly get up to speed. Overwrite, don\'t append — this replaces the previous summary entirely.',
+      messages: [
+        {
+          role: 'user',
+          content:
+            `Organization: ${req.org.name} (plan: ${req.org.plan})\n` +
+            `Synthesize these ${observations.length} observations from the last 7 days:\n\n${formatted}`,
+        },
+      ],
+    });
+
+    // Write to the org
+    const now = new Date().toISOString();
+    const { error: updateError } = await supabase
+      .from('organizations')
+      .update({
+        hot_cache: result.text,
+        hot_cache_updated_at: now,
+        hot_cache_stale: false,
+      })
+      .eq('id', req.org.id);
+
+    if (updateError) throw updateError;
+
+    // Update req.org in-memory so subsequent calls in this request see the new cache
+    req.org.hot_cache = result.text;
+    req.org.hot_cache_updated_at = now;
+    req.org.hot_cache_stale = false;
+
+    res.json({
+      status: 'fresh',
+      hot_cache: result.text,
+      updated_at: now,
+      observation_count: observations.length,
+      word_count: result.text.split(/\s+/).length,
       model: result.model,
       usage: result.usage,
     });

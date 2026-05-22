@@ -83,7 +83,7 @@ stoic-agentos/
 
 | Table | Key Columns | Purpose |
 |-------|-------------|---------|
-| `organizations` | id, name, slug, plan, stripe_customer_id, stripe_subscription_id | Multi-tenant orgs |
+| `organizations` | id, name, slug, plan, stripe_customer_id, stripe_subscription_id, hot_cache, hot_cache_updated_at, hot_cache_stale | Multi-tenant orgs |
 | `org_members` | org_id, user_id, role (owner/admin/member) | Org membership |
 | `agents` | org_id, name, module, status, last_heartbeat, total_runs, total_errors | Registered AI agents |
 | `observations` | org_id, workspace_id, agent_id, type, title, content, importance | Agent activity log |
@@ -130,7 +130,9 @@ stoic-agentos/
 | **Insights (Claude)** |||
 | POST | `/insights/summarize` | Summarize recent observations (Haiku 4.5) |
 | POST | `/insights/analyze-agent` | Diagnose an agent (Sonnet 4.6 + adaptive thinking) |
-| POST | `/insights/ask` | Free-form Q&A grounded in org data |
+| POST | `/insights/ask` | Free-form Q&A grounded in org data (hot-cache-first) |
+| GET | `/insights/hot-cache` | Read the org's hot cache status and content |
+| POST | `/insights/hot-cache/refresh` | Regenerate the org's hot cache via Haiku |
 | GET | `/api-keys/anthropic` | Get Anthropic key status (masked) |
 | POST | `/api-keys/anthropic` | Set per-org Anthropic key (BYOK) |
 | DELETE | `/api-keys/anthropic` | Remove per-org Anthropic key |
@@ -186,8 +188,20 @@ The API caches decrypted keys in-process for 5 min to avoid an RPC per Claude ca
 1. `api/supabase/migration_001_init.sql` — base schema
 2. `api/supabase/migration_002_anthropic_keys.sql` — adds `anthropic_key_last4`, `anthropic_usage` table
 3. `api/supabase/migration_003_vault_anthropic_keys.sql` — moves keys into Supabase Vault, drops plaintext column, adds `set/get/clear_org_anthropic_key()` RPCs
+4. `api/migrations/005_hot_cache.sql` — adds `hot_cache`, `hot_cache_updated_at`, `hot_cache_stale` columns to organizations + `mark_hot_cache_stale()` trigger on observations
 
 **Deploy order is not load-bearing.** If the API is deployed before migration_003 runs, BYOK gracefully degrades: read paths silently fall back to the platform `ANTHROPIC_API_KEY`, write paths (`POST/DELETE /api-keys/anthropic`) return `503` with a clear "migration pending" message, and the API logs `⚠️  Vault BYOK PENDING — run migration_003_vault_anthropic_keys.sql` at boot. Once the migration runs, the next call detects it and BYOK activates automatically.
+
+### Hot Cache (LLM Wiki pattern)
+
+Ported from [claude-obsidian](https://github.com/AgriciDaniel/claude-obsidian). Instead of fetching 20 raw observations for every `/insights/ask` call, the platform maintains a pre-synthesized ~500-word rolling summary per org.
+
+**How it works:**
+- `POST /insights/hot-cache/refresh` → fetches up to 150 observations from the last 7 days, sends them to Haiku, and writes the result to `organizations.hot_cache`.
+- An AFTER INSERT trigger on `observations` flips `hot_cache_stale = TRUE` whenever new data lands.
+- `/insights/ask` reads `hot_cache` when it's fresh (stale=false), skipping all three parallel Supabase queries. When stale or empty, it falls back to the original live-fetch behavior.
+- The cache is **overwritten, not appended** — bounded token cost.
+- If `migration_005` hasn't run, `org.hot_cache` is `undefined` → all hot-cache paths degrade silently.
 
 ---
 

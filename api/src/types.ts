@@ -6,6 +6,9 @@ export interface Organization {
   plan: 'free' | 'pro' | 'team' | 'enterprise';
   stripe_customer_id?: string;
   anthropic_api_key?: string;
+  hot_cache?: string | null;
+  hot_cache_updated_at?: string | null;
+  hot_cache_stale?: boolean;
   created_at: string;
   updated_at: string;
 }
