@@ -1,20 +1,6 @@
 import { useState } from 'react';
 import { colors, shared, statusTag } from './styles';
 
-const workspaces = [
-  { emoji: '🎬', name: 'LuzDaPalavra', domain: 'Biblical videos, TikTok, Higgsfield, stoic-factory', stack: 'Python, Node.js, FFmpeg', path: 'c:\\Users\\benja\\LuzDaPalavra\\', status: 'active' },
-  { emoji: '📊', name: 'StoicCRM', domain: 'CRM, SaaS Hub, n8n, email, stoic-jarvis', stack: 'React, Python, Docker', path: 'c:\\Users\\benja\\StoicCRM\\', status: 'active' },
-  { emoji: '📈', name: 'StoicTrading', domain: 'Forex EA, live quotes, TradingView', stack: 'MQL5, Python', path: 'c:\\Users\\benja\\StoicTrading\\', status: 'live' },
-  { emoji: '🤖', name: 'TelegramBots', domain: 'Telegram bot projects', stack: 'TypeScript, Node.js', path: 'c:\\Users\\benja\\TelegramBots\\', status: 'live' },
-  { emoji: '📣', name: 'GTM-Pipelines', domain: 'AdSpy, SEO factory, Viralizer, Newsletter', stack: 'Python, Claude API', path: 'c:\\Users\\benja\\GTM-Pipelines\\', status: 'active' },
-  { emoji: '🐟', name: 'FishFinder', domain: 'Fish identification app', stack: 'React, TensorFlow', path: 'c:\\Users\\benja\\FishFinder\\', status: 'planned' },
-  { emoji: '👴', name: 'Automacoes-Papai', domain: "Dad's PowerShell automations", stack: 'PowerShell', path: 'c:\\Users\\benja\\Automacoes-Papai\\', status: 'deployed' },
-  { emoji: '🚂', name: 'RailwayBounty', domain: 'Railway bounty solver', stack: 'Node.js', path: 'c:\\Users\\benja\\RailwayBounty\\', status: 'pending' },
-  { emoji: '🔒', name: 'CyberArmor', domain: 'Security monitor, prompt hardening', stack: 'Python', path: 'c:\\Users\\benja\\CyberArmor\\', status: 'deployed' },
-  { emoji: '🐋', name: 'WhaleTracker', domain: 'Smart Money Intelligence Terminal', stack: 'Python, React', path: 'c:\\Users\\benja\\WhaleTracker\\', status: 'pending' },
-  { emoji: '🏠', name: 'Comunidade Stoic', domain: 'Hub: brand-vault, agent-ops, workflows', stack: 'Markdown, PS1, JS', path: 'c:\\Users\\benja\\Comunidade stoic\\', status: 'live' },
-];
-
 const styles = {
   table: {
     width: '100%',
@@ -47,88 +33,85 @@ const styles = {
     borderRight: `1px solid ${colors.border}`,
     borderRadius: '0 10px 10px 0',
   },
-  wsPath: {
-    fontFamily: "'JetBrains Mono', monospace",
-    fontSize: 11,
+  emptyState: {
+    textAlign: 'center',
+    padding: '60px 20px',
     color: colors.textDim,
-  },
-  wsIcon: {
-    fontSize: 18,
-    marginRight: 8,
   },
 };
 
-export default function WorkspacesPanel() {
+export default function WorkspacesPanel({ workspaces = [] }) {
   const [hoveredRow, setHoveredRow] = useState(null);
 
   return (
     <div>
       <div style={shared.sectionHeader}>
         <div style={shared.sectionTitle}>
-          📂 Workspace DNS <span style={shared.badge}>11 dedicated workspaces</span>
+          📂 Workspaces <span style={shared.badge}>{workspaces.length} workspace{workspaces.length !== 1 ? 's' : ''}</span>
         </div>
       </div>
 
-      <table style={styles.table}>
-        <thead>
-          <tr>
-            <th style={styles.th}></th>
-            <th style={styles.th}>Workspace</th>
-            <th style={styles.th}>Domain</th>
-            <th style={styles.th}>Stack</th>
-            <th style={styles.th}>Path</th>
-            <th style={styles.th}>Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          {workspaces.map((ws, i) => (
-            <tr
-              key={ws.name}
-              onMouseEnter={() => setHoveredRow(i)}
-              onMouseLeave={() => setHoveredRow(null)}
-            >
-              <td style={{
-                ...styles.td,
-                ...styles.tdFirst,
-                background: hoveredRow === i ? colors.bgCardHover : colors.bgCard,
-              }}>
-                <span style={styles.wsIcon}>{ws.emoji}</span>
-              </td>
-              <td style={{
-                ...styles.td,
-                background: hoveredRow === i ? colors.bgCardHover : colors.bgCard,
-              }}>
-                <strong>{ws.name}</strong>
-              </td>
-              <td style={{
-                ...styles.td,
-                background: hoveredRow === i ? colors.bgCardHover : colors.bgCard,
-              }}>
-                {ws.domain}
-              </td>
-              <td style={{
-                ...styles.td,
-                background: hoveredRow === i ? colors.bgCardHover : colors.bgCard,
-              }}>
-                {ws.stack}
-              </td>
-              <td style={{
-                ...styles.td,
-                background: hoveredRow === i ? colors.bgCardHover : colors.bgCard,
-              }}>
-                <span style={styles.wsPath}>{ws.path}</span>
-              </td>
-              <td style={{
-                ...styles.td,
-                ...styles.tdLast,
-                background: hoveredRow === i ? colors.bgCardHover : colors.bgCard,
-              }}>
-                <span style={statusTag(ws.status)}>{ws.status}</span>
-              </td>
+      {workspaces.length > 0 ? (
+        <table style={styles.table}>
+          <thead>
+            <tr>
+              <th style={styles.th}></th>
+              <th style={styles.th}>Workspace</th>
+              <th style={styles.th}>Branch</th>
+              <th style={styles.th}>Stack</th>
+              <th style={styles.th}>Status</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {workspaces.map((ws, i) => (
+              <tr
+                key={ws.id}
+                onMouseEnter={() => setHoveredRow(i)}
+                onMouseLeave={() => setHoveredRow(null)}
+              >
+                <td style={{
+                  ...styles.td,
+                  ...styles.tdFirst,
+                  background: hoveredRow === i ? colors.bgCardHover : colors.bgCard,
+                }}>
+                  <span style={{ fontSize: 18 }}>📦</span>
+                </td>
+                <td style={{
+                  ...styles.td,
+                  background: hoveredRow === i ? colors.bgCardHover : colors.bgCard,
+                }}>
+                  <strong>{ws.name}</strong>
+                </td>
+                <td style={{
+                  ...styles.td,
+                  background: hoveredRow === i ? colors.bgCardHover : colors.bgCard,
+                }}>
+                  {ws.branch || 'main'}
+                </td>
+                <td style={{
+                  ...styles.td,
+                  background: hoveredRow === i ? colors.bgCardHover : colors.bgCard,
+                }}>
+                  {ws.stack || '—'}
+                </td>
+                <td style={{
+                  ...styles.td,
+                  ...styles.tdLast,
+                  background: hoveredRow === i ? colors.bgCardHover : colors.bgCard,
+                }}>
+                  <span style={statusTag('active')}>Active</span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ) : (
+        <div style={styles.emptyState}>
+          <div style={{ fontSize: 48, marginBottom: 16 }}>📦</div>
+          <h3 style={{ color: colors.textSecondary, marginBottom: 8 }}>No workspaces connected</h3>
+          <p>Add workspaces from the Workspaces tab to see them here.</p>
+        </div>
+      )}
     </div>
   );
 }

@@ -23,18 +23,6 @@ const TABS = [
   { id: 'geoops',    label: '🌍 GeoOps',            color: '#00d4ff' },
 ];
 
-const PANELS = {
-  overview:   OverviewPanel,
-  workspaces: WorkspacesPanel,
-  agents:     AgentFleetPanel,
-  platforms:  PlatformsPanel,
-  graph:      KnowledgeGraphPanel,
-  brain:      KnowledgeBrainPanel,
-  deps:       DependenciesPanel,
-  fetok:      FeTokPanel,
-  geoops:     GeoOpsPanel,
-};
-
 const styles = {
   wrapper: {
     background: colors.bgPrimary,
@@ -138,8 +126,27 @@ const styles = {
   },
 };
 
-export default function CommandCenterLayout() {
+export default function CommandCenterLayout({ agents = [], workspaces = [], observations = [], knowledgeItems = [], stats = {}, usage = {} }) {
   const [activeTab, setActiveTab] = useState('overview');
+
+  // Compute dynamic header subtitle
+  const wsCount = workspaces.length || stats.workspaces || 0;
+  const agentCount = agents.length || stats.agents || 0;
+  const headerSub = `Your Ecosystem · ${wsCount} Workspace${wsCount !== 1 ? 's' : ''} · ${agentCount} Agent${agentCount !== 1 ? 's' : ''}`;
+
+  // Panel map — each receives real data
+  const panelProps = { agents, workspaces, observations, knowledgeItems, stats, usage };
+  const PANELS = {
+    overview:   OverviewPanel,
+    workspaces: WorkspacesPanel,
+    agents:     AgentFleetPanel,
+    platforms:  PlatformsPanel,
+    graph:      KnowledgeGraphPanel,
+    brain:      KnowledgeBrainPanel,
+    deps:       DependenciesPanel,
+    fetok:      FeTokPanel,
+    geoops:     GeoOpsPanel,
+  };
   const Panel = PANELS[activeTab];
 
   return (
@@ -150,7 +157,7 @@ export default function CommandCenterLayout() {
           <div style={styles.logoIcon}>⚡</div>
           <div>
             <div style={styles.headerTitle}>COMMAND CENTER</div>
-            <div style={styles.headerSub}>Stoic Ecosystem · 11 Workspaces · 23 Agents</div>
+            <div style={styles.headerSub}>{headerSub}</div>
           </div>
         </div>
         <div style={styles.hqBadge}>HQ</div>
@@ -183,7 +190,7 @@ export default function CommandCenterLayout() {
 
       {/* Active Panel */}
       <div style={styles.main}>
-        {Panel && <Panel />}
+        {Panel && <Panel {...panelProps} />}
       </div>
     </div>
   );

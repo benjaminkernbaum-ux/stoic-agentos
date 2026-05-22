@@ -214,7 +214,14 @@ export default function Dashboard() {
         )}
 
         {activeTab === 'commandcenter' && (
-          <CommandCenterTab />
+          <CommandCenterTab
+            agents={data.agents}
+            workspaces={data.workspaces}
+            observations={data.observations}
+            knowledgeItems={data.knowledgeItems}
+            stats={data.stats}
+            usage={data.usage}
+          />
         )}
 
         {activeTab === 'workflows' && (

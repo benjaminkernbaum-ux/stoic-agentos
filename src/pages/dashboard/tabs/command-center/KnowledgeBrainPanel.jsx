@@ -1,118 +1,73 @@
 import { useState } from 'react';
 import { colors, shared } from './styles';
 
-const knowledgeItems = [
-  { id: 'brain-integration', icon: '🧠', name: 'Master Brain v2.0', color: '#a78bfa', desc: 'Complete ecosystem brain — 14 workspaces, 23 agents, 17+ platforms, Memory Engine, Command Center, workflow commands', type: 'core', created: '2026-04-21' },
-  { id: 'deployment-map', icon: '🚀', name: 'Deployment Map', color: '#ef4444', desc: 'Railway, Vercel, Supabase, Higgsfield topology. Full env key registry for 20+ platform integrations', type: 'infra', created: '2026-04-20' },
-  { id: 'workspace-map', icon: '🗺️', name: 'Workspace & Git Map', color: '#3b82f6', desc: 'All 14 workspaces, 17 GitHub repos, git status, branches, context files, routing protocol', type: 'map', created: '2026-04-19' },
-  { id: 'agent-fleet', icon: '🤖', name: 'Agent Fleet (23 Agents)', color: '#10b981', desc: '23 agents across 5 modules — Content, GTM, CRM, Finance, Standalone. Schedules, data contracts, orchestration rules', type: 'agents', created: '2026-04-18' },
-  { id: 'stoiccrm-saas-state', icon: '💻', name: 'StoicCRM SaaS State', color: '#f59e0b', desc: 'Full production state — what works vs fake, 14 Supabase tables, 10 commits, Stripe setup, env vars', type: 'product', created: '2026-04-17' },
-  { id: 'supabase-schema', icon: '🗄️', name: 'Supabase Schema', color: '#06b6d4', desc: '14 tables, column schemas, credentials, FK relationships, RLS policies, function map', type: 'database', created: '2026-04-16' },
-  { id: 'recent-achievements', icon: '🏆', name: 'Recent Achievements', color: '#ec4899', desc: '11 conversation logs — what was built, commits, outcomes. Prevents re-doing work across sessions', type: 'history', created: '2026-04-15' },
-];
-
 const styles = {
   searchBar: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 12,
-    marginBottom: 20,
+    display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20,
   },
   searchInput: {
-    flex: 1,
-    padding: '10px 16px 10px 40px',
-    background: colors.bgCard,
-    border: `1px solid ${colors.border}`,
-    borderRadius: 12,
-    color: colors.textPrimary,
-    fontFamily: "'Inter', sans-serif",
-    fontSize: 13,
-    outline: 'none',
+    flex: 1, padding: '10px 16px 10px 40px',
+    background: colors.bgCard, border: `1px solid ${colors.border}`,
+    borderRadius: 12, color: colors.textPrimary,
+    fontFamily: "'Inter', sans-serif", fontSize: 13, outline: 'none',
     transition: 'border-color 0.2s',
   },
   searchIcon: {
-    position: 'absolute',
-    left: 14,
-    fontSize: 14,
-    color: colors.textDim,
+    position: 'absolute', left: 14, fontSize: 14, color: colors.textDim,
   },
   countBadge: {
-    background: 'rgba(167,139,250,0.15)',
-    color: '#a78bfa',
-    padding: '4px 12px',
-    borderRadius: 20,
-    fontSize: 12,
-    fontWeight: 600,
+    background: 'rgba(167,139,250,0.15)', color: '#a78bfa',
+    padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600,
   },
   kiCard: (color, isHovered) => ({
     background: colors.bgCard,
     border: `1px solid ${isHovered ? color : colors.border}`,
-    borderRadius: 12,
-    padding: 18,
-    transition: 'all 0.2s',
-    cursor: 'default',
-    borderLeft: `4px solid ${color}`,
+    borderRadius: 12, padding: 18, transition: 'all 0.2s',
+    cursor: 'default', borderLeft: `4px solid ${color}`,
     boxShadow: isHovered ? `0 0 20px ${color}22` : 'none',
   }),
-  kiHeader: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 10,
-    marginBottom: 10,
-  },
-  kiIcon: {
-    fontSize: 24,
-  },
-  kiName: {
-    fontWeight: 700,
-    fontSize: 14,
-    color: colors.textPrimary,
-  },
-  kiId: (color) => ({
-    fontSize: 11,
-    color,
-    fontFamily: "'JetBrains Mono', monospace",
-  }),
-  kiDesc: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    lineHeight: 1.5,
-    marginBottom: 12,
-  },
+  kiHeader: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 },
+  kiIcon: { fontSize: 24 },
+  kiName: { fontWeight: 700, fontSize: 14, color: colors.textPrimary },
+  kiId: (color) => ({ fontSize: 11, color, fontFamily: "'JetBrains Mono', monospace" }),
+  kiDesc: { fontSize: 12, color: colors.textSecondary, lineHeight: 1.5, marginBottom: 12 },
   typeBadge: (color) => ({
-    padding: '2px 8px',
-    borderRadius: 6,
-    fontSize: 10,
-    fontWeight: 600,
-    background: `${color}18`,
-    color,
-    textTransform: 'uppercase',
+    padding: '2px 8px', borderRadius: 6, fontSize: 10, fontWeight: 600,
+    background: `${color}18`, color, textTransform: 'uppercase',
   }),
-  dateBadge: {
-    fontSize: 10,
-    color: colors.textDim,
-    fontFamily: "'JetBrains Mono', monospace",
-  },
-  footer: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  emptyState: {
-    textAlign: 'center',
-    padding: '60px 20px',
-    color: colors.textDim,
-  },
+  dateBadge: { fontSize: 10, color: colors.textDim, fontFamily: "'JetBrains Mono', monospace" },
+  footer: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
+  emptyState: { textAlign: 'center', padding: '60px 20px', color: colors.textDim },
 };
 
-export default function KnowledgeBrainPanel() {
+const TYPE_COLORS = {
+  note: '#a78bfa', decision: '#3b82f6', architecture: '#10b981',
+  deployment: '#ef4444', discovery: '#f59e0b', error: '#ef4444',
+  default: '#6b7280',
+};
+
+export default function KnowledgeBrainPanel({ knowledgeItems = [], observations = [] }) {
   const [search, setSearch] = useState('');
   const [hovered, setHovered] = useState(null);
 
-  const filtered = knowledgeItems.filter(item =>
+  // Combine knowledge items and observations as brain items
+  const allItems = [
+    ...knowledgeItems.map(ki => ({
+      id: ki.id, icon: '💡', name: ki.name || ki.title || 'Knowledge Item',
+      color: '#a78bfa', desc: ki.summary || ki.content || '',
+      type: 'knowledge', created: ki.created_at,
+    })),
+    ...observations.slice(0, 20).map(obs => ({
+      id: obs.id, icon: '🧠', name: obs.title || 'Observation',
+      color: TYPE_COLORS[obs.type] || TYPE_COLORS.default,
+      desc: obs.content || '', type: obs.type || 'note',
+      created: obs.created_at,
+    })),
+  ];
+
+  const filtered = allItems.filter(item =>
     item.name.toLowerCase().includes(search.toLowerCase()) ||
-    item.desc.toLowerCase().includes(search.toLowerCase()) ||
-    item.id.toLowerCase().includes(search.toLowerCase())
+    item.desc.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
@@ -120,7 +75,7 @@ export default function KnowledgeBrainPanel() {
       <div style={shared.sectionHeader}>
         <div style={shared.sectionTitle}>
           🧠 Knowledge Brain{' '}
-          <span style={shared.badge}>Antigravity Knowledge Items</span>
+          <span style={shared.badge}>Your Knowledge Items</span>
         </div>
       </div>
 
@@ -138,7 +93,7 @@ export default function KnowledgeBrainPanel() {
             onBlur={e => { e.currentTarget.style.borderColor = colors.border; }}
           />
         </div>
-        <span style={styles.countBadge}>{filtered.length} items · 56 KB</span>
+        <span style={styles.countBadge}>{filtered.length} items</span>
       </div>
 
       {/* Items Grid */}
@@ -146,7 +101,7 @@ export default function KnowledgeBrainPanel() {
         <div style={styles.emptyState}>
           <div style={{ fontSize: 48, marginBottom: 16 }}>🧠</div>
           <h3 style={{ color: colors.textSecondary, marginBottom: 8 }}>No knowledge items yet</h3>
-          <p>Knowledge items will appear here as they are captured by the system.</p>
+          <p>Capture observations and knowledge items to build your brain.</p>
         </div>
       ) : (
         <div style={shared.grid(340)}>
@@ -161,13 +116,15 @@ export default function KnowledgeBrainPanel() {
                 <div style={styles.kiIcon}>{ki.icon}</div>
                 <div>
                   <div style={styles.kiName}>{ki.name}</div>
-                  <div style={styles.kiId(ki.color)}>{ki.id}</div>
+                  <div style={styles.kiId(ki.color)}>{ki.type}</div>
                 </div>
               </div>
-              <div style={styles.kiDesc}>{ki.desc}</div>
+              <div style={styles.kiDesc}>{ki.desc.substring(0, 200)}{ki.desc.length > 200 ? '...' : ''}</div>
               <div style={styles.footer}>
                 <span style={styles.typeBadge(ki.color)}>{ki.type}</span>
-                <span style={styles.dateBadge}>{ki.created}</span>
+                <span style={styles.dateBadge}>
+                  {ki.created ? new Date(ki.created).toLocaleDateString() : '—'}
+                </span>
               </div>
             </div>
           ))}
