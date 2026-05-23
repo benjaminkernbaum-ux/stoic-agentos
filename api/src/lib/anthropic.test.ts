@@ -8,12 +8,14 @@ vi.mock('./../middleware/db.js', () => ({
 
 // Stub the Anthropic SDK so we never actually hit the network
 const createMock = vi.fn();
-vi.mock('@anthropic-ai/sdk', () => ({
-  default: vi.fn().mockImplementation(({ apiKey }) => ({
-    apiKey,
-    messages: { create: createMock },
-  })),
-}));
+vi.mock('@anthropic-ai/sdk', () => {
+  // Must use a function expression (not arrow) so it can be called with `new`
+  const MockAnthropic = vi.fn().mockImplementation(function (this: any, { apiKey }: { apiKey: string }) {
+    this.apiKey = apiKey;
+    this.messages = { create: createMock };
+  });
+  return { default: MockAnthropic };
+});
 
 describe('anthropic.js', () => {
   let mod: any;
