@@ -24,8 +24,99 @@ if (!password) {
   process.exit(1);
 }
 
-const connectionString = `postgresql://postgres.viiagdhtzbvkfhcjqrlz:${encodeURIComponent(password)}@aws-0-sa-east-1.pooler.supabase.com:6543/postgres`;
-const client = new Client({ connectionString, ssl: { rejectUnauthorized: false } });
+const PROJECT_REF = 'viiagdhtzbvkfhcjqrlz';
+
+// Connection configs to try in order (Supabase has migrated poolers multiple times)
+const configs = [
+  {
+    name: 'Direct (db.ref)',
+    config: {
+      host: `db.${PROJECT_REF}.supabase.co`,
+      port: 5432,
+      user: 'postgres',
+      password,
+      database: 'postgres',
+      ssl: { rejectUnauthorized: false },
+    }
+  },
+  {
+    name: 'New pooler (pooler.supabase.com:6543)',
+    config: {
+      host: `${PROJECT_REF}.pooler.supabase.com`,
+      port: 6543,
+      user: `postgres.${PROJECT_REF}`,
+      password,
+      database: 'postgres',
+      ssl: { rejectUnauthorized: false },
+    }
+  },
+  {
+    name: 'New pooler session (pooler.supabase.com:5432)',
+    config: {
+      host: `${PROJECT_REF}.pooler.supabase.com`,
+      port: 5432,
+      user: `postgres.${PROJECT_REF}`,
+      password,
+      database: 'postgres',
+      ssl: { rejectUnauthorized: false },
+    }
+  },
+  {
+    name: 'Legacy pooler session (aws-0-sa-east-1:5432)',  
+    config: {
+      host: `aws-0-sa-east-1.pooler.supabase.com`,
+      port: 5432,
+      user: `postgres.${PROJECT_REF}`,
+      password,
+      database: 'postgres',
+      ssl: { rejectUnauthorized: false },
+    }
+  },
+  {
+    name: 'Legacy pooler txn (aws-0-sa-east-1:6543)',
+    config: {
+      host: `aws-0-sa-east-1.pooler.supabase.com`,
+      port: 6543,
+      user: `postgres.${PROJECT_REF}`,
+      password,
+      database: 'postgres',
+      ssl: { rejectUnauthorized: false },
+    }
+  },
+  {
+    name: 'Direct legacy (ref.supabase.co)',
+    config: {
+      host: `${PROJECT_REF}.supabase.co`,
+      port: 5432,
+      user: 'postgres',
+      password,
+      database: 'postgres',
+      ssl: { rejectUnauthorized: false },
+    }
+  },
+];
+
+let client;
+for (const { name, config } of configs) {
+  console.log(`\n⚡ Trying ${name} (${config.host}:${config.port})...`);
+  const c = new Client(config);
+  try {
+    await c.connect();
+    console.log(`✅ Connected via ${name}\n`);
+    client = c;
+    break;
+  } catch (err) {
+    console.log(`   ❌ ${err.message}`);
+    try { await c.end(); } catch {}
+  }
+}
+
+if (!client) {
+  console.error('\n❌ Could not connect to Supabase with any method.');
+  console.error('   Please verify your password at:');
+  console.error('   https://supabase.com/dashboard/project/viiagdhtzbvkfhcjqrlz/settings/database\n');
+  process.exit(1);
+}
 
 const migrations = [
   { name: '004_upsert_constraints', file: 'api/migrations/004_upsert_constraints.sql' },
@@ -33,9 +124,7 @@ const migrations = [
 ];
 
 try {
-  console.log('\n⚡ Connecting to Supabase Postgres...');
-  await client.connect();
-  console.log('✅ Connected\n');
+  console.log('\n--- Running migrations ---\n');
 
   for (const m of migrations) {
     const sqlPath = resolve(__dirname, m.file);
