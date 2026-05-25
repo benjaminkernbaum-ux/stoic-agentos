@@ -1,6 +1,6 @@
 {
-  "name": "stoic-agentos-sdk",
-  "version": "2.0.0",
+  "name": "@stoic/agentos-sdk",
+  "version": "2.1.0",
   "description": "Official SDK for Stoic AgentOS — AI Agent Operations Platform. Auto-instrument OpenAI & Anthropic calls. Monitor, orchestrate, and persist knowledge across your AI agent fleet.",
   "main": "src/index.js",
   "types": "src/index.d.ts",
@@ -15,13 +15,18 @@
     }
   },
   "bin": {
-    "agentos": "src/cli.js"
+    "agentos": "src/cli.js",
+    "stoic-agentos-sdk": "src/cli.js"
   },
   "files": [
     "src/",
     "README.md",
     "LICENSE"
   ],
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
   "keywords": [
     "ai",
     "agents",
@@ -37,15 +42,18 @@
     "openai",
     "anthropic",
     "auto-instrumentation",
-    "tracing"
+    "tracing",
+    "agentos",
+    "llm-observability"
   ],
   "author": "Benjamin Kernbaum <benjamin@stoicagentos.com>",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/benjaminkernbaum-ux/stoic-agentos"
+    "url": "https://github.com/benjaminkernbaum-ux/stoic-agentos",
+    "directory": "sdk"
   },
-  "homepage": "https://stoicagentos.com",
+  "homepage": "https://stoicagentos.com/docs",
   "bugs": {
     "url": "https://github.com/benjaminkernbaum-ux/stoic-agentos/issues"
   },
@@ -54,7 +62,8 @@
   },
   "scripts": {
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "prepublishOnly": "npm test"
   },
   "peerDependencies": {
     "openai": ">=4.0.0",

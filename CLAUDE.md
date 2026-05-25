@@ -103,7 +103,9 @@ stoic-agentos/
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/health` | Health check (no auth) |
+| GET | `/health` | Liveness probe — uptime, request count (no auth, <50ms) |
+| GET | `/health/ready` | Readiness probe — checks Supabase, Anthropic, Stripe |
+| GET | `/health/metrics` | Full metrics — p50/p95/p99 latency, per-endpoint breakdown |
 | POST | `/auth/setup-org` | Create org after signup (JWT) |
 | GET | `/stats` | Dashboard stats |
 | **Observations** |||

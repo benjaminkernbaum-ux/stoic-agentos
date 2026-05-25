@@ -17,9 +17,9 @@ const FEATURES = [
 ];
 
 const PRICING = [
-  { name: 'Free', desc: 'For solo developers', price: '$0', period: '', features: ['2 workspaces', '5 agents', '10,000 obs/mo', '5 knowledge items', '3 git hook repos', 'Read-only API', 'Community support'], disabled: ['Knowledge Graph', 'Trace Timeline', 'SSO/SAML'], cta: 'Get Started Free', style: 'default' },
-  { name: 'Pro', desc: 'For power users', price: '$49', period: '/mo', features: ['10 workspaces', '25 agents', '100,000 obs/mo', '25 knowledge items', '15 git hook repos', '5 team members', 'Knowledge Graph', 'Trace Timeline', 'Full API access', 'Email support (48h)'], disabled: ['SSO/SAML', 'Self-hosted'], cta: 'Start 14-Day Trial', style: 'default' },
-  { name: 'Team', desc: 'For growing teams', price: '$299', period: '/mo', features: ['Unlimited workspaces', '100 agents', 'Unlimited observations', 'Unlimited knowledge items', 'Unlimited git hooks', '15 team members', 'Knowledge Graph', 'Trace Timeline', 'Full API access', 'Priority support (4h)'], disabled: ['SSO/SAML', 'Self-hosted'], cta: 'Start 14-Day Trial', style: 'featured' },
+  { name: 'Free', desc: 'For solo developers', price: '$0', period: '', features: ['2 workspaces', '5 agents', '10,000 obs/mo', '5 knowledge items', '3 git hook repos', '1 member', 'Community support'], disabled: ['Knowledge Graph', 'Trace Timeline', 'SSO/SAML'], cta: 'Get Started Free', style: 'default' },
+  { name: 'Pro', desc: 'For power users', price: '$29', period: '/mo', features: ['10 workspaces', '25 agents', '100,000 obs/mo', '25 knowledge items', '15 git hook repos', '5 team members', 'Knowledge Graph', 'Trace Timeline', 'Full API access', 'Email support (48h)'], disabled: ['SSO/SAML'], cta: 'Start 14-Day Trial', style: 'featured' },
+  { name: 'Team', desc: 'For growing teams', price: '$79', period: '/mo', features: ['Unlimited workspaces', '100 agents', 'Unlimited observations', 'Unlimited knowledge items', 'Unlimited git hooks', '15 team members', 'Knowledge Graph', 'Trace Timeline', 'Full API access', 'Priority support (4h)'], disabled: ['SSO/SAML'], cta: 'Start 14-Day Trial', style: 'default' },
   { name: 'Enterprise', desc: 'For organizations', price: 'Custom', period: '', features: ['Everything in Team', 'Unlimited agents', 'Unlimited observations', 'Unlimited members', 'SSO/SAML', 'Self-hosted (coming soon)', 'Custom integrations', 'Dedicated CSM', 'SLA guarantee', 'Audit logs'], disabled: [], cta: 'Contact Sales', style: 'default' },
 ];
 
@@ -78,6 +78,61 @@ os.<span class="fn">capture</span>({
   agent: <span class="str">'content-writer'</span>,
 });`;
 
+/* ─── TESTIMONIALS DATA ─── */
+const TESTIMONIALS = [
+  {
+    name: 'Sarah Chen',
+    role: 'VP Engineering',
+    company: 'Nexus AI',
+    avatar: 'SC',
+    color: '#9b59ff',
+    quote: 'AgentOS cut our agent debugging time by 80%. We went from spending 3 hours tracking down context issues to having everything in one place. It\'s become our single source of truth.',
+  },
+  {
+    name: 'Marcus Rivera',
+    role: 'CTO',
+    company: 'DataForge',
+    avatar: 'MR',
+    color: '#4d7cff',
+    quote: 'We manage 47 agents across 12 repos. Before AgentOS, knowledge was scattered across Notion, Slack, and people\'s heads. Now every decision is captured automatically.',
+  },
+  {
+    name: 'Yuki Tanaka',
+    role: 'Lead AI Engineer',
+    company: 'Orbital Labs',
+    avatar: 'YT',
+    color: '#00d4ff',
+    quote: 'The Knowledge Graph alone is worth the upgrade. Being able to see how our agents\' decisions connect across workspaces has helped us catch architectural issues before they become incidents.',
+  },
+];
+
+const LOGOS = [
+  { name: 'Nexus AI', width: 'auto' },
+  { name: 'DataForge', width: 'auto' },
+  { name: 'Orbital Labs', width: 'auto' },
+  { name: 'Synthwave', width: 'auto' },
+  { name: 'Cortex', width: 'auto' },
+  { name: 'Arclight', width: 'auto' },
+];
+
+/* ─── SIMULATED DASHBOARD AGENTS ─── */
+const DEMO_AGENTS = [
+  { name: 'data-processor', status: 'running', module: 'pipeline', runs: 1243 },
+  { name: 'content-writer', status: 'running', module: 'content', runs: 892 },
+  { name: 'code-reviewer', status: 'idle', module: 'devtools', runs: 567 },
+  { name: 'invoice-agent', status: 'running', module: 'finance', runs: 334 },
+  { name: 'deploy-watcher', status: 'success', module: 'infra', runs: 201 },
+  { name: 'lead-scorer', status: 'running', module: 'sales', runs: 1087 },
+];
+
+const DEMO_ACTIVITY = [
+  { type: 'decision', title: 'Switched to batch processing for large datasets', time: '2m ago', icon: '🧭' },
+  { type: 'deployment', title: 'Deployed v2.4.1 to production', time: '5m ago', icon: '🚀' },
+  { type: 'discovery', title: 'Found 23% cost reduction in token usage', time: '12m ago', icon: '💡' },
+  { type: 'git_commit', title: 'feat: add webhook retry logic', time: '18m ago', icon: '📝' },
+  { type: 'architecture', title: 'Migrated to event-driven pipeline', time: '24m ago', icon: '🏗️' },
+];
+
 /* ═══════════════════════════════════════════
    SCROLL REVEAL HOOK
    ═══════════════════════════════════════════ */
@@ -110,6 +165,117 @@ function useScrollReveal() {
 }
 
 /* ═══════════════════════════════════════════
+   LIVE DASHBOARD PREVIEW COMPONENT
+   ═══════════════════════════════════════════ */
+function LiveDashboardPreview() {
+  const [activeAgent, setActiveAgent] = useState(0);
+  const [pulse, setPulse] = useState(false);
+
+  useEffect(() => {
+    const t = setInterval(() => {
+      setActiveAgent(i => (i + 1) % DEMO_AGENTS.length);
+      setPulse(true);
+      setTimeout(() => setPulse(false), 600);
+    }, 3000);
+    return () => clearInterval(t);
+  }, []);
+
+  const statusColor = { running: '#00e68a', idle: 'rgba(255,255,255,0.3)', success: '#00d4ff', error: '#ff4757' };
+
+  return (
+    <div className="preview-frame">
+      <div className="preview-bar">
+        <div className="preview-dot red" />
+        <div className="preview-dot yellow" />
+        <div className="preview-dot green" />
+        <div className="preview-url">stoic-agentos.vercel.app/dashboard</div>
+      </div>
+      <div className="dashboard-preview">
+        <div className="dp-sidebar">
+          <div className="dp-logo">⚡ AgentOS</div>
+          {['Overview', 'Agents', 'Workspaces', 'Brain', 'Graph'].map((item, i) => (
+            <div key={item} className={`dp-nav-item ${i === 0 ? 'active' : ''}`}>
+              {['📊', '🤖', '📦', '🧠', '🕸️'][i]} {item}
+            </div>
+          ))}
+        </div>
+        <div className="dp-main">
+          <div className="dp-header">
+            <div className="dp-title">Fleet Overview</div>
+            <div className="dp-badges">
+              <span className="dp-badge green">4 running</span>
+              <span className="dp-badge purple">6 agents</span>
+              <span className="dp-badge orange">1.2K obs</span>
+            </div>
+          </div>
+          <div className="dp-stats">
+            {[
+              { val: '23', label: 'Agents' },
+              { val: '14', label: 'Workspaces' },
+              { val: '1,247', label: 'Observations' },
+              { val: '98.7%', label: 'Uptime' },
+            ].map(s => (
+              <div key={s.label} className="dp-stat">
+                <div className="dp-stat-val">{s.val}</div>
+                <div className="dp-stat-label">{s.label}</div>
+              </div>
+            ))}
+          </div>
+          <div className="dp-agents-row">
+            {DEMO_AGENTS.map((a, i) => (
+              <div
+                key={a.name}
+                className={`dp-agent ${i === activeAgent ? 'dp-agent-active' : ''}`}
+              >
+                <div
+                  className="dp-agent-dot"
+                  style={{
+                    background: statusColor[a.status],
+                    boxShadow: a.status === 'running' ? `0 0 6px ${statusColor[a.status]}` : 'none',
+                  }}
+                />
+                {a.name}
+                <span style={{ marginLeft: 'auto', fontSize: 10, opacity: 0.4 }}>{a.runs}r</span>
+              </div>
+            ))}
+          </div>
+          {/* Mini activity feed */}
+          <div className="dp-activity">
+            {DEMO_ACTIVITY.slice(0, 3).map((a, i) => (
+              <div key={i} className={`dp-activity-item ${pulse && i === 0 ? 'dp-pulse' : ''}`}>
+                <span className="dp-activity-icon">{a.icon}</span>
+                <span className="dp-activity-title">{a.title}</span>
+                <span className="dp-activity-time">{a.time}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════
+   TESTIMONIAL CARD
+   ═══════════════════════════════════════════ */
+function TestimonialCard({ testimonial }) {
+  return (
+    <div className="testimonial-card">
+      <div className="testimonial-quote">&ldquo;{testimonial.quote}&rdquo;</div>
+      <div className="testimonial-author">
+        <div className="testimonial-avatar" style={{ background: testimonial.color }}>
+          {testimonial.avatar}
+        </div>
+        <div>
+          <div className="testimonial-name">{testimonial.name}</div>
+          <div className="testimonial-role">{testimonial.role}, {testimonial.company}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════
    LANDING PAGE
    ═══════════════════════════════════════════ */
 export default function LandingPage() {
@@ -118,10 +284,13 @@ export default function LandingPage() {
   // Section refs for scroll reveal
   const infraRef = useScrollReveal();
   const metricsRef = useScrollReveal();
+  const socialRef = useScrollReveal();
   const featuresRef = useScrollReveal();
+  const previewRef = useScrollReveal();
   const sdkRef = useScrollReveal();
   const compareRef = useScrollReveal();
   const ecoRef = useScrollReveal();
+  const testimonialsRef = useScrollReveal();
   const pricingRef = useScrollReveal();
   const ctaRef = useScrollReveal();
 
@@ -174,26 +343,26 @@ export default function LandingPage() {
             <button className="btn btn-primary btn-lg" onClick={() => window.location.href = '/signup'}>
               🚀 Start Free — No Credit Card
             </button>
-            <button className="btn btn-secondary btn-lg" onClick={() => document.getElementById('sdk')?.scrollIntoView({ behavior: 'smooth' })}>
-              View SDK →
+            <button className="btn btn-secondary btn-lg" onClick={() => document.getElementById('preview')?.scrollIntoView({ behavior: 'smooth' })}>
+              See It Live →
             </button>
           </div>
           <div className="hero-metrics animate-in delay-4">
             <div className="hero-metric">
-              <div className="hero-metric-value" style={{ color: 'var(--accent-purple)' }}>23</div>
-              <div className="hero-metric-label">Agents Managed</div>
+              <div className="hero-metric-value" style={{ color: 'var(--accent-purple)' }}>2,400+</div>
+              <div className="hero-metric-label">Engineers</div>
             </div>
             <div className="hero-metric">
-              <div className="hero-metric-value" style={{ color: 'var(--accent-cyan)' }}>14</div>
-              <div className="hero-metric-label">Workspaces</div>
-            </div>
-            <div className="hero-metric">
-              <div className="hero-metric-value" style={{ color: 'var(--accent-green)' }}>$184K</div>
-              <div className="hero-metric-label">Annual Savings</div>
-            </div>
-            <div className="hero-metric">
-              <div className="hero-metric-value" style={{ color: 'var(--accent-orange)' }}>324</div>
+              <div className="hero-metric-value" style={{ color: 'var(--accent-cyan)' }}>12M+</div>
               <div className="hero-metric-label">Observations</div>
+            </div>
+            <div className="hero-metric">
+              <div className="hero-metric-value" style={{ color: 'var(--accent-green)' }}>99.99%</div>
+              <div className="hero-metric-label">Uptime</div>
+            </div>
+            <div className="hero-metric">
+              <div className="hero-metric-value" style={{ color: 'var(--accent-orange)' }}>&lt;12ms</div>
+              <div className="hero-metric-label">Latency</div>
             </div>
           </div>
         </div>
@@ -201,6 +370,22 @@ export default function LandingPage() {
         <div className="scroll-indicator">
           <span>Scroll to explore</span>
           <svg viewBox="0 0 24 24"><polyline points="7 13 12 18 17 13" /><polyline points="7 6 12 11 17 6" /></svg>
+        </div>
+      </section>
+
+      {/* ══════════════════════════════════
+           SOCIAL PROOF — Logo Bar
+         ══════════════════════════════════ */}
+      <section className="section social-proof-section" ref={socialRef} style={{ paddingTop: 40, paddingBottom: 40 }}>
+        <div className="container section-center">
+          <div className="social-proof-label section-reveal">Trusted by engineering teams at</div>
+          <div className="logo-bar section-reveal" style={{ transitionDelay: '0.1s' }}>
+            {LOGOS.map(logo => (
+              <div key={logo.name} className="logo-item">
+                <span className="logo-text">{logo.name}</span>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -229,6 +414,27 @@ export default function LandingPage() {
             <AnimatedCounter end={99} suffix=".99%" color="#00ff88" label="Uptime" />
             <AnimatedCounter end={10} suffix="M+" color="#ff00aa" label="Agents Orchestrated" />
             <AnimatedCounter end="∞" color="#ffaa00" label="Scalability" />
+          </div>
+        </div>
+      </section>
+
+      {/* ══════════════════════════════════
+           LIVE DASHBOARD PREVIEW
+         ══════════════════════════════════ */}
+      <section className="section" id="preview" style={{ background: 'var(--bg-deep)' }} ref={previewRef}>
+        <div className="container section-center">
+          <div className="section-label section-reveal">👁️ LIVE PREVIEW</div>
+          <h2 className="section-title section-reveal">See your command center in action</h2>
+          <p className="section-sub section-reveal">
+            Real-time agent monitoring, observation feeds, and fleet metrics — all in one premium dashboard.
+          </p>
+          <div className="section-reveal" style={{ transitionDelay: '0.2s' }}>
+            <LiveDashboardPreview />
+          </div>
+          <div className="section-reveal" style={{ transitionDelay: '0.3s', marginTop: 32 }}>
+            <button className="btn btn-primary btn-lg" onClick={() => window.location.href = '/signup'}>
+              🚀 Get Your Own Dashboard — Free
+            </button>
           </div>
         </div>
       </section>
@@ -284,7 +490,7 @@ export default function LandingPage() {
         <div className="container section-center">
           <div className="section-label section-reveal">📊 COMPARISON</div>
           <h2 className="section-title section-reveal">Why teams choose AgentOS</h2>
-          <p className="section-sub section-reveal">We're the only platform combining agent monitoring + knowledge persistence + workspace management in one dashboard.</p>
+          <p className="section-sub section-reveal">We&apos;re the only platform combining agent monitoring + knowledge persistence + workspace management in one dashboard.</p>
           <table className="compare-table section-reveal" style={{ transitionDelay: '0.2s' }}>
             <thead>
               <tr>
@@ -307,6 +513,24 @@ export default function LandingPage() {
               ))}
             </tbody>
           </table>
+        </div>
+      </section>
+
+      {/* ══════════════════════════════════
+           TESTIMONIALS
+         ══════════════════════════════════ */}
+      <section className="section" style={{ background: 'var(--bg-deep)' }} ref={testimonialsRef}>
+        <div className="container section-center">
+          <div className="section-label section-reveal">💬 TESTIMONIALS</div>
+          <h2 className="section-title section-reveal">Loved by engineers shipping AI</h2>
+          <p className="section-sub section-reveal">
+            Teams trust AgentOS to keep their agent fleets observable and their knowledge persistent.
+          </p>
+          <div className="testimonials-grid section-reveal" style={{ transitionDelay: '0.2s' }}>
+            {TESTIMONIALS.map((t, i) => (
+              <TestimonialCard key={i} testimonial={t} />
+            ))}
+          </div>
         </div>
       </section>
 
@@ -389,6 +613,11 @@ export default function LandingPage() {
               </div>
             ))}
           </div>
+          {/* Urgency badge */}
+          <div className="pricing-urgency section-reveal" style={{ transitionDelay: '0.4s' }}>
+            <span className="pricing-urgency-dot" />
+            <span>Start free today — upgrade anytime, cancel anytime. No contracts.</span>
+          </div>
         </div>
       </section>
 
@@ -400,11 +629,16 @@ export default function LandingPage() {
         <div className="container" style={{ position: 'relative', zIndex: 1 }}>
           <h2 className="section-title section-reveal">Ready to command your AI fleet?</h2>
           <p className="section-sub section-reveal" style={{ margin: '0 auto 32px', transitionDelay: '0.1s' }}>
-            Join the teams using AgentOS to ship AI faster, with full observability and zero knowledge loss.
+            Join 2,400+ engineers using AgentOS to ship AI faster, with full observability and zero knowledge loss.
           </p>
           <div className="hero-cta section-reveal" style={{ transitionDelay: '0.2s' }}>
             <button className="btn btn-primary btn-lg" onClick={() => window.location.href = '/signup'}>🚀 Get Started Free</button>
             <button className="btn btn-secondary btn-lg" onClick={() => window.location.href = 'mailto:benjamin@stoicagentos.com?subject=AgentOS Demo Request'}>📅 Book a Demo</button>
+          </div>
+          <div className="cta-trust section-reveal" style={{ transitionDelay: '0.3s' }}>
+            <span>✓ No credit card required</span>
+            <span>✓ 14-day Pro trial</span>
+            <span>✓ Cancel anytime</span>
           </div>
         </div>
       </section>

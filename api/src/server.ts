@@ -1,13 +1,30 @@
 /**
- * Stoic AgentOS — API Server
+ * Stoic AgentOS — API Server (Production-Hardened)
  * Express.js backend for AI Agent Operations Platform
- * Routes are organized in src/routes/
+ *
+ * Features:
+ * - Request ID tracking (x-request-id)
+ * - Per-endpoint metrics collection (p50/p95/p99 latency)
+ * - Plan-aware rate limiting (100/1000/5000/10000 req/min)
+ * - Structured JSON logging
+ * - Global error handler with standardized responses
+ * - Graceful shutdown (SIGTERM/SIGINT)
+ * - Uncaught exception / unhandled rejection safety nets
  */
 
 import express from 'express';
-import type { Request, Response, NextFunction } from 'express';
+import type { Request, Response } from 'express';
 import cors from 'cors';
 import { supabase } from './middleware/db.js';
+
+// Production middleware
+import {
+  requestIdMiddleware,
+  metricsMiddleware,
+  globalErrorHandler,
+  installProcessHandlers,
+} from './middleware/production.js';
+import { apiLimiter } from './middleware/rateLimiter.js';
 
 // Route modules
 import healthRoutes from './routes/health.js';
@@ -26,13 +43,21 @@ import graphRoutes from './routes/graph.js';
 import insightRoutes from './routes/insights.js';
 import { probeVaultRpc } from './lib/anthropic.js';
 
+// ── Install process-level safety nets ──
+installProcessHandlers();
+
 // ── Config ──
 const PORT = process.env.PORT || 4444;
 const API_VERSION = 'v1';
 
 const app = express();
 
-// ── Middleware ──
+// ── Core Middleware (order matters) ──
+
+// 1. Request ID — must be first so all subsequent logs include it
+app.use(requestIdMiddleware);
+
+// 2. CORS
 app.use(cors({
   origin: [
     'https://stoicagentos.com',
@@ -41,23 +66,20 @@ app.use(cors({
     process.env.NODE_ENV === 'development' && 'http://localhost:5173',
   ].filter(Boolean) as string[],
   credentials: true,
+  exposedHeaders: ['X-Request-ID', 'X-RateLimit-Limit', 'X-RateLimit-Remaining', 'X-RateLimit-Reset', 'Retry-After'],
 }));
+
+// 3. Body parsing
 app.use(express.json({ limit: '1mb' }));
+
+// 4. Metrics + structured logging
+app.use(metricsMiddleware);
+
+// 5. Rate limiting (applied to all API routes)
+app.use('/api/', apiLimiter);
 
 // Make supabase accessible via app.locals
 app.locals.supabase = supabase;
-
-// Request logging
-app.use((req: Request, res: Response, next: NextFunction) => {
-  const start = Date.now();
-  res.on('finish', () => {
-    const ms = Date.now() - start;
-    if (!req.url.includes('/health')) {
-      console.log(`${req.method} ${req.url} ${res.statusCode} ${ms}ms`);
-    }
-  });
-  next();
-});
 
 // ── Mount Routes ──
 app.use(healthRoutes);
@@ -75,13 +97,29 @@ app.use(alertRoutes);
 app.use(graphRoutes);
 app.use(insightRoutes);
 
+// ── 404 handler ──
+app.use((req: Request, res: Response) => {
+  res.status(404).json({
+    error: 'Not found',
+    code: 'NOT_FOUND',
+    request_id: req.requestId,
+    path: req.originalUrl,
+  });
+});
+
+// ── Global error handler (must be last) ──
+app.use(globalErrorHandler);
+
 // ── Start ──
 app.listen(PORT, async () => {
-  console.log(`\n⚡ Stoic AgentOS API — ${API_VERSION}`);
+  console.log(`\n⚡ Stoic AgentOS API — ${API_VERSION} (production-hardened)`);
   console.log(`   Port: ${PORT}`);
   console.log(`   Supabase: ${supabase ? '✅ Connected' : '⚠️  No URL or Service Key (demo mode)'}`);
   console.log(`   Stripe: ${process.env.STRIPE_SECRET_KEY ? '✅ Ready' : '⚠️  Not configured'}`);
   console.log(`   Anthropic: ${process.env.ANTHROPIC_API_KEY ? '✅ Platform key set' : '⚠️  BYOK only (no platform fallback)'}`);
+  console.log(`   Rate limiting: ✅ Plan-aware (free:100/min, pro:1K, team:5K)`);
+  console.log(`   Metrics: ✅ /api/v1/health/metrics`);
+  console.log(`   Error handling: ✅ Global handler + process safety nets`);
 
   if (supabase) {
     const status = await probeVaultRpc();

@@ -1,9 +1,9 @@
 /**
- * @stoic/agentos-sdk v2.0.0
+ * @stoic/agentos-sdk v2.1.0
  * Official SDK for Stoic AgentOS — AI Agent Operations Platform
  * 
  * Usage:
- *   import { AgentOS } from 'stoic-agentos-sdk';
+ *   import { AgentOS } from '@stoic/agentos-sdk';
  *   const os = new AgentOS({ apiKey: 'sk_live_xxx', workspace: 'my-app' });
  *   
  *   // Auto-instrument LLM providers (zero-config observability)
@@ -28,19 +28,75 @@ import { estimateCost, MODEL_PRICING } from './pricing.js';
 
 const DEFAULT_API_URL = 'https://stoic-agentos-api-production.up.railway.app/api/v1';
 
+const VALID_OBSERVATION_TYPES = [
+  'note', 'decision', 'architecture', 'deployment', 'discovery',
+  'file_edit', 'error', 'git_commit', 'agent_run', 'command',
+  'dependency', 'config',
+];
+
+// ── Error Classes ──
+
+export class AgentOSError extends Error {
+  constructor(message, code, statusCode) {
+    super(message);
+    this.name = 'AgentOSError';
+    this.code = code;
+    this.statusCode = statusCode;
+  }
+}
+
+export class AgentOSValidationError extends AgentOSError {
+  constructor(message) {
+    super(message, 'VALIDATION_ERROR', 400);
+    this.name = 'AgentOSValidationError';
+  }
+}
+
+export class AgentOSAuthError extends AgentOSError {
+  constructor(message) {
+    super(message, 'AUTH_ERROR', 401);
+    this.name = 'AgentOSAuthError';
+  }
+}
+
+export class AgentOSRateLimitError extends AgentOSError {
+  constructor(message, limit, current) {
+    super(message, 'RATE_LIMIT', 429);
+    this.name = 'AgentOSRateLimitError';
+    this.limit = limit;
+    this.current = current;
+  }
+}
+
+// ── Main Client ──
+
 export class AgentOS {
   constructor(options = {}) {
     this.apiKey = options.apiKey || process.env.AGENTOS_API_KEY || '';
-    this.apiUrl = options.apiUrl || process.env.AGENTOS_API_URL || DEFAULT_API_URL;
+    this.apiUrl = (options.apiUrl || process.env.AGENTOS_API_URL || DEFAULT_API_URL).replace(/\/+$/, '');
     this.workspace = options.workspace || 'default';
     this.debug = options.debug || false;
     this._queue = [];
     this._flushTimer = null;
     this._batchSize = options.batchSize || 10;
     this._flushInterval = options.flushInterval || 5000; // 5s
+    this._maxRetries = options.maxRetries ?? 3;
+    this._baseDelay = options.baseDelay ?? 500; // ms
+    this._shutdownCalled = false;
 
     if (!this.apiKey) {
-      console.warn('[AgentOS] No API key provided. Set AGENTOS_API_KEY or pass apiKey option.');
+      console.warn(
+        '[AgentOS] ⚠️  No API key provided.\n' +
+        '  Set AGENTOS_API_KEY environment variable or pass apiKey option:\n' +
+        '  const os = new AgentOS({ apiKey: "sk_live_xxx" });\n' +
+        '  Get your key at: https://stoic-agentos.vercel.app/dashboard'
+      );
+    } else if (!this.apiKey.startsWith('sk_live_') && !this.apiKey.startsWith('sk_test_')) {
+      console.warn(
+        '[AgentOS] ⚠️  API key format looks wrong.\n' +
+        '  Expected format: sk_live_xxx or sk_test_xxx\n' +
+        '  Get your key at: https://stoic-agentos.vercel.app/dashboard'
+      );
     }
 
     // Auto-flush on process exit
@@ -66,6 +122,13 @@ export class AgentOS {
    *   // All openai.chat.completions.create() calls now auto-captured
    */
   instrumentClient(provider, client) {
+    if (!provider || typeof provider !== 'string') {
+      throw new AgentOSValidationError('instrumentClient requires a provider name ("openai" or "anthropic")');
+    }
+    if (!client || typeof client !== 'object') {
+      throw new AgentOSValidationError('instrumentClient requires a valid client instance');
+    }
+
     switch (provider) {
       case 'openai':
         instrumentOpenAIClient(client, this);
@@ -74,7 +137,9 @@ export class AgentOS {
         instrumentAnthropicClient(client, this);
         break;
       default:
-        console.warn(`[AgentOS] Unknown provider: ${provider}. Supported: openai, anthropic`);
+        throw new AgentOSValidationError(
+          `Unknown provider: "${provider}". Supported: "openai", "anthropic"`
+        );
     }
     return this; // Allow chaining
   }
@@ -91,6 +156,9 @@ export class AgentOS {
    *   await trace.end(); // Sends trace + all captured spans
    */
   startTrace(name, options = {}) {
+    if (!name || typeof name !== 'string') {
+      throw new AgentOSValidationError('startTrace requires a name string');
+    }
     const trace = new Trace(this, name, options);
     setActiveTrace(trace);
     return trace;
@@ -108,7 +176,7 @@ export class AgentOS {
   }
 
   // ═══════════════════════════════════
-  // OBSERVATIONS (v1.0 — unchanged)
+  // OBSERVATIONS
   // ═══════════════════════════════════
 
   /**
@@ -121,6 +189,19 @@ export class AgentOS {
    * @param {Object} [observation.metadata] - Extra data
    */
   async capture(observation) {
+    if (!observation || typeof observation !== 'object') {
+      throw new AgentOSValidationError('capture() requires an observation object');
+    }
+    if (!observation.title || typeof observation.title !== 'string') {
+      throw new AgentOSValidationError('capture() requires a "title" string');
+    }
+    if (observation.type && !VALID_OBSERVATION_TYPES.includes(observation.type)) {
+      throw new AgentOSValidationError(
+        `Invalid observation type: "${observation.type}". ` +
+        `Valid types: ${VALID_OBSERVATION_TYPES.join(', ')}`
+      );
+    }
+
     const payload = {
       workspace: this.workspace,
       type: observation.type || 'note',
@@ -175,6 +256,13 @@ export class AgentOS {
    * @returns {Function} Wrapped function
    */
   wrapAgent(agentName, fn) {
+    if (!agentName || typeof agentName !== 'string') {
+      throw new AgentOSValidationError('wrapAgent requires an agentName string');
+    }
+    if (typeof fn !== 'function') {
+      throw new AgentOSValidationError('wrapAgent requires a function as the second argument');
+    }
+
     const sdk = this;
 
     return async function wrappedAgent(...args) {
@@ -234,6 +322,9 @@ export class AgentOS {
    * @param {Object} agent - { name, description, module }
    */
   async registerAgent(agent) {
+    if (!agent || !agent.name) {
+      throw new AgentOSValidationError('registerAgent requires an agent object with a "name" field');
+    }
     return this._send('/agents', {
       name: agent.name,
       description: agent.description || '',
@@ -255,10 +346,11 @@ export class AgentOS {
    */
   async getObservations(options = {}) {
     const params = new URLSearchParams();
-    if (options.limit) params.set('limit', options.limit);
+    if (options.limit) params.set('limit', String(options.limit));
     if (options.type) params.set('type', options.type);
     if (options.workspace) params.set('workspace', options.workspace);
-    return this._fetch(`/observations?${params}`);
+    const qs = params.toString();
+    return this._fetch(`/observations${qs ? `?${qs}` : ''}`);
   }
 
   /**
@@ -267,61 +359,15 @@ export class AgentOS {
    */
   async getTraces(options = {}) {
     const params = new URLSearchParams();
-    if (options.limit) params.set('limit', options.limit);
+    if (options.limit) params.set('limit', String(options.limit));
     if (options.agent) params.set('agent', options.agent);
     if (options.status) params.set('status', options.status);
-    return this._fetch(`/traces?${params}`);
+    const qs = params.toString();
+    return this._fetch(`/traces${qs ? `?${qs}` : ''}`);
   }
 
   // ═══════════════════════════════════
-  // CLAUDE INSIGHTS (v2.1)
-  // ═══════════════════════════════════
-
-  /**
-   * Summarize recent observations using Claude.
-   * @param {Object} [options]
-   * @param {number} [options.hours=24] - Window in hours
-   * @param {string} [options.agent_id] - Filter to one agent
-   * @param {string} [options.workspace_id] - Filter to one workspace
-   * @returns {Promise<{summary: string, count: number, model: string, usage: object}>}
-   */
-  async summarize(options = {}) {
-    return this._send('/insights/summarize', {
-      hours: options.hours || 24,
-      agent_id: options.agent_id,
-      workspace_id: options.workspace_id,
-    });
-  }
-
-  /**
-   * Diagnose an agent's reliability using Claude (Sonnet 4.6 with thinking).
-   * @param {string} agentId - Agent UUID
-   * @returns {Promise<{analysis: string, agent: object, model: string, usage: object}>}
-   */
-  async analyzeAgent(agentId) {
-    return this._send('/insights/analyze-agent', { agent_id: agentId });
-  }
-
-  /**
-   * Ask a free-form question grounded in your org's data.
-   * @param {string} question
-   * @param {Object} [options]
-   * @param {'fast'|'smart'} [options.model='fast'] - fast=Haiku 4.5, smart=Sonnet 4.6
-   */
-  async ask(question, options = {}) {
-    return this._send('/insights/ask', { question, model: options.model || 'fast' });
-  }
-
-  /**
-   * Get cost breakdown for current month
-   */
-  async getCosts(period) {
-    const params = period ? `?period=${period}` : '';
-    return this._fetch(`/costs${params}`);
-  }
-
-  // ═══════════════════════════════════
-  // CLAUDE INSIGHTS (v3.0)
+  // CLAUDE INSIGHTS
   // ═══════════════════════════════════
 
   /**
@@ -344,6 +390,9 @@ export class AgentOS {
    * @returns {{ agent: object, analysis: string, usage: object }}
    */
   async analyzeAgent(agentId, includeTraces = true) {
+    if (!agentId || typeof agentId !== 'string') {
+      throw new AgentOSValidationError('analyzeAgent requires an agentId string');
+    }
     return this._send('/insights/analyze-agent', {
       agent_id: agentId,
       include_traces: includeTraces,
@@ -357,43 +406,109 @@ export class AgentOS {
    * @returns {{ answer: string, usage: object }}
    */
   async ask(question, context = '') {
+    if (!question || typeof question !== 'string') {
+      throw new AgentOSValidationError('ask() requires a question string');
+    }
     return this._send('/insights/ask', { question, context });
   }
 
-  // ── Internal ──
-
-  async _send(path, body, method = 'POST') {
-    try {
-      const resp = await fetch(`${this.apiUrl}${path}`, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.apiKey}`,
-        },
-        body: JSON.stringify(body),
-      });
-      if (!resp.ok) {
-        const err = await resp.json().catch(() => ({}));
-        if (this.debug) console.warn(`[AgentOS] API error: ${resp.status}`, err);
-        return null;
-      }
-      return resp.json();
-    } catch (err) {
-      if (this.debug) console.warn(`[AgentOS] Network error:`, err.message);
-      return null;
-    }
+  /**
+   * Graceful shutdown — flush all pending data
+   */
+  async shutdown() {
+    this._shutdownCalled = true;
+    await this.flush();
   }
 
-  async _fetch(path) {
-    try {
-      const resp = await fetch(`${this.apiUrl}${path}`, {
-        headers: { 'Authorization': `Bearer ${this.apiKey}` },
-      });
-      if (!resp.ok) return null;
-      return resp.json();
-    } catch {
-      return null;
+  // ── Internal: POST with retry ──
+
+  async _send(path, body, method = 'POST') {
+    let lastError;
+    for (let attempt = 0; attempt <= this._maxRetries; attempt++) {
+      try {
+        const resp = await fetch(`${this.apiUrl}${path}`, {
+          method,
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${this.apiKey}`,
+            'User-Agent': 'stoic-agentos-sdk/2.1.0',
+          },
+          body: JSON.stringify(body),
+        });
+
+        // Don't retry client errors (4xx) except 429
+        if (resp.status === 429) {
+          const err = await resp.json().catch(() => ({}));
+          if (attempt < this._maxRetries) {
+            const delay = this._baseDelay * Math.pow(2, attempt) + Math.random() * 200;
+            if (this.debug) console.warn(`[AgentOS] Rate limited, retrying in ${Math.round(delay)}ms...`);
+            await new Promise(r => setTimeout(r, delay));
+            continue;
+          }
+          throw new AgentOSRateLimitError(err.error || 'Rate limited', err.limit, err.current);
+        }
+
+        if (resp.status === 401) {
+          const err = await resp.json().catch(() => ({}));
+          throw new AgentOSAuthError(err.error || 'Invalid API key. Check your key at https://stoic-agentos.vercel.app/dashboard');
+        }
+
+        if (!resp.ok) {
+          const err = await resp.json().catch(() => ({}));
+          if (this.debug) console.warn(`[AgentOS] API error: ${resp.status}`, err);
+          return null;
+        }
+        return resp.json();
+      } catch (err) {
+        if (err instanceof AgentOSError) throw err;
+        lastError = err;
+
+        // Retry on network errors
+        if (attempt < this._maxRetries) {
+          const delay = this._baseDelay * Math.pow(2, attempt) + Math.random() * 200;
+          if (this.debug) console.warn(`[AgentOS] Network error, retry ${attempt + 1}/${this._maxRetries} in ${Math.round(delay)}ms: ${err.message}`);
+          await new Promise(r => setTimeout(r, delay));
+          continue;
+        }
+      }
     }
+    if (this.debug) console.warn(`[AgentOS] All ${this._maxRetries + 1} attempts failed:`, lastError?.message);
+    return null;
+  }
+
+  // ── Internal: GET with retry ──
+
+  async _fetch(path) {
+    let lastError;
+    for (let attempt = 0; attempt <= this._maxRetries; attempt++) {
+      try {
+        const resp = await fetch(`${this.apiUrl}${path}`, {
+          headers: {
+            'Authorization': `Bearer ${this.apiKey}`,
+            'User-Agent': 'stoic-agentos-sdk/2.1.0',
+          },
+        });
+
+        if (resp.status === 429 && attempt < this._maxRetries) {
+          const delay = this._baseDelay * Math.pow(2, attempt) + Math.random() * 200;
+          if (this.debug) console.warn(`[AgentOS] Rate limited, retrying in ${Math.round(delay)}ms...`);
+          await new Promise(r => setTimeout(r, delay));
+          continue;
+        }
+
+        if (!resp.ok) return null;
+        return resp.json();
+      } catch (err) {
+        lastError = err;
+        if (attempt < this._maxRetries) {
+          const delay = this._baseDelay * Math.pow(2, attempt) + Math.random() * 200;
+          if (this.debug) console.warn(`[AgentOS] Network error, retry ${attempt + 1}/${this._maxRetries}: ${err.message}`);
+          await new Promise(r => setTimeout(r, delay));
+          continue;
+        }
+      }
+    }
+    return null;
   }
 }
 
