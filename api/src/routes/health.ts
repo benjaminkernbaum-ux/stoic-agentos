@@ -21,13 +21,20 @@ router.post(`/api/${API_VERSION}/admin/run-migration-005`, async (req: Request, 
   const supabaseUrl = process.env.SUPABASE_URL || '';
   const supabaseKey = process.env.SUPABASE_SERVICE_KEY || '';
 
-  // Build Postgres connection from Supabase URL + service key
-  // Extract project ref from SUPABASE_URL
+  // Debug: show what env vars we have
+  const envInfo = {
+    DATABASE_URL: dbUrl ? `${dbUrl.substring(0, 30)}...` : 'NOT SET',
+    SUPABASE_URL: supabaseUrl || 'NOT SET',
+    SUPABASE_SERVICE_KEY: supabaseKey ? `${supabaseKey.substring(0, 15)}...` : 'NOT SET',
+    SUPABASE_DB_URL: process.env.SUPABASE_DB_URL ? 'SET' : 'NOT SET',
+  };
+  console.log('[migrate-005] Env:', JSON.stringify(envInfo));
+
   const refMatch = supabaseUrl.match(/https:\/\/([^.]+)\.supabase\.co/);
   const ref = refMatch?.[1] || '';
 
   if (!ref && !dbUrl) {
-    return res.status(500).json({ error: 'No database connection info available' });
+    return res.status(500).json({ error: 'No database connection info available', env: envInfo });
   }
 
   // Try to connect via pg
@@ -39,6 +46,7 @@ router.post(`/api/${API_VERSION}/admin/run-migration-005`, async (req: Request, 
         { name: `${ref}.pooler`, host: `${ref}.pooler.supabase.com`, port: 6543, user: `postgres.${ref}`, password: req.body.db_password || '', database: 'postgres' },
       ];
 
+  const errors: Array<{method: string, error: string}> = [];
   for (const cfg of configs) {
     const { name, ...connOpts } = cfg;
     console.log(`[migrate-005] Trying ${name}...`);
@@ -88,12 +96,14 @@ router.post(`/api/${API_VERSION}/admin/run-migration-005`, async (req: Request, 
         index: idx.length > 0 ? 'active' : 'not_found',
       });
     } catch (err: unknown) {
-      console.log(`[migrate-005] ${name} failed: ${(err as Error).message}`);
+      const msg = (err as Error).message;
+      console.log(`[migrate-005] ${name} failed: ${msg}`);
+      errors.push({ method: name, error: msg });
       try { await client.end(); } catch {}
     }
   }
 
-  res.status(500).json({ error: 'Could not connect to database from any method' });
+  res.status(500).json({ error: 'Could not connect to database from any method', env: envInfo, attempts: errors });
 });
 
 export default router;
