@@ -137,4 +137,23 @@ router.post(`/api/${API_VERSION}/agents/heartbeat`, authenticate, async (req: Au
   }
 });
 
+// ── Delete Agent ──
+router.delete(`/api/${API_VERSION}/agents/:id`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { data, error } = await supabase!
+      .from('agents')
+      .delete()
+      .eq('id', req.params.id)
+      .eq('org_id', req.org.id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    if (!data) return res.status(404).json({ error: 'Agent not found' });
+    res.json({ deleted: true, id: req.params.id });
+  } catch (err: unknown) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
 export default router;
