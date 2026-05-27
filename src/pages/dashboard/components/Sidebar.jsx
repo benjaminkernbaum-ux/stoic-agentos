@@ -25,6 +25,7 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen, activeTab, setAct
           { id: 'workflows',  icon: '◫', label: 'Workflows',  badge: null },
           { id: 'memory',     icon: '🧠', label: 'Memory',     badge: null },
           { id: 'compliance', icon: '🛡️', label: 'Compliance', badge: null },
+          { id: 'teamhq',     icon: '🏢', label: 'Team HQ',    badge: { text: 'NEW', color: 'purple' } },
         ].map(item => (
           <button
             key={item.id}

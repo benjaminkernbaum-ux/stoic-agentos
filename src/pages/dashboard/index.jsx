@@ -26,6 +26,7 @@ import CommandCenterTab from './tabs/CommandCenterTab';
 import SettingsTab from './tabs/SettingsTab';
 import MemoryTab from './tabs/MemoryTab';
 import ComplianceTab from './tabs/ComplianceTab';
+import TeamHQTab from './tabs/TeamHQTab';
 
 import '../Dashboard.css';
 
@@ -240,6 +241,14 @@ export default function Dashboard() {
 
         {activeTab === 'compliance' && (
           <ComplianceTab />
+        )}
+
+        {activeTab === 'teamhq' && (
+          <TeamHQTab
+            planName={planName}
+            handleUpgrade={(plan) => actions.handleUpgrade(plan, setUpgradeLoading)}
+            upgradeLoading={upgradeLoading}
+          />
         )}
 
         {activeTab === 'settings' && (
