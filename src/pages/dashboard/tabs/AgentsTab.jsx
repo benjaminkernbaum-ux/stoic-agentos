@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../../../lib/supabase';
 import { EmptyState } from '../../../components/SkeletonLoader';
 
@@ -39,64 +39,37 @@ function timeAgo(ts) {
   return `${Math.floor(s / 86400)}d ago`;
 }
 
-export default function AgentsTab({ agents: initialAgents, setShowAgentModal, setSelectedAgent, handleSeedDemo, seedLoading }) {
-  const [agents, setAgents] = useState(initialAgents || []);
+export default function AgentsTab({ agents, setShowAgentModal, setSelectedAgent, handleSeedDemo, seedLoading }) {
   const [recentlyUpdated, setRecentlyUpdated] = useState(new Set());
 
-  // Sync with parent data
-  useEffect(() => {
-    setAgents(initialAgents || []);
-  }, [initialAgents]);
+  // Stable org_id derived from agents
+  const orgId = useMemo(() => agents[0]?.org_id || null, [agents]);
 
   // ── Supabase Realtime subscription ──
   useEffect(() => {
-    if (!agents.length) return;
-
-    // Get org_id from the first agent
-    const orgId = agents[0]?.org_id;
     if (!orgId) return;
 
     const channel = supabase
-      .channel('agents-realtime')
+      .channel(`agents-realtime-${orgId}`)
       .on(
         'postgres_changes',
         {
-          event: 'UPDATE',
+          event: '*',
           schema: 'public',
           table: 'agents',
           filter: `org_id=eq.${orgId}`,
         },
         (payload) => {
-          const updated = payload.new;
-          setAgents(prev =>
-            prev.map(a => a.id === updated.id ? { ...a, ...updated } : a)
-          );
-
-          // Mark as recently updated for pulse animation
-          setRecentlyUpdated(prev => new Set([...prev, updated.id]));
-          setTimeout(() => {
-            setRecentlyUpdated(prev => {
-              const next = new Set(prev);
-              next.delete(updated.id);
-              return next;
-            });
-          }, 5000);
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'agents',
-          filter: `org_id=eq.${orgId}`,
-        },
-        (payload) => {
-          setAgents(prev => {
-            // Check if already exists
-            if (prev.some(a => a.id === payload.new.id)) return prev;
-            return [...prev, payload.new];
-          });
+          if (payload.eventType === 'UPDATE' || payload.eventType === 'INSERT') {
+            setRecentlyUpdated(prev => new Set([...prev, payload.new.id]));
+            setTimeout(() => {
+              setRecentlyUpdated(prev => {
+                const next = new Set(prev);
+                next.delete(payload.new.id);
+                return next;
+              });
+            }, 5000);
+          }
         }
       )
       .subscribe();
@@ -104,15 +77,9 @@ export default function AgentsTab({ agents: initialAgents, setShowAgentModal, se
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [agents.length > 0 ? agents[0]?.org_id : null]);
+  }, [orgId]);
 
-  // Refresh heartbeat statuses every 30s
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setAgents(prev => [...prev]); // Force re-render to update heartbeat status
-    }, 30000);
-    return () => clearInterval(interval);
-  }, []);
+
 
   return (
     <div className="dash-content">
@@ -246,14 +213,7 @@ export default function AgentsTab({ agents: initialAgents, setShowAgentModal, se
         </div>
       )}
 
-      {/* CSS for realtime pulse animation */}
-      <style>{`
-        @keyframes realtimePulse {
-          0% { box-shadow: 0 0 0 0 rgba(167,139,250,0.4); }
-          50% { box-shadow: 0 0 20px 4px rgba(167,139,250,0.2); }
-          100% { box-shadow: 0 0 0 0 rgba(167,139,250,0); }
-        }
-      `}</style>
+
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import AnimatedCounter from '../../../components/AnimatedCounter';
 import { SkeletonStatCards, SkeletonAgentRows, SkeletonTimeline, SkeletonUsageBar, EmptyState } from '../../../components/SkeletonLoader';
 import { STATUS_COLORS, TYPE_ICONS, CAPTURE_HINTS } from '../constants';
@@ -90,7 +90,7 @@ function StatCard({ icon, trend, trendType = 'neutral', value, label, sublabel, 
    from observations for visual appeal
    ═══════════════════════════════════════════ */
 function useSparklineData(observations) {
-  return useCallback(() => {
+  return useMemo(() => {
     if (!observations || observations.length === 0) return [];
     // Build 7-day buckets from observations
     const now = Date.now();
@@ -108,7 +108,7 @@ function useSparklineData(observations) {
       return [1, 2, 2, 3, 4, 5, 7];
     }
     return buckets;
-  }, [observations])();
+  }, [observations]);
 }
 
 /* ═══════════════════════════════════════════

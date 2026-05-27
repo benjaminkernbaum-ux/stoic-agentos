@@ -21,7 +21,7 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen, activeTab, setAct
           { id: 'workspaces', icon: '📦', label: 'Workspaces', badge: null },
           { id: 'brain',      icon: '🧠', label: 'Brain',      badge: null },
           { id: 'graph',      icon: '🕸️', label: 'Graph',      badge: null },
-          { id: 'traces',     icon: '📊', label: 'Traces',     badge: null },
+          { id: 'traces',     icon: '📈', label: 'Traces',     badge: null },
           { id: 'workflows',  icon: '🔗', label: 'Workflows',  badge: null },
         ].map(item => (
           <button

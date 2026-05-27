@@ -5,7 +5,7 @@ async function getToken() {
   return (await supabase.auth.getSession()).data.session?.access_token;
 }
 
-export function useDashboardActions({ org, toast, fetchData, setAgents, setObservations, setStats, setUsage, setApiKeys, setKnowledgeItems }) {
+export function useDashboardActions({ org, toast, fetchData, setAgents, setObservations, setStats, setUsage, setApiKeys, setKnowledgeItems, setWorkspaces }) {
 
   const handleCapture = async (e, captureForm, setCaptureForm, setCaptureLoading, onCaptureRef) => {
     e.preventDefault();

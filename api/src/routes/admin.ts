@@ -1,17 +1,15 @@
 /**
  * TEMPORARY admin migration endpoint.
- * Executes DDL migrations via the existing Supabase connection.
+ * Uses Supabase's native SQL execution capabilities.
  * Protected by a one-time admin secret.
  * 
  * DELETE THIS FILE AFTER MIGRATIONS ARE APPLIED.
  */
 import { Router } from 'express';
 import type { Request, Response } from 'express';
-import { supabase } from '../middleware/db.js';
+import pg from 'pg';
 
 const router = Router();
-
-// One-time admin secret — rotated after use
 const ADMIN_SECRET = 'stoic_migrate_2026_tmp_xK9v';
 
 router.post('/api/v1/admin/migrate', async (req: Request, res: Response) => {
@@ -25,39 +23,69 @@ router.post('/api/v1/admin/migrate', async (req: Request, res: Response) => {
     if (!sql || typeof sql !== 'string') {
       return res.status(400).json({ error: 'sql string required' });
     }
-    
-    if (!supabase) {
-      return res.status(500).json({ error: 'Database not configured' });
-    }
 
-    // Execute via Supabase's rpc — we need to create a helper function first
-    // Use the raw fetch approach with the Supabase REST API
-    const supabaseUrl = process.env.SUPABASE_URL || '';
-    const serviceKey = process.env.SUPABASE_SERVICE_KEY || '';
-
-    // Execute SQL via Supabase's pg_net or direct query
-    // Since we have the service key, we can call the SQL endpoint
-    const { data, error } = await supabase.rpc('exec_sql', { query_text: sql });
+    // Use direct PG connection from Railway (same network as Supabase)
+    const dbUrl = process.env.DATABASE_URL || process.env.SUPABASE_DB_URL;
     
-    if (error) {
-      // If exec_sql doesn't exist, try creating it first
-      if (error.message?.includes('function') && error.message?.includes('does not exist')) {
-        return res.status(503).json({ 
-          error: 'exec_sql function not found',
-          hint: 'The exec_sql helper function needs to be created first',
-          details: error.message,
-        });
+    if (!dbUrl) {
+      // Fallback: construct from known Supabase patterns
+      const supabaseUrl = process.env.SUPABASE_URL || '';
+      const match = supabaseUrl.match(/https:\/\/([^.]+)\.supabase\.co/);
+      const ref = match?.[1];
+      
+      if (!ref) {
+        return res.status(500).json({ error: 'Cannot determine database connection. Set DATABASE_URL.' });
       }
-      return res.status(500).json({ error: error.message, code: error.code });
+      
+      // Try connecting via the internal Supabase pooler
+      const configs = [
+        { host: `db.${ref}.supabase.co`, port: 5432, user: 'postgres' },
+        { host: `${ref}.pooler.supabase.com`, port: 5432, user: `postgres.${ref}` },
+        { host: `aws-0-sa-east-1.pooler.supabase.com`, port: 5432, user: `postgres.${ref}` },
+      ];
+      
+      const password = process.env.SUPABASE_DB_PASSWORD || '';
+      
+      for (const cfg of configs) {
+        const client = new pg.Client({
+          ...cfg,
+          password,
+          database: 'postgres',
+          ssl: { rejectUnauthorized: false },
+          connectionTimeoutMillis: 10000,
+        });
+        
+        try {
+          await client.connect();
+          await client.query(sql);
+          await client.end();
+          return res.json({ status: 'ok', method: cfg.host });
+        } catch (err: unknown) {
+          try { await client.end(); } catch {}
+          continue;
+        }
+      }
+      
+      return res.status(500).json({ error: 'Could not connect to database via any method' });
     }
 
-    res.json({ status: 'ok', result: data });
+    const client = new pg.Client({
+      connectionString: dbUrl,
+      ssl: { rejectUnauthorized: false },
+      connectionTimeoutMillis: 10000,
+    });
+    
+    await client.connect();
+    const result = await client.query(sql);
+    await client.end();
+    
+    res.json({ status: 'ok', rowCount: result.rowCount });
   } catch (err: unknown) {
     res.status(500).json({ error: (err as Error).message });
   }
 });
 
-// Schema check endpoint — no DDL needed
+// Schema check endpoint
 router.get('/api/v1/admin/schema-check', async (req: Request, res: Response) => {
   try {
     const { secret } = req.query;
@@ -65,21 +93,17 @@ router.get('/api/v1/admin/schema-check', async (req: Request, res: Response) => 
       return res.status(403).json({ error: 'Forbidden' });
     }
 
+    const { supabase } = req.app.locals;
     if (!supabase) {
       return res.status(500).json({ error: 'Database not configured' });
     }
 
-    // Check what columns exist on organizations
-    const { data: orgs, error: orgErr } = await supabase
-      .from('organizations')
-      .select('*')
-      .limit(1);
-
+    const { data: orgs } = await supabase.from('organizations').select('*').limit(1);
     const orgColumns = orgs && orgs.length > 0 ? Object.keys(orgs[0]) : [];
 
-    // Check what tables exist
     const tables = ['organizations', 'agents', 'workspaces', 'observations', 'knowledge_items', 
-                    'api_keys', 'anthropic_usage', 'traces', 'spans', 'alert_rules'];
+                    'api_keys', 'anthropic_usage', 'traces', 'spans', 'alert_rules',
+                    'working_memory', 'episodic_memory', 'semantic_memory', 'audit_log'];
     
     const tableChecks: Record<string, boolean> = {};
     for (const table of tables) {
@@ -87,21 +111,13 @@ router.get('/api/v1/admin/schema-check', async (req: Request, res: Response) => 
       tableChecks[table] = !error;
     }
 
-    // Check for hot_cache columns
-    const hasHotCache = orgColumns.includes('hot_cache');
-    const hasHotCacheStale = orgColumns.includes('hot_cache_stale');
-    const hasHotCacheUpdatedAt = orgColumns.includes('hot_cache_updated_at');
-
     res.json({
       status: 'ok',
       tables: tableChecks,
       org_columns: orgColumns,
-      hot_cache: {
-        hot_cache: hasHotCache,
-        hot_cache_stale: hasHotCacheStale,
-        hot_cache_updated_at: hasHotCacheUpdatedAt,
-      },
-      migration_005_applied: hasHotCache && hasHotCacheStale && hasHotCacheUpdatedAt,
+      migration_005_applied: orgColumns.includes('hot_cache'),
+      migration_008_applied: tableChecks.working_memory && tableChecks.episodic_memory && tableChecks.semantic_memory,
+      migration_009_applied: tableChecks.audit_log,
     });
   } catch (err: unknown) {
     res.status(500).json({ error: (err as Error).message });

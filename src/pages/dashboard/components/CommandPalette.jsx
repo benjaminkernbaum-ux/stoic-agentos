@@ -1,11 +1,31 @@
+import { useState, useEffect, useCallback } from 'react';
 import { CMD_ITEMS } from '../constants';
 
 export default function CommandPalette({ cmdOpen, setCmdOpen, cmdQuery, setCmdQuery, cmdInputRef, setActiveTab }) {
-  if (!cmdOpen) return null;
+  const [selectedIdx, setSelectedIdx] = useState(0);
 
   const filteredCmds = CMD_ITEMS.filter(item =>
     !cmdQuery || item.name.toLowerCase().includes(cmdQuery.toLowerCase()) || item.desc.toLowerCase().includes(cmdQuery.toLowerCase())
   );
+
+  // Reset selection when query changes
+  useEffect(() => { setSelectedIdx(0); }, [cmdQuery]);
+
+  const handleKeyDown = useCallback((e) => {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setSelectedIdx(i => (i + 1) % filteredCmds.length);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setSelectedIdx(i => (i - 1 + filteredCmds.length) % filteredCmds.length);
+    } else if (e.key === 'Enter' && filteredCmds.length > 0) {
+      e.preventDefault();
+      setActiveTab(filteredCmds[selectedIdx].tab);
+      setCmdOpen(false);
+    }
+  }, [filteredCmds, selectedIdx, setActiveTab, setCmdOpen]);
+
+  if (!cmdOpen) return null;
 
   return (
     <div className="cmd-backdrop" onClick={() => setCmdOpen(false)}>
@@ -18,15 +38,17 @@ export default function CommandPalette({ cmdOpen, setCmdOpen, cmdQuery, setCmdQu
             placeholder="Search or jump to..."
             value={cmdQuery}
             onChange={e => setCmdQuery(e.target.value)}
+            onKeyDown={handleKeyDown}
           />
           <span className="cmd-esc">ESC</span>
         </div>
         <div className="cmd-section-label">Navigation</div>
-        {filteredCmds.map(item => (
+        {filteredCmds.map((item, idx) => (
           <div
             key={item.id}
-            className="cmd-item"
+            className={`cmd-item${idx === selectedIdx ? ' cmd-item-selected' : ''}`}
             onClick={() => { setActiveTab(item.tab); setCmdOpen(false); }}
+            onMouseEnter={() => setSelectedIdx(idx)}
           >
             <div className="cmd-item-icon">{item.icon}</div>
             <div className="cmd-item-text">

@@ -206,10 +206,7 @@ function HotCachePanel() {
         </div>
       )}
 
-      {/* Inline keyframes for spinner */}
-      <style>{`
-        @keyframes spin { to { transform: rotate(360deg); } }
-      `}</style>
+
     </div>
   );
 }

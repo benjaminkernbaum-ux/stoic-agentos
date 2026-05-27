@@ -28,6 +28,8 @@ export const CMD_ITEMS = [
   { id: 'graph',      icon: '🕸️', name: 'Go to Graph',       desc: 'Knowledge visualization',       tab: 'graph' },
   { id: 'settings',   icon: '⚙️', name: 'Go to Settings',    desc: 'API keys and account',           tab: 'settings' },
   { id: 'commandcenter', icon: '⚡', name: 'Command Center',  desc: 'Full ecosystem command center',  tab: 'commandcenter' },
+  { id: 'traces',    icon: '📈', name: 'Go to Traces',     desc: 'LLM call tracing and costs',     tab: 'traces' },
+  { id: 'workflows', icon: '🔗', name: 'Go to Workflows',  desc: 'Agent execution workflows',      tab: 'workflows' },
 ];
 
 export const TAB_TITLES = {

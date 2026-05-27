@@ -70,6 +70,7 @@ export default function Dashboard() {
     setAgents: data.setAgents, setObservations: data.setObservations,
     setStats: data.setStats, setUsage: data.setUsage,
     setApiKeys: data.setApiKeys, setKnowledgeItems: data.setKnowledgeItems,
+    setWorkspaces: data.setWorkspaces,
   });
 
   // Live clock
@@ -107,10 +108,10 @@ export default function Dashboard() {
   useEffect(() => {
     if (searchParams.get('upgraded') === 'true') {
       toast('Plan upgraded successfully! Welcome to Pro.', 'success');
-      window.history.replaceState({}, '', '/dashboard');
+      navigate('/dashboard', { replace: true });
     } else if (searchParams.get('cancelled') === 'true') {
       toast('Upgrade cancelled — you are still on the free plan.', 'info');
-      window.history.replaceState({}, '', '/dashboard');
+      navigate('/dashboard', { replace: true });
     }
   }, []);
 

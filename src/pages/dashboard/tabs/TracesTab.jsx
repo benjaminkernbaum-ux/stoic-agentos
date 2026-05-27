@@ -400,6 +400,14 @@ export default function TracesTab({ traces: initialTraces, traceStats: initialSt
   // Filter traces
   const filteredTraces = useMemo(() => {
     let result = traces;
+    // Date range filter
+    const daysMap = { '7d': 7, '30d': 30, '90d': 90 };
+    const days = daysMap[dateRange] || 30;
+    const cutoff = Date.now() - days * 86400000;
+    result = result.filter(t => {
+      const ts = new Date(t.started_at || t.created_at).getTime();
+      return ts >= cutoff;
+    });
     if (statusFilter !== 'all') result = result.filter(t => t.status === statusFilter);
     if (agentFilter !== 'all') result = result.filter(t => t.agent === agentFilter);
     if (searchQuery) {
@@ -411,7 +419,7 @@ export default function TracesTab({ traces: initialTraces, traceStats: initialSt
       );
     }
     return result;
-  }, [traces, statusFilter, agentFilter, searchQuery]);
+  }, [traces, statusFilter, agentFilter, searchQuery, dateRange]);
 
   // Compute filtered stats
   const stats = useMemo(() => {

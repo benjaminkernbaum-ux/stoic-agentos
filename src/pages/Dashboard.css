@@ -1980,3 +1980,18 @@
   }
 }
 
+/* ── Realtime pulse (moved from AgentsTab inline style) ── */
+@keyframes realtimePulse {
+  0% { box-shadow: 0 0 0 0 rgba(167,139,250,0.4); }
+  50% { box-shadow: 0 0 20px 4px rgba(167,139,250,0.2); }
+  100% { box-shadow: 0 0 0 0 rgba(167,139,250,0); }
+}
+
+/* ── Spinner (moved from BrainTab inline style) ── */
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Command palette selected item ── */
+.cmd-item-selected {
+  background: rgba(124,58,237,0.15) !important;
+  border-color: rgba(167,139,250,0.3) !important;
+}
