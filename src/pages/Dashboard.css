@@ -435,13 +435,7 @@
   transition: width 0.8s cubic-bezier(.4,0,.2,1);
   position: relative; overflow: hidden;
 }
-.dash-usage-fill::after {
-  content: '';
-  position: absolute;
-  top: 0; left: -100%; right: 0; bottom: 0;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
-  animation: shimmer 2.5s infinite;
-}
+  /* clean, no shimmer */
 @keyframes shimmer {
   from { transform: translateX(-100%); }
   to   { transform: translateX(200%); }
@@ -455,8 +449,8 @@
 .dash-grid-2 {
   display: grid;
   grid-template-columns: 1.1fr 0.9fr;
-  gap: 12px;
-  margin-bottom: 12px;
+  gap: 16px;
+  margin-bottom: 16px;
 }
 .dash-panel {
   background: var(--surface-2);
@@ -467,7 +461,7 @@
 }
 .dash-panel-head {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 14px 18px;
+  padding: 16px 20px;
   border-bottom: 1px solid var(--line);
   flex-shrink: 0;
 }
@@ -612,14 +606,14 @@
 .dash-capture-input::placeholder { color: var(--gray-3); }
 .dash-capture-submit {
   padding: 12px 20px;
-  background: var(--gradient-hero);
-  border: none;
-  color: #fff; font-size: 12px; font-weight: 700;
+  background: var(--surface-4);
+  border: 1px solid var(--line-mid);
+  color: var(--gray-1); font-size: 12px; font-weight: 500;
   cursor: pointer; transition: all 0.15s;
   font-family: inherit; flex-shrink: 0;
   letter-spacing: -0.01em;
 }
-.dash-capture-submit:hover { filter: brightness(1.15); }
+.dash-capture-submit:hover { border-color: var(--line-hi); color: var(--white); }
 .dash-capture-submit:disabled { opacity: 0.35; cursor: default; }
 
 /* ══════════════════════════════════
@@ -628,7 +622,7 @@
 .dash-agent-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 12px;
+  gap: 16px;
 }
 .dash-agent-card {
   background: var(--surface-2);
@@ -668,9 +662,9 @@
 .dash-agent-card-stats { display: flex; gap: 20px; margin-bottom: 14px; }
 .dash-agent-stat { display: flex; flex-direction: column; gap: 2px; }
 .dash-agent-stat-val {
-  font-size: 22px; font-weight: 800;
+  font-size: 18px; font-weight: 600;
   font-variant-numeric: tabular-nums;
-  color: var(--white); letter-spacing: -0.03em;
+  color: var(--white); letter-spacing: -0.02em;
 }
 .dash-agent-stat-val.err { color: #ff3b30; }
 .dash-agent-stat-lbl {
@@ -705,7 +699,7 @@
   background: var(--accent-deep);
   border-color: var(--accent);
   color: #fff;
-  box-shadow: 0 0 12px var(--accent-glow);
+  box-shadow: none;
 }
 
 .dash-obs-list { padding: 0; }

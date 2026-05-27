@@ -1,35 +1,35 @@
 // Dashboard constants — extracted from Dashboard.jsx monolith
 
 export const STATUS_COLORS = {
-  running: '#00e68a',
-  success: '#00d4ff',
+  running: '#22c55e',
+  success: '#a1a1aa',
   idle: 'rgba(255,255,255,0.3)',
-  error: '#ff4757',
+  error: '#ef4444',
   disabled: 'rgba(255,255,255,0.15)',
 };
 
 export const TYPE_ICONS = {
-  architecture: '🏗️',
-  decision: '🧭',
-  git_commit: '📝',
-  deployment: '🚀',
-  error: '❌',
-  discovery: '💡',
-  note: '📌',
-  agent_run: '🤖',
-  file_edit: '✏️',
+  architecture: '▣',
+  decision: '◎',
+  git_commit: '▪',
+  deployment: '▲',
+  error: '✕',
+  discovery: '◆',
+  note: '▸',
+  agent_run: '◈',
+  file_edit: '✎',
 };
 
 export const CMD_ITEMS = [
-  { id: 'overview',   icon: '📊', name: 'Go to Overview',    desc: 'Fleet overview and stats',       tab: 'overview' },
-  { id: 'agents',     icon: '🤖', name: 'Go to Agents',      desc: 'Agent registry and status',      tab: 'agents' },
-  { id: 'workspaces', icon: '📦', name: 'Go to Workspaces',  desc: 'Connected codebases',            tab: 'workspaces' },
-  { id: 'brain',      icon: '🧠', name: 'Go to Brain',       desc: 'Knowledge and observations',     tab: 'brain' },
-  { id: 'graph',      icon: '🕸️', name: 'Go to Graph',       desc: 'Knowledge visualization',       tab: 'graph' },
-  { id: 'settings',   icon: '⚙️', name: 'Go to Settings',    desc: 'API keys and account',           tab: 'settings' },
-  { id: 'commandcenter', icon: '⚡', name: 'Command Center',  desc: 'Full ecosystem command center',  tab: 'commandcenter' },
-  { id: 'traces',    icon: '📈', name: 'Go to Traces',     desc: 'LLM call tracing and costs',     tab: 'traces' },
-  { id: 'workflows', icon: '🔗', name: 'Go to Workflows',  desc: 'Agent execution workflows',      tab: 'workflows' },
+  { id: 'overview',   icon: '◎', name: 'Go to Overview',    desc: 'Fleet overview and stats',       tab: 'overview' },
+  { id: 'agents',     icon: '◈', name: 'Go to Agents',      desc: 'Agent registry and status',      tab: 'agents' },
+  { id: 'workspaces', icon: '▦', name: 'Go to Workspaces',  desc: 'Connected codebases',            tab: 'workspaces' },
+  { id: 'brain',      icon: '◉', name: 'Go to Brain',       desc: 'Knowledge and observations',     tab: 'brain' },
+  { id: 'graph',      icon: '◬', name: 'Go to Graph',       desc: 'Knowledge visualization',        tab: 'graph' },
+  { id: 'settings',   icon: '⚙', name: 'Go to Settings',    desc: 'API keys and account',           tab: 'settings' },
+  { id: 'commandcenter', icon: '⌘', name: 'Command Center', desc: 'Full ecosystem command center',  tab: 'commandcenter' },
+  { id: 'traces',    icon: '▤', name: 'Go to Traces',       desc: 'LLM call tracing and costs',     tab: 'traces' },
+  { id: 'workflows', icon: '◫', name: 'Go to Workflows',    desc: 'Agent execution workflows',      tab: 'workflows' },
 ];
 
 export const TAB_TITLES = {

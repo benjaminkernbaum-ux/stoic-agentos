@@ -105,19 +105,19 @@ export default function OverviewTab({ stats, agents, observations, liveAgents, e
           icon="🤖"
           trend="TOTAL"
           trendType="neutral"
-          value={<AnimatedCounter end={stats.agents || agents.length} color="var(--accent-bright)" duration={1200} />}
+          value={<AnimatedCounter end={stats.agents || agents.length} color="#fafafa" duration={800} />}
           label="Agents"
           sublabel={`${liveAgents} running · ${errorAgents} errors`}
           colorClass="purple"
           sparkData={agentSpark}
-          sparkColor="#9b59ff"
+          sparkColor="rgba(250,250,250,0.2)"
         />
 
         <StatCard
           icon="📦"
           trend="REPOS"
           trendType="neutral"
-          value={<AnimatedCounter end={stats.workspaces || 0} color="#67e8f9" duration={1200} />}
+          value={<AnimatedCounter end={stats.workspaces || 0} color="#fafafa" duration={800} />}
           label="Workspaces"
           sublabel="Connected repositories"
           colorClass="cyan"
@@ -127,24 +127,24 @@ export default function OverviewTab({ stats, agents, observations, liveAgents, e
           icon="🧠"
           trend={observations.length > 0 ? `+${Math.min(observations.length, 99)}` : 'NEW'}
           trendType={observations.length > 0 ? 'up' : 'neutral'}
-          value={<AnimatedCounter end={stats.observations || observations.length} color="var(--accent-bright)" duration={1200} />}
+          value={<AnimatedCounter end={stats.observations || observations.length} color="#fafafa" duration={800} />}
           label="Observations"
           sublabel="This month"
           colorClass="green"
           sparkData={sparkObs}
-          sparkColor="#00e68a"
+          sparkColor="rgba(250,250,250,0.2)"
         />
 
         <StatCard
           icon="💡"
           trend="STORED"
           trendType="neutral"
-          value={<AnimatedCounter end={stats.knowledgeItems || 0} color="var(--accent-bright)" duration={1200} />}
+          value={<AnimatedCounter end={stats.knowledgeItems || 0} color="#fafafa" duration={800} />}
           label="Knowledge Items"
           sublabel="Persistent insights"
           colorClass="orange"
           sparkData={kbSpark}
-          sparkColor="#ff9f43"
+          sparkColor="rgba(250,250,250,0.2)"
         />
       </div>
 
@@ -174,7 +174,6 @@ export default function OverviewTab({ stats, agents, observations, liveAgents, e
         <div className="dash-panel">
           <div className="dash-panel-head">
             <span className="dash-panel-title">
-              <span className="dash-panel-title-icon">🤖</span>
               Agent Fleet
             </span>
             <button className="dash-panel-action" onClick={() => setActiveTab('agents')}>View all →</button>
@@ -220,7 +219,6 @@ export default function OverviewTab({ stats, agents, observations, liveAgents, e
         <div className="dash-panel">
           <div className="dash-panel-head">
             <span className="dash-panel-title">
-              <span className="dash-panel-title-icon">⚡</span>
               Activity Feed
             </span>
             <button className="dash-panel-action" onClick={() => setActiveTab('brain')}>View all →</button>
@@ -278,9 +276,9 @@ export default function OverviewTab({ stats, agents, observations, liveAgents, e
                     padding: '4px 10px',
                     fontSize: 11,
                     borderRadius: 16,
-                    border: `1px solid ${isActive ? 'rgba(167,139,250,0.5)' : 'rgba(255,255,255,0.1)'}`,
-                    background: isActive ? 'rgba(167,139,250,0.2)' : 'transparent',
-                    color: isActive ? '#a78bfa' : 'rgba(255,255,255,0.35)',
+                    border: `1px solid ${isActive ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.06)'}`,
+                    background: isActive ? 'rgba(255,255,255,0.08)' : 'transparent',
+                    color: isActive ? '#fafafa' : 'rgba(255,255,255,0.35)',
                     cursor: 'pointer',
                     transition: 'all 0.15s ease',
                     lineHeight: 1.4,
