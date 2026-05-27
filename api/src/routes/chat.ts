@@ -314,14 +314,7 @@ router.post(`/api/${API_VERSION}/chat`, authenticate, async (req: AuthenticatedR
   }
 });
 
-// ── Get conversation history ──
-router.get(`/api/${API_VERSION}/chat/:conversationId`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
-  const history = conversations.get(req.params.conversationId);
-  if (!history) return res.status(404).json({ error: 'Conversation not found or expired' });
-  res.json({ conversation_id: req.params.conversationId, messages: history, count: history.length });
-});
-
-// ── Suggested prompts for empty state ──
+// ── Suggested prompts for empty state (MUST be before :conversationId) ──
 router.get(`/api/${API_VERSION}/chat/suggestions`, authenticate, async (_req: AuthenticatedRequest, res: Response) => {
   res.json({
     suggestions: [
@@ -335,4 +328,12 @@ router.get(`/api/${API_VERSION}/chat/suggestions`, authenticate, async (_req: Au
   });
 });
 
+// ── Get conversation history ──
+router.get(`/api/${API_VERSION}/chat/:conversationId`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
+  const history = conversations.get(req.params.conversationId);
+  if (!history) return res.status(404).json({ error: 'Conversation not found or expired' });
+  res.json({ conversation_id: req.params.conversationId, messages: history, count: history.length });
+});
+
 export default router;
+
