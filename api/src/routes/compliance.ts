@@ -1,284 +1,126 @@
 /**
- * Stoic AgentOS — Compliance API Routes
- * EU AI Act Article 12 + SOC 2 Ready
+ * Compliance Routes — Audit Log + Circuit Breaker
  *
- * Features:
- * - Immutable audit log ingestion
- * - Circuit breaker (fleet-wide agent kill switch)
- * - SIEM export (structured JSON for Splunk/Datadog)
- * - Compliance stats dashboard
+ * Immutable audit trail for all agent decisions and policy evaluations.
+ * Circuit breaker calculates agent health from recent BLOCK verdicts.
  */
+
 import { Router } from 'express';
 import type { Response } from 'express';
 import { authenticate } from '../middleware/auth.js';
 import { supabase } from '../middleware/db.js';
 import type { AuthenticatedRequest } from '../types.js';
-import crypto from 'crypto';
-import { eventBus } from '../lib/eventBus.js';
 
 const router = Router();
-const API_VERSION = 'v1';
+const V = 'v1';
 
-// ═══════════════════════════════════════════════════════
-//  AUDIT LOG — immutable event recording
-// ═══════════════════════════════════════════════════════
+function isTableMissing(error: { message?: string; code?: string }): boolean {
+  const msg = (error.message || '').toLowerCase();
+  return msg.includes('does not exist') || error.code === '42P01';
+}
 
-// ── Log Event ──
-router.post(`/api/${API_VERSION}/audit/log`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
+// ══════════════════════════════════════
+// AUDIT LOG
+// ══════════════════════════════════════
+
+router.get(`/api/${V}/compliance/audit-log`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { agent_id, event_type, action, reasoning, context, policy_version, verdict, metadata } = req.body;
-
-    if (!event_type || !action) {
-      return res.status(400).json({ error: 'event_type and action are required' });
-    }
-
-    // Hash the context for tamper-detection
-    const context_hash = context
-      ? crypto.createHash('sha256').update(JSON.stringify(context)).digest('hex')
-      : null;
-
-    const { data, error } = await supabase!
-      .from('audit_log')
-      .insert({
-        org_id: req.org.id,
-        agent_id: agent_id || null,
-        event_type,
-        action,
-        reasoning: reasoning || null,
-        context_hash,
-        policy_version: policy_version || null,
-        verdict: verdict || 'PROCEED',
-        metadata: metadata || {},
-      })
-      .select()
-      .single();
-
-    if (error) throw error;
-    eventBus.emit('compliance.audit.logged', req.org.id, { id: data.id, event_type, verdict: verdict || 'PROCEED' });
-    res.status(201).json(data);
-  } catch (err: unknown) {
-    res.status(500).json({ error: (err as Error).message });
-  }
-});
-
-// ── Batch Log Events (for SDK bulk ingestion) ──
-router.post(`/api/${API_VERSION}/audit/log/batch`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
-  try {
-    const { events } = req.body;
-    if (!Array.isArray(events) || events.length === 0) {
-      return res.status(400).json({ error: 'events array is required' });
-    }
-
-    if (events.length > 100) {
-      return res.status(400).json({ error: 'Maximum 100 events per batch' });
-    }
-
-    const rows = events.map((e: Record<string, unknown>) => ({
-      org_id: req.org.id,
-      agent_id: e.agent_id || null,
-      event_type: e.event_type || 'unknown',
-      action: e.action || 'unknown',
-      reasoning: e.reasoning || null,
-      context_hash: e.context
-        ? crypto.createHash('sha256').update(JSON.stringify(e.context)).digest('hex')
-        : null,
-      policy_version: e.policy_version || null,
-      verdict: e.verdict || 'PROCEED',
-      metadata: e.metadata || {},
-    }));
-
-    const { data, error } = await supabase!
-      .from('audit_log')
-      .insert(rows)
-      .select();
-
-    if (error) throw error;
-    res.status(201).json({ inserted: data?.length || 0 });
-  } catch (err: unknown) {
-    res.status(500).json({ error: (err as Error).message });
-  }
-});
-
-// ── Query Audit Log ──
-router.get(`/api/${API_VERSION}/audit/log`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
-  try {
-    const { agent_id, event_type, verdict, from, to, limit = '50', offset = '0' } = req.query;
-
-    let query = supabase!
-      .from('audit_log')
-      .select('*')
-      .eq('org_id', req.org.id)
-      .order('created_at', { ascending: false })
-      .range(+(offset as string), +(offset as string) + +(limit as string) - 1);
-
-    if (agent_id) query = query.eq('agent_id', agent_id as string);
-    if (event_type) query = query.eq('event_type', event_type as string);
-    if (verdict) query = query.eq('verdict', verdict as string);
-    if (from) query = query.gte('created_at', from as string);
-    if (to) query = query.lte('created_at', to as string);
-
+    let query = supabase!.from('audit_log').select('*')
+      .eq('org_id', req.org.id).order('created_at', { ascending: false }).limit(100);
+    if (req.query.event_type) query = query.eq('event_type', req.query.event_type as string);
+    if (req.query.agent_id) query = query.eq('agent_id', req.query.agent_id as string);
+    if (req.query.verdict) query = query.eq('verdict', req.query.verdict as string);
+    if (req.query.from) query = query.gte('created_at', req.query.from as string);
+    if (req.query.to) query = query.lte('created_at', req.query.to as string);
     const { data, error } = await query;
-    if (error) throw error;
+    if (error) { if (isTableMissing(error)) return res.json([]); throw error; }
     res.json(data || []);
-  } catch (err: unknown) {
-    res.status(500).json({ error: (err as Error).message });
-  }
+  } catch (err: unknown) { res.status(500).json({ error: (err as Error).message }); }
 });
 
-
-// ═══════════════════════════════════════════════════════
-//  SIEM EXPORT — structured JSON for compliance tools
-// ═══════════════════════════════════════════════════════
-
-router.get(`/api/${API_VERSION}/compliance/export`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
+router.post(`/api/${V}/compliance/audit-log`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    // Only team+ plans can export
-    if (req.org.plan === 'free' || req.org.plan === 'pro') {
-      return res.status(403).json({
-        error: 'Compliance export requires Team or Enterprise plan',
-        upgrade_url: '/pricing',
-      });
-    }
-
-    const { from, to, format = 'json', agent_id, event_type } = req.query;
-
-    if (!from || !to) {
-      return res.status(400).json({ error: 'from and to date parameters are required (ISO 8601)' });
-    }
-
-    let query = supabase!
-      .from('audit_log')
-      .select('*')
-      .eq('org_id', req.org.id)
-      .gte('created_at', from as string)
-      .lte('created_at', to as string)
-      .order('created_at', { ascending: true });
-
-    if (agent_id) query = query.eq('agent_id', agent_id as string);
-    if (event_type) query = query.eq('event_type', event_type as string);
-
-    const { data, error } = await query.limit(10000);
+    const { event_type, action, agent_id, reasoning, verdict, metadata, policy_version, context_hash } = req.body;
+    if (!event_type || !action) return res.status(400).json({ error: 'event_type and action required' });
+    const { data, error } = await supabase!.from('audit_log').insert({
+      org_id: req.org.id, agent_id: agent_id || null, event_type, action,
+      reasoning: reasoning || null, verdict: verdict || 'PROCEED',
+      metadata: metadata || {}, policy_version: policy_version || '1.0',
+      context_hash: context_hash || null,
+    }).select().single();
     if (error) throw error;
-
-    const entries = (data || []).map(entry => ({
-      id: entry.id,
-      timestamp: entry.created_at,
-      org_id: entry.org_id,
-      agent_id: entry.agent_id,
-      event_type: entry.event_type,
-      action: entry.action,
-      reasoning: entry.reasoning,
-      context_hash: entry.context_hash,
-      policy_version: entry.policy_version,
-      verdict: entry.verdict,
-      metadata: entry.metadata,
-    }));
-
-    if (format === 'ndjson') {
-      // Newline-delimited JSON (for Splunk/Datadog ingest)
-      res.setHeader('Content-Type', 'application/x-ndjson');
-      res.setHeader('Content-Disposition', `attachment; filename="audit-export-${from}-${to}.ndjson"`);
-      res.send(entries.map(e => JSON.stringify(e)).join('\n'));
-    } else {
-      res.json({
-        export: {
-          org_id: req.org.id,
-          from,
-          to,
-          total_entries: entries.length,
-          generated_at: new Date().toISOString(),
-        },
-        entries,
-      });
-    }
-  } catch (err: unknown) {
-    res.status(500).json({ error: (err as Error).message });
-  }
+    res.status(201).json(data);
+  } catch (err: unknown) { res.status(500).json({ error: (err as Error).message }); }
 });
 
-
-// ═══════════════════════════════════════════════════════
-//  CIRCUIT BREAKER — fleet-wide agent kill switch
-//  EU AI Act Article 14 (Human Oversight)
-// ═══════════════════════════════════════════════════════
-
-router.post(`/api/${API_VERSION}/compliance/circuit-breaker`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
+router.get(`/api/${V}/compliance/audit-log/stats`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { action, reason } = req.body;
-
-    if (!action || !['HALT_ALL', 'RESUME_ALL'].includes(action)) {
-      return res.status(400).json({ error: 'action must be HALT_ALL or RESUME_ALL' });
-    }
-
-    const newStatus = action === 'HALT_ALL' ? 'paused' : 'idle';
-
-    // Update all agents for this org
-    const { data: agents, error: agentErr } = await supabase!
-      .from('agents')
-      .update({ status: newStatus, updated_at: new Date().toISOString() })
-      .eq('org_id', req.org.id)
-      .neq('status', newStatus)
-      .select('id, name, status');
-
-    if (agentErr) throw agentErr;
-
-    // Log to audit trail
-    await supabase!.from('audit_log').insert({
-      org_id: req.org.id,
-      event_type: 'circuit_breaker',
-      action,
-      reasoning: reason || `Circuit breaker ${action} triggered by user`,
-      verdict: action === 'HALT_ALL' ? 'HALT' : 'PROCEED',
-      metadata: {
-        agents_affected: agents?.length || 0,
-        triggered_by: req.user?.email || req.apiKey?.name || 'unknown',
-      },
+    const { data, error } = await supabase!.from('audit_log').select('event_type, verdict, created_at')
+      .eq('org_id', req.org.id).order('created_at', { ascending: false }).limit(1000);
+    if (error) { if (isTableMissing(error)) return res.json({ total: 0, by_type: {}, by_verdict: {}, by_day: {} }); throw error; }
+    const rows = data || [];
+    const by_type: Record<string, number> = {};
+    const by_verdict: Record<string, number> = {};
+    const by_day: Record<string, number> = {};
+    rows.forEach((r: Record<string, unknown>) => {
+      by_type[r.event_type as string] = (by_type[r.event_type as string] || 0) + 1;
+      by_verdict[r.verdict as string] = (by_verdict[r.verdict as string] || 0) + 1;
+      const day = new Date(r.created_at as string).toISOString().slice(0, 10);
+      by_day[day] = (by_day[day] || 0) + 1;
     });
-
-    eventBus.emit('compliance.circuit_breaker', req.org.id, { action, agents_affected: agents?.length || 0 });
-
-    res.json({
-      status: 'ok',
-      action,
-      agents_affected: agents?.length || 0,
-      agents: agents?.map(a => ({ id: a.id, name: a.name, new_status: a.status })) || [],
-    });
-  } catch (err: unknown) {
-    res.status(500).json({ error: (err as Error).message });
-  }
+    res.json({ total: rows.length, by_type, by_verdict, by_day });
+  } catch (err: unknown) { res.status(500).json({ error: (err as Error).message }); }
 });
 
-
-// ═══════════════════════════════════════════════════════
-//  COMPLIANCE STATS — dashboard metrics
-// ═══════════════════════════════════════════════════════
-
-router.get(`/api/${API_VERSION}/compliance/stats`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
+router.get(`/api/${V}/compliance/audit-log/export`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const now = new Date();
-    const last24h = new Date(now.getTime() - 86400000).toISOString();
-    const last7d = new Date(now.getTime() - 604800000).toISOString();
+    let query = supabase!.from('audit_log').select('*')
+      .eq('org_id', req.org.id).order('created_at', { ascending: false });
+    if (req.query.from) query = query.gte('created_at', req.query.from as string);
+    if (req.query.to) query = query.lte('created_at', req.query.to as string);
+    const { data, error } = await query;
+    if (error) { if (isTableMissing(error)) return res.json([]); throw error; }
+    res.setHeader('Content-Disposition', 'attachment; filename=audit_log_export.json');
+    res.json(data || []);
+  } catch (err: unknown) { res.status(500).json({ error: (err as Error).message }); }
+});
 
-    const [total, last24, last7, halts, escalations] = await Promise.all([
-      supabase!.from('audit_log').select('*', { count: 'exact', head: true }).eq('org_id', req.org.id),
-      supabase!.from('audit_log').select('*', { count: 'exact', head: true }).eq('org_id', req.org.id).gte('created_at', last24h),
-      supabase!.from('audit_log').select('*', { count: 'exact', head: true }).eq('org_id', req.org.id).gte('created_at', last7d),
-      supabase!.from('audit_log').select('*', { count: 'exact', head: true }).eq('org_id', req.org.id).eq('verdict', 'HALT'),
-      supabase!.from('audit_log').select('*', { count: 'exact', head: true }).eq('org_id', req.org.id).eq('verdict', 'ESCALATE'),
-    ]);
+// ══════════════════════════════════════
+// CIRCUIT BREAKER
+// ══════════════════════════════════════
 
-    res.json({
-      total_events: total.count || 0,
-      last_24h: last24.count || 0,
-      last_7d: last7.count || 0,
-      halts: halts.count || 0,
-      escalations: escalations.count || 0,
-      circuit_breaker_available: true,
-      siem_export_available: req.org.plan === 'team' || req.org.plan === 'enterprise',
+router.get(`/api/${V}/compliance/circuit-breaker`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    // Get recent audit entries with BLOCK verdict
+    const { data: blocks, error } = await supabase!.from('audit_log')
+      .select('agent_id, verdict')
+      .eq('org_id', req.org.id).eq('verdict', 'BLOCK')
+      .gte('created_at', oneHourAgo);
+    if (error) { if (isTableMissing(error)) return res.json([]); throw error; }
+
+    // Get all agents for this org
+    const { data: agents } = await supabase!.from('agents').select('id, name, status')
+      .eq('org_id', req.org.id);
+
+    // Count blocks per agent
+    const blockCounts: Record<string, number> = {};
+    (blocks || []).forEach((b: Record<string, unknown>) => {
+      const aid = (b.agent_id as string) || 'unknown';
+      blockCounts[aid] = (blockCounts[aid] || 0) + 1;
     });
-  } catch (err: unknown) {
-    res.status(500).json({ error: (err as Error).message });
-  }
+
+    const breakers = (agents || []).map((a: Record<string, unknown>) => {
+      const count = blockCounts[a.id as string] || 0;
+      let status: string;
+      if (count > 5) status = 'open';
+      else if (count > 0) status = 'half-open';
+      else status = 'closed';
+      return { agent_id: a.id, agent_name: a.name, agent_status: a.status, circuit_status: status, blocks_last_hour: count };
+    });
+
+    res.json(breakers);
+  } catch (err: unknown) { res.status(500).json({ error: (err as Error).message }); }
 });
 
 export default router;

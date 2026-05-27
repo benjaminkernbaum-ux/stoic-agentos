@@ -1,275 +1,191 @@
 /**
- * Stoic AgentOS — Reflection Worker
- * Background process that scans episodic memory → extracts semantic triples
+ * Reflection Routes — AI-Powered Knowledge Extraction + Memory Decay
  *
- * Uses Claude Haiku for pattern extraction from recent episodes.
- * Runs as a periodic cron job or triggered via API.
- *
- * Flow:
- *   1. Fetch recent episodic memories (last N hours)
- *   2. Batch them into context windows
- *   3. Claude Haiku extracts knowledge triples
- *   4. Store new/strengthen existing semantic triples
- *   5. Log the reflection to audit trail
+ * POST /reflection/run   — Extract semantic triplets from episodic memories via Claude
+ * POST /reflection/decay — Apply time-based memory decay across all tiers
+ * GET  /reflection/status — Last reflection and decay timestamps
  */
+
 import { Router } from 'express';
 import type { Response } from 'express';
 import { authenticate } from '../middleware/auth.js';
 import { supabase } from '../middleware/db.js';
+import { complete, hasAnthropic } from '../lib/anthropic.js';
 import type { AuthenticatedRequest } from '../types.js';
 
 const router = Router();
-const API_VERSION = 'v1';
+const V = 'v1';
 
-// ── Reflection endpoint (trigger manually or via cron) ──
-router.post(`/api/${API_VERSION}/memory/reflect`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
+function isTableMissing(error: { message?: string; code?: string }): boolean {
+  const msg = (error.message || '').toLowerCase();
+  return msg.includes('does not exist') || error.code === '42P01';
+}
+
+// ── Reflection: episodic -> semantic extraction via Claude ──
+router.post(`/api/${V}/reflection/run`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const {
-      hours = 24,           // Look back N hours
-      max_episodes = 50,    // Max episodes to process
-      agent_id,
-      model = 'claude-haiku-4-5',
-      dry_run = false,      // If true, return triples without storing
-    } = req.body;
+    if (!hasAnthropic(req.org)) {
+      return res.status(402).json({
+        error: 'Reflection requires an Anthropic API key',
+        hint: 'Set ANTHROPIC_API_KEY or configure your key in Settings',
+      });
+    }
 
-    // 1. Fetch recent episodic memories
-    const since = new Date(Date.now() - (hours as number) * 3600000).toISOString();
-
-    let query = supabase!
+    // Fetch recent episodic memories
+    const { data: episodes, error: epErr } = await supabase!
       .from('episodic_memory')
-      .select('id, content, event_type, importance, metadata, created_at')
+      .select('id, content, event_type, importance, valid_from')
       .eq('org_id', req.org.id)
-      .or('valid_to.is.null,valid_to.gt.' + new Date().toISOString())
-      .gte('created_at', since)
-      .order('importance', { ascending: false })
-      .order('created_at', { ascending: false })
-      .limit(max_episodes as number);
+      .order('valid_from', { ascending: false })
+      .limit(20);
 
-    if (agent_id) query = query.eq('agent_id', agent_id as string);
-
-    const { data: episodes, error: epError } = await query;
-    if (epError) throw epError;
+    if (epErr) {
+      if (isTableMissing(epErr)) return res.json({ triplets_extracted: 0, episodes_processed: 0, hint: 'Run migration 008 first' });
+      throw epErr;
+    }
 
     if (!episodes || episodes.length === 0) {
-      return res.json({ status: 'ok', message: 'No recent episodes to reflect on', triples_extracted: 0 });
+      return res.json({ triplets_extracted: 0, episodes_processed: 0, hint: 'No episodic memories to reflect on' });
     }
 
-    // 2. Fetch existing semantic memory for deduplication context
-    const { data: existingTriples } = await supabase!
-      .from('semantic_memory')
-      .select('subject, relation, object')
-      .eq('org_id', req.org.id)
-      .order('confidence', { ascending: false })
-      .limit(50);
+    // Build reflection prompt
+    const episodeText = episodes.map((e, i) =>
+      `[${i + 1}] (${e.event_type}, importance:${e.importance}) ${e.content}`
+    ).join('\n');
 
-    const existingContext = (existingTriples || [])
-      .map(t => `${t.subject} → ${t.relation} → ${t.object}`)
-      .join('\n');
-
-    // 3. Build the reflection prompt
-    const episodeText = episodes
-      .map((e, i) => `[${i + 1}] (${e.event_type}, importance:${e.importance}) ${e.content}`)
-      .join('\n');
-
-    const reflectionPrompt = `You are a knowledge extraction system for an AI agent operations platform.
-
-Analyze these recent agent events and extract structured knowledge triples (subject → relation → object).
-
-## Existing Knowledge (avoid duplicates):
-${existingContext || '(none yet)'}
-
-## Recent Episodes:
-${episodeText}
-
-## Instructions:
-- Extract factual, durable knowledge (not transient events)
-- Focus on: architecture decisions, tool preferences, error patterns, deployment configs, agent behaviors
-- Each triple must have: subject, relation, object, confidence (0.0-1.0), source_type
-- Valid relations: uses, depends_on, deployed_to, configured_with, replaced, caused, resolved, prefers, avoids, handles
-- Confidence: 0.9+ for explicit statements, 0.6-0.8 for inferred, 0.4-0.6 for speculative
-- Return JSON array of triples, max 15
-
-## Output Format:
-\`\`\`json
-[
-  {"subject": "email-agent", "relation": "uses", "object": "GPT-4o", "confidence": 0.9, "source_type": "observation"},
-  {"subject": "API gateway", "relation": "deployed_to", "object": "Railway", "confidence": 0.95, "source_type": "deployment"}
-]
-\`\`\`
-
-Return ONLY the JSON array, no explanation.`;
-
-    // 4. Call Claude (use org's Anthropic key if available, else platform key)
-    const anthropicKey = req.org.anthropic_api_key || process.env.ANTHROPIC_API_KEY;
-    if (!anthropicKey) {
-      return res.status(503).json({
-        error: 'No Anthropic API key configured. Set org key or platform ANTHROPIC_API_KEY.',
-      });
-    }
-
-    const claudeResponse = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'x-api-key': anthropicKey,
-        'content-type': 'application/json',
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model,
-        max_tokens: 2048,
-        messages: [{ role: 'user', content: reflectionPrompt }],
-      }),
+    const result = await complete(req.org, {
+      model: 'fast',
+      system: `You extract structured knowledge from event logs. Given episodic memories, output JSON array of knowledge triplets. Each triplet: {"subject":"...", "relation":"...", "object":"...", "confidence": 0.0-1.0}. Relations should be verbs: "uses", "depends_on", "caused", "resolved", "monitors", "produces", "failed_at", "improved". Output ONLY valid JSON array, no markdown, no explanation.`,
+      messages: [{ role: 'user', content: `Extract knowledge triplets from these ${episodes.length} episodic memories:\n\n${episodeText}` }],
+      maxTokens: 2048,
+      endpoint: 'reflection',
     });
 
-    if (!claudeResponse.ok) {
-      const errBody = await claudeResponse.text();
-      throw new Error(`Claude API error ${claudeResponse.status}: ${errBody}`);
-    }
-
-    const claudeData = await claudeResponse.json() as {
-      content: Array<{ text: string }>;
-      usage: { input_tokens: number; output_tokens: number };
-    };
-    const responseText = claudeData.content?.[0]?.text || '[]';
-
-    // 5. Parse triples from Claude's response
-    let triples: Array<{
-      subject: string;
-      relation: string;
-      object: string;
-      confidence: number;
-      source_type: string;
-    }> = [];
-
+    // Parse triplets from Claude response
+    let triplets: Array<{ subject: string; relation: string; object: string; confidence?: number }> = [];
     try {
-      // Extract JSON from potential markdown code blocks
-      const jsonMatch = responseText.match(/\[[\s\S]*\]/);
-      if (jsonMatch) {
-        triples = JSON.parse(jsonMatch[0]);
-      }
-    } catch (parseErr) {
-      console.error('[Reflection] Failed to parse Claude response:', responseText.slice(0, 200));
-      return res.json({
-        status: 'partial',
-        message: 'Claude response could not be parsed',
-        raw_response: responseText.slice(0, 500),
-        triples_extracted: 0,
-      });
+      const cleaned = result.text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+      triplets = JSON.parse(cleaned);
+      if (!Array.isArray(triplets)) triplets = [];
+    } catch {
+      return res.json({ triplets_extracted: 0, episodes_processed: episodes.length, parse_error: 'Claude response was not valid JSON', raw: result.text.slice(0, 300) });
     }
 
-    // 6. Validate and filter triples
-    const validTriples = triples.filter(t =>
-      t.subject && t.relation && t.object &&
-      typeof t.confidence === 'number' &&
-      t.confidence >= 0 && t.confidence <= 1
-    ).slice(0, 15);
+    // Insert triplets into semantic_memory
+    let inserted = 0;
+    for (const t of triplets) {
+      if (!t.subject || !t.relation || !t.object) continue;
+      try {
+        await supabase!.from('semantic_memory').insert({
+          org_id: req.org.id,
+          subject: t.subject,
+          relation: t.relation,
+          object: t.object,
+          confidence: t.confidence ?? 0.8,
+          source_type: 'reflection',
+          source_episodes: episodes.map(e => e.id),
+        });
+        inserted++;
+      } catch { /* duplicate or constraint violation — skip */ }
+    }
 
-    // 7. Store triples (unless dry_run)
-    const results: Array<{ triple: string; action: string }> = [];
-
-    if (!dry_run) {
-      for (const t of validTriples) {
-        // Check for existing triple
-        const { data: existing } = await supabase!
-          .from('semantic_memory')
-          .select('id, confidence')
-          .eq('org_id', req.org.id)
-          .eq('subject', t.subject)
-          .eq('relation', t.relation)
-          .eq('object', t.object)
-          .single();
-
-        if (existing) {
-          // Strengthen confidence
-          const newConf = Math.min(1.0, Math.max(existing.confidence, t.confidence));
-          await supabase!
-            .from('semantic_memory')
-            .update({ confidence: newConf, updated_at: new Date().toISOString() })
-            .eq('id', existing.id);
-          results.push({ triple: `${t.subject} → ${t.relation} → ${t.object}`, action: 'strengthened' });
-        } else {
-          await supabase!
-            .from('semantic_memory')
-            .insert({
-              org_id: req.org.id,
-              subject: t.subject,
-              relation: t.relation,
-              object: t.object,
-              confidence: t.confidence,
-              source_type: t.source_type || 'reflection',
-              source_episodes: episodes.map(e => e.id),
-            });
-          results.push({ triple: `${t.subject} → ${t.relation} → ${t.object}`, action: 'created' });
-        }
-      }
-
-      // 8. Log to audit trail
+    // Log reflection in audit_log
+    try {
       await supabase!.from('audit_log').insert({
         org_id: req.org.id,
         event_type: 'reflection',
-        action: 'extract_knowledge',
-        reasoning: `Reflected on ${episodes.length} episodes, extracted ${validTriples.length} triples`,
+        action: 'extract_semantic_triplets',
+        reasoning: `Processed ${episodes.length} episodes, extracted ${inserted} triplets`,
         verdict: 'PROCEED',
-        metadata: {
-          episodes_processed: episodes.length,
-          triples_extracted: validTriples.length,
-          triples_created: results.filter(r => r.action === 'created').length,
-          triples_strengthened: results.filter(r => r.action === 'strengthened').length,
-          model,
-          usage: claudeData.usage,
-        },
+        metadata: { episodes_processed: episodes.length, triplets_extracted: inserted },
       });
-    }
+    } catch { /* audit_log may not exist */ }
 
-    res.json({
-      status: 'ok',
-      episodes_processed: episodes.length,
-      triples_extracted: validTriples.length,
-      triples: dry_run ? validTriples : results,
-      usage: claudeData.usage,
-      dry_run,
-    });
+    res.json({ triplets_extracted: inserted, episodes_processed: episodes.length, model: result.model });
   } catch (err: unknown) {
-    res.status(500).json({ error: (err as Error).message });
+    const error = err as Error & { code?: string; status?: number };
+    if (error.code === 'NO_ANTHROPIC_KEY') return res.status(402).json({ error: 'Anthropic API key not configured' });
+    if (error.status === 401) return res.status(402).json({ error: 'Invalid Anthropic API key' });
+    res.status(500).json({ error: error.message });
   }
 });
 
-// ── Auto-Decay: mark old working memory as expired ──
-router.post(`/api/${API_VERSION}/memory/decay`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
+// ── Memory Decay ──
+router.post(`/api/${V}/reflection/decay`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { max_age_hours = 72 } = req.body;
-    const cutoff = new Date(Date.now() - (max_age_hours as number) * 3600000).toISOString();
+    const results = { working_expired: 0, episodic_decayed: 0, semantic_decayed: 0 };
 
-    // Delete expired working memory
-    const { data: expired, error: expErr } = await supabase!
-      .from('working_memory')
-      .delete()
-      .eq('org_id', req.org.id)
-      .not('expires_at', 'is', null)
-      .lt('expires_at', new Date().toISOString())
-      .select('id');
+    // 1. Delete expired working memory
+    try {
+      const { data } = await supabase!.from('working_memory').delete()
+        .eq('org_id', req.org.id).lt('expires_at', new Date().toISOString())
+        .select('id');
+      results.working_expired = data?.length ?? 0;
+    } catch { /* table may not exist */ }
 
-    if (expErr) throw expErr;
+    // 2. Reduce importance of old episodic memories (>30 days, importance > 1)
+    try {
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+      const { data: oldEpisodes } = await supabase!.from('episodic_memory')
+        .select('id, importance')
+        .eq('org_id', req.org.id).lt('valid_from', thirtyDaysAgo).gt('importance', 1);
+      if (oldEpisodes) {
+        for (const ep of oldEpisodes) {
+          await supabase!.from('episodic_memory')
+            .update({ importance: Math.max(1, (ep.importance as number) - 1) })
+            .eq('id', ep.id);
+        }
+        results.episodic_decayed = oldEpisodes.length;
+      }
+    } catch { /* table may not exist */ }
 
-    // Also clean up very old working memory without TTL
-    const { data: stale, error: staleErr } = await supabase!
-      .from('working_memory')
-      .delete()
-      .eq('org_id', req.org.id)
-      .is('expires_at', null)
-      .lt('created_at', cutoff)
-      .select('id');
+    // 3. Reduce confidence of stale semantic memories (>60 days, confidence > 0.1)
+    try {
+      const sixtyDaysAgo = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString();
+      const { data: staleSemantic } = await supabase!.from('semantic_memory')
+        .select('id, confidence')
+        .eq('org_id', req.org.id).lt('updated_at', sixtyDaysAgo).gt('confidence', 0.1);
+      if (staleSemantic) {
+        for (const sm of staleSemantic) {
+          await supabase!.from('semantic_memory')
+            .update({ confidence: Math.max(0.1, (sm.confidence as number) - 0.1), updated_at: new Date().toISOString() })
+            .eq('id', sm.id);
+        }
+        results.semantic_decayed = staleSemantic.length;
+      }
+    } catch { /* table may not exist */ }
 
-    if (staleErr) throw staleErr;
+    // Log decay in audit_log
+    try {
+      await supabase!.from('audit_log').insert({
+        org_id: req.org.id, event_type: 'decay', action: 'memory_decay_cycle',
+        reasoning: `W:${results.working_expired} E:${results.episodic_decayed} S:${results.semantic_decayed}`,
+        verdict: 'PROCEED', metadata: results,
+      });
+    } catch { /* audit_log may not exist */ }
 
-    res.json({
-      status: 'ok',
-      expired_removed: expired?.length || 0,
-      stale_removed: stale?.length || 0,
-    });
-  } catch (err: unknown) {
-    res.status(500).json({ error: (err as Error).message });
-  }
+    res.json(results);
+  } catch (err: unknown) { res.status(500).json({ error: (err as Error).message }); }
+});
+
+// ── Reflection Status ──
+router.get(`/api/${V}/reflection/status`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const status: Record<string, unknown> = { last_reflection: null, last_decay: null };
+    try {
+      const { data: lastReflect } = await supabase!.from('audit_log')
+        .select('created_at, metadata').eq('org_id', req.org.id)
+        .eq('event_type', 'reflection').order('created_at', { ascending: false }).limit(1).single();
+      if (lastReflect) status.last_reflection = lastReflect;
+    } catch { /* no reflection yet */ }
+    try {
+      const { data: lastDecay } = await supabase!.from('audit_log')
+        .select('created_at, metadata').eq('org_id', req.org.id)
+        .eq('event_type', 'decay').order('created_at', { ascending: false }).limit(1).single();
+      if (lastDecay) status.last_decay = lastDecay;
+    } catch { /* no decay yet */ }
+    res.json(status);
+  } catch (err: unknown) { res.status(500).json({ error: (err as Error).message }); }
 });
 
 export default router;

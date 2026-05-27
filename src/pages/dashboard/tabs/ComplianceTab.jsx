@@ -1,221 +1,240 @@
-import { useState, useEffect } from 'react';
-import { supabase, API_BASE } from '../../../lib/supabase';
+import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '../../../lib/supabase';
 
-const getToken = async () =>
-  (await supabase.auth.getSession()).data.session?.access_token;
+const API = import.meta.env.VITE_API_URL || 'https://stoic-agentos-api-production.up.railway.app';
 
-/* ═════════════════════════════════════════════
-   COMPLIANCE TAB — Audit Log + Circuit Breaker
-   ═════════════════════════════════════════════ */
+const VERDICT_COLORS = { PROCEED: '#22c55e', BLOCK: '#ef4444', WARN: '#eab308' };
+const CIRCUIT_COLORS = { closed: '#22c55e', 'half-open': '#eab308', open: '#ef4444' };
+const CIRCUIT_LABELS = { closed: 'Healthy', 'half-open': 'Warning', open: 'Tripped' };
+
 export default function ComplianceTab() {
-  const [stats, setStats] = useState(null);
-  const [events, setEvents] = useState([]);
+  const [auditLog, setAuditLog] = useState([]);
+  const [stats, setStats] = useState({ total: 0, by_type: {}, by_verdict: {}, by_day: {} });
+  const [breakers, setBreakers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeSubTab, setActiveSubTab] = useState('overview');
-  const [breakerLoading, setBreakerLoading] = useState(false);
-  const [breakerResult, setBreakerResult] = useState(null);
-  const [exportRange, setExportRange] = useState({ from: '', to: '' });
+  const [seeding, setSeeding] = useState(false);
+  const [filters, setFilters] = useState({ event_type: '', verdict: '' });
 
-  useEffect(() => { fetchAll(); }, []);
+  const headers = useCallback(async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    return { Authorization: `Bearer ${session?.access_token}`, 'Content-Type': 'application/json' };
+  }, []);
 
-  const fetchAll = async () => {
-    setLoading(true);
-    const token = await getToken();
-    if (!token) { setLoading(false); return; }
-    const headers = { Authorization: `Bearer ${token}` };
+  const fetchAll = useCallback(async () => {
     try {
-      const [statsRes, eventsRes] = await Promise.all([
-        fetch(`${API_BASE}/api/v1/compliance/stats`, { headers }),
-        fetch(`${API_BASE}/api/v1/audit/log?limit=50`, { headers }),
+      const h = await headers();
+      let logUrl = `${API}/api/v1/compliance/audit-log`;
+      const params = new URLSearchParams();
+      if (filters.event_type) params.set('event_type', filters.event_type);
+      if (filters.verdict) params.set('verdict', filters.verdict);
+      if (params.toString()) logUrl += `?${params}`;
+
+      const [logR, statsR, breakerR] = await Promise.all([
+        fetch(logUrl, { headers: h }).then(r => r.json()).catch(() => []),
+        fetch(`${API}/api/v1/compliance/audit-log/stats`, { headers: h }).then(r => r.json()).catch(() => ({ total: 0, by_type: {}, by_verdict: {}, by_day: {} })),
+        fetch(`${API}/api/v1/compliance/circuit-breaker`, { headers: h }).then(r => r.json()).catch(() => []),
       ]);
-      if (statsRes.ok) setStats(await statsRes.json());
-      if (eventsRes.ok) setEvents(await eventsRes.json());
-    } catch (e) {
-      console.error(e);
-    }
+      setAuditLog(Array.isArray(logR) ? logR : []);
+      setStats(statsR);
+      setBreakers(Array.isArray(breakerR) ? breakerR : []);
+    } catch { /* silently degrade */ }
     setLoading(false);
-  };
+  }, [headers, filters]);
 
-  const triggerBreaker = async (action) => {
-    if (!confirm(`Are you sure you want to ${action}? This will ${action === 'HALT_ALL' ? 'STOP all agents' : 'RESUME all agents'}.`)) return;
-    setBreakerLoading(true);
+  useEffect(() => { fetchAll(); }, [fetchAll]);
+
+  const seedDemo = async () => {
+    setSeeding(true);
     try {
-      const token = await getToken();
-      const res = await fetch(`${API_BASE}/api/v1/compliance/circuit-breaker`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action, reason: `Manual ${action} from dashboard` }),
-      });
-      setBreakerResult(await res.json());
-      fetchAll();
-    } catch (e) {
-      setBreakerResult({ error: e.message });
-    }
-    setBreakerLoading(false);
+      const h = await headers();
+      const entries = [
+        { event_type: 'policy_check', action: 'Agent requested external API access', verdict: 'PROCEED', reasoning: 'API endpoint is whitelisted' },
+        { event_type: 'policy_check', action: 'Agent attempted to delete production data', verdict: 'BLOCK', reasoning: 'Destructive operations require manual approval' },
+        { event_type: 'rate_limit', action: 'Agent exceeded 100 requests/minute threshold', verdict: 'WARN', reasoning: 'Throttled to 50 req/min for 5 minutes' },
+        { event_type: 'reflection', action: 'Extracted 8 semantic triplets from 20 episodes', verdict: 'PROCEED', reasoning: 'Routine reflection cycle completed successfully' },
+        { event_type: 'authentication', action: 'New API key generated for agent code-reviewer', verdict: 'PROCEED', reasoning: 'Key rotation per 30-day policy' },
+        { event_type: 'policy_check', action: 'Agent attempted to access PII without encryption', verdict: 'BLOCK', reasoning: 'PII access requires encrypted channel - policy v2.1' },
+        { event_type: 'deployment', action: 'Agent data-pipeline deployed to production', verdict: 'PROCEED', reasoning: 'All health checks passed' },
+        { event_type: 'anomaly', action: 'Unusual spike in error observations detected', verdict: 'WARN', reasoning: 'Error rate 23% exceeds 10% threshold' },
+      ];
+      await Promise.all(entries.map(e => fetch(`${API}/api/v1/compliance/audit-log`, { method: 'POST', headers: h, body: JSON.stringify(e) })));
+      await fetchAll();
+    } catch { /* ignore */ }
+    setSeeding(false);
   };
 
-  const verdictColors = {
-    PROCEED: '#10b981', HALT: '#ef4444', ESCALATE: '#f59e0b', MONITOR: '#67e8f9',
+  const exportSIEM = async () => {
+    try {
+      const h = await headers();
+      const res = await fetch(`${API}/api/v1/compliance/audit-log/export`, { headers: h });
+      const data = await res.json();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `audit_log_${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch { /* ignore */ }
   };
 
-  const subTabs = [
-    { id: 'overview', label: '📊 Stats' },
-    { id: 'events', label: '📋 Audit Log' },
-    { id: 'breaker', label: '🛑 Circuit Breaker' },
-  ];
+  const isEmpty = stats.total === 0 && !loading;
+
+  if (loading) {
+    return (
+      <div className="dash-tab-content">
+        <div className="dash-card" style={{ padding: '3rem', textAlign: 'center' }}>
+          <div className="dash-loading-spinner" />
+          <p style={{ color: 'var(--text-secondary)', marginTop: '1rem' }}>Loading compliance data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (isEmpty) {
+    return (
+      <div className="dash-tab-content">
+        <div className="dash-card" style={{ padding: '3rem', textAlign: 'center' }}>
+          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🛡️</div>
+          <h3 style={{ color: 'var(--text-primary)', marginBottom: '0.5rem' }}>No audit entries yet</h3>
+          <p style={{ color: 'var(--text-secondary)', maxWidth: '420px', margin: '0 auto 1.5rem' }}>
+            Audit entries are created automatically when agents make decisions, encounter policy boundaries, or trigger circuit breakers.
+          </p>
+          <button className="dash-btn dash-btn-primary" onClick={seedDemo} disabled={seeding}
+            style={{ padding: '0.75rem 2rem', fontSize: '0.95rem' }}>
+            {seeding ? 'Seeding...' : '✨ Seed Demo Data'}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const eventTypes = [...new Set(auditLog.map(a => a.event_type))];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-      {/* Sub-tabs */}
-      <div style={{ display: 'flex', gap: 4, padding: 4, background: 'rgba(255,255,255,0.03)', borderRadius: 10, width: 'fit-content' }}>
-        {subTabs.map(t => (
-          <button key={t.id} onClick={() => setActiveSubTab(t.id)} style={{
-            padding: '8px 16px', borderRadius: 8, border: 'none', cursor: 'pointer',
-            fontSize: 13, fontWeight: activeSubTab === t.id ? 600 : 400,
-            background: activeSubTab === t.id ? 'rgba(239,68,68,0.15)' : 'transparent',
-            color: activeSubTab === t.id ? '#fca5a5' : 'rgba(255,255,255,0.5)',
-            transition: 'all 0.2s',
-          }}>
-            {t.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Overview Stats */}
-      {activeSubTab === 'overview' && stats && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 16 }}>
-            {[
-              { label: 'Total Events', value: stats.total_events, icon: '📊', color: '#a78bfa' },
-              { label: 'Last 24h', value: stats.last_24h, icon: '📅', color: '#67e8f9' },
-              { label: 'Last 7d', value: stats.last_7d, icon: '📆', color: '#10b981' },
-              { label: 'Halts', value: stats.halts, icon: '🛑', color: '#ef4444' },
-              { label: 'Escalations', value: stats.escalations, icon: '⚠️', color: '#f59e0b' },
-            ].map(s => (
-              <div key={s.label} style={{
-                background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)',
-                borderRadius: 12, padding: '20px 24px', display: 'flex', alignItems: 'center', gap: 16,
-              }}>
-                <div style={{
-                  width: 40, height: 40, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  background: `${s.color}18`, fontSize: 18,
-                }}>
-                  {s.icon}
-                </div>
-                <div>
-                  <div style={{ fontSize: 24, fontWeight: 700, color: '#fff' }}>{s.value}</div>
-                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)' }}>{s.label}</div>
-                </div>
+    <div className="dash-tab-content">
+      {/* Stats Bar */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
+        <div className="dash-card" style={{ padding: '1.25rem', textAlign: 'center' }}>
+          <div style={{ fontSize: '1.75rem', fontWeight: 700, color: 'var(--text-primary)' }}>{stats.total}</div>
+          <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Total Entries</div>
+        </div>
+        <div className="dash-card" style={{ padding: '1.25rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem' }}>
+            {['PROCEED', 'BLOCK', 'WARN'].map(v => (
+              <div key={v} style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '1.2rem', fontWeight: 700, color: VERDICT_COLORS[v] }}>{stats.by_verdict?.[v] || 0}</div>
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>{v}</div>
               </div>
             ))}
           </div>
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textAlign: 'center', marginTop: '0.3rem' }}>Verdict Breakdown</div>
+        </div>
+        <div className="dash-card" style={{ padding: '1.25rem', textAlign: 'center' }}>
+          <div style={{ fontSize: '1.75rem', fontWeight: 700, color: 'var(--accent)' }}>
+            {Object.keys(stats.by_day || {}).length}
+          </div>
+          <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Active Days</div>
+        </div>
+      </div>
 
-          <div style={{
-            padding: 16, borderRadius: 12, background: 'rgba(16,185,129,0.05)',
-            border: '1px solid rgba(16,185,129,0.15)', display: 'flex', alignItems: 'center', gap: 12,
-          }}>
-            <span style={{ fontSize: 20 }}>🛡️</span>
-            <div>
-              <div style={{ color: '#6ee7b7', fontWeight: 600, fontSize: 14 }}>Compliance Status: Active</div>
-              <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, marginTop: 2 }}>
-                EU AI Act Article 12 (Logging) + Article 14 (Circuit Breaker) ready
+      {/* Circuit Breakers */}
+      {breakers.length > 0 && (
+        <div className="dash-card" style={{ marginBottom: '1.5rem', padding: '1.25rem' }}>
+          <h3 style={{ margin: '0 0 1rem', color: 'var(--text-primary)' }}>⚡ Circuit Breakers</h3>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.75rem' }}>
+            {breakers.map(b => (
+              <div key={b.agent_id} style={{
+                padding: '0.75rem', borderRadius: '8px', border: `1px solid ${CIRCUIT_COLORS[b.circuit_status]}33`,
+                background: `${CIRCUIT_COLORS[b.circuit_status]}08`,
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.9rem' }}>{b.agent_name}</span>
+                  <span style={{
+                    fontSize: '0.7rem', padding: '2px 8px', borderRadius: '4px',
+                    background: `${CIRCUIT_COLORS[b.circuit_status]}22`,
+                    color: CIRCUIT_COLORS[b.circuit_status],
+                    animation: b.circuit_status === 'open' ? 'pulse 2s infinite' : 'none',
+                  }}>
+                    {CIRCUIT_LABELS[b.circuit_status]}
+                  </span>
+                </div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.3rem' }}>
+                  {b.blocks_last_hour} blocks in last hour
+                </div>
               </div>
-            </div>
+            ))}
           </div>
         </div>
       )}
 
       {/* Audit Log */}
-      {activeSubTab === 'events' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <h3 style={{ margin: 0, fontSize: 16, color: '#fff' }}>Audit Trail ({events.length} events)</h3>
-          {events.length === 0
-            ? <div style={{ color: 'rgba(255,255,255,0.4)', padding: 24, textAlign: 'center' }}>No audit events yet.</div>
-            : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {events.map((e, i) => (
-                  <div key={i} style={{
-                    display: 'grid', gridTemplateColumns: '90px 100px 1fr 80px 140px',
-                    gap: 12, alignItems: 'center', padding: '10px 16px',
-                    background: 'rgba(255,255,255,0.02)', borderRadius: 8,
-                    border: '1px solid rgba(255,255,255,0.04)', fontSize: 12,
-                  }}>
-                    <span style={{
-                      padding: '2px 8px', borderRadius: 4, fontWeight: 600, fontSize: 11,
-                      background: `${verdictColors[e.verdict] || '#6b7280'}18`,
-                      color: verdictColors[e.verdict] || '#9ca3af',
-                    }}>
-                      {e.verdict}
-                    </span>
-                    <span style={{ color: '#a78bfa' }}>{e.event_type}</span>
-                    <span style={{ color: 'rgba(255,255,255,0.7)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {e.action}
-                    </span>
-                    <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 10, fontFamily: 'monospace' }}>
-                      {e.context_hash?.slice(0, 8) || '—'}
-                    </span>
-                    <span style={{ color: 'rgba(255,255,255,0.3)' }}>
-                      {new Date(e.created_at).toLocaleString()}
-                    </span>
-                  </div>
+      <div className="dash-card" style={{ padding: '1.25rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+          <h3 style={{ margin: 0, color: 'var(--text-primary)' }}>📋 Audit Log</h3>
+          <button className="dash-btn" onClick={exportSIEM} style={{ fontSize: '0.8rem', padding: '0.4rem 0.8rem' }}>
+            📥 Export SIEM
+          </button>
+        </div>
+
+        {/* Filters */}
+        <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1rem' }}>
+          <select value={filters.event_type} onChange={e => setFilters(f => ({ ...f, event_type: e.target.value }))}
+            style={{ padding: '0.4rem 0.8rem', borderRadius: '6px', background: 'var(--surface-1)', color: 'var(--text-primary)', border: '1px solid var(--border)', fontSize: '0.8rem' }}>
+            <option value="">All Types</option>
+            {eventTypes.map(t => <option key={t} value={t}>{t}</option>)}
+          </select>
+          <select value={filters.verdict} onChange={e => setFilters(f => ({ ...f, verdict: e.target.value }))}
+            style={{ padding: '0.4rem 0.8rem', borderRadius: '6px', background: 'var(--surface-1)', color: 'var(--text-primary)', border: '1px solid var(--border)', fontSize: '0.8rem' }}>
+            <option value="">All Verdicts</option>
+            <option value="PROCEED">PROCEED</option>
+            <option value="BLOCK">BLOCK</option>
+            <option value="WARN">WARN</option>
+          </select>
+        </div>
+
+        {/* Log Table */}
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                {['Time', 'Event', 'Action', 'Verdict', 'Reasoning'].map(h => (
+                  <th key={h} style={{ padding: '0.6rem 0.75rem', textAlign: 'left', color: 'var(--text-secondary)', fontWeight: 500 }}>{h}</th>
                 ))}
-              </div>
-            )
-          }
+              </tr>
+            </thead>
+            <tbody>
+              {auditLog.map(entry => (
+                <tr key={entry.id} style={{ borderBottom: '1px solid hsla(0,0%,100%,0.04)' }}>
+                  <td style={{ padding: '0.6rem 0.75rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                    {new Date(entry.created_at).toLocaleString()}
+                  </td>
+                  <td style={{ padding: '0.6rem 0.75rem' }}>
+                    <span style={{ fontSize: '0.7rem', padding: '2px 6px', borderRadius: '4px', background: 'hsla(var(--accent-h, 270), 70%, 50%, 0.15)', color: 'var(--accent)' }}>
+                      {entry.event_type}
+                    </span>
+                  </td>
+                  <td style={{ padding: '0.6rem 0.75rem', color: 'var(--text-primary)', maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {entry.action}
+                  </td>
+                  <td style={{ padding: '0.6rem 0.75rem' }}>
+                    <span style={{
+                      fontSize: '0.7rem', padding: '2px 8px', borderRadius: '4px', fontWeight: 600,
+                      background: `${VERDICT_COLORS[entry.verdict] || '#666'}22`,
+                      color: VERDICT_COLORS[entry.verdict] || '#666',
+                    }}>
+                      {entry.verdict}
+                    </span>
+                  </td>
+                  <td style={{ padding: '0.6rem 0.75rem', color: 'var(--text-secondary)', maxWidth: '250px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {entry.reasoning || '—'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
-      )}
-
-      {/* Circuit Breaker */}
-      {activeSubTab === 'breaker' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-          <div style={{
-            padding: 24, borderRadius: 12, textAlign: 'center',
-            background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.15)',
-          }}>
-            <div style={{ fontSize: 48, marginBottom: 12 }}>🛑</div>
-            <h3 style={{ color: '#fca5a5', margin: '0 0 8px', fontSize: 18 }}>Fleet Circuit Breaker</h3>
-            <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, margin: '0 0 20px' }}>
-              EU AI Act Article 14 — Human Oversight. Immediately halt or resume all agents.
-            </p>
-            <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
-              <button
-                onClick={() => triggerBreaker('HALT_ALL')} disabled={breakerLoading}
-                style={{
-                  padding: '12px 28px', border: 'none', borderRadius: 8, cursor: breakerLoading ? 'wait' : 'pointer',
-                  background: 'linear-gradient(135deg, #dc2626, #ef4444)', color: '#fff',
-                  fontWeight: 700, fontSize: 14, transition: 'all 0.2s',
-                }}
-              >
-                🛑 HALT ALL AGENTS
-              </button>
-              <button
-                onClick={() => triggerBreaker('RESUME_ALL')} disabled={breakerLoading}
-                style={{
-                  padding: '12px 28px', border: 'none', borderRadius: 8, cursor: breakerLoading ? 'wait' : 'pointer',
-                  background: 'linear-gradient(135deg, #059669, #10b981)', color: '#fff',
-                  fontWeight: 700, fontSize: 14, transition: 'all 0.2s',
-                }}
-              >
-                ▶️ RESUME ALL AGENTS
-              </button>
-            </div>
-          </div>
-
-          {breakerResult && (
-            <div style={{
-              padding: 16, borderRadius: 8, fontSize: 13,
-              background: breakerResult.error ? 'rgba(239,68,68,0.1)' : 'rgba(16,185,129,0.1)',
-              border: `1px solid ${breakerResult.error ? 'rgba(239,68,68,0.2)' : 'rgba(16,185,129,0.2)'}`,
-              color: breakerResult.error ? '#fca5a5' : '#6ee7b7',
-            }}>
-              {breakerResult.error
-                ? `❌ ${breakerResult.error}`
-                : `✅ ${breakerResult.action} — ${breakerResult.agents_affected} agents affected`
-              }
-            </div>
-          )}
-        </div>
-      )}
+      </div>
     </div>
   );
 }
