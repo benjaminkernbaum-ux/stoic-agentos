@@ -112,16 +112,19 @@ stoic-agentos/
 | POST | `/observations` | Capture observation |
 | GET | `/observations` | List (type, workspace, agent filters) |
 | **Agents** |||
-| POST | `/agents` | Register agent |
+| POST | `/agents` | Register agent (module fallback to 'standalone') |
 | GET | `/agents` | List agents |
 | PATCH | `/agents/:id` | Update status/heartbeat |
+| DELETE | `/agents/:id` | Remove agent |
 | POST | `/agents/heartbeat` | Upsert by name |
 | **Workspaces** |||
 | POST | `/workspaces` | Register workspace |
 | GET | `/workspaces` | List workspaces |
+| DELETE | `/workspaces/:id` | Remove workspace |
 | **Knowledge** |||
 | POST | `/knowledge-items` | Create KI |
 | GET | `/knowledge-items` | List KIs |
+| DELETE | `/knowledge-items/:id` | Remove KI |
 | **API Keys** |||
 | GET | `/api-keys` | List (masked) |
 | POST | `/api-keys` | Generate new key |

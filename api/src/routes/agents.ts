@@ -22,18 +22,32 @@ router.post(`/api/${API_VERSION}/agents`, authenticate, async (req: Authenticate
       return res.status(429).json({ error: 'Agent limit reached', limit: PLAN_LIMITS[req.org.plan]?.agents, current: count, upgrade_url: 'https://stoicagentos.com/#pricing' });
     }
 
-    const { data, error } = await supabase!
+    const agentData = {
+      org_id: req.org.id,
+      name,
+      description: description || '',
+      module: module || 'standalone',
+      status: status || 'idle',
+      config: config || {},
+    };
+
+    let { data, error } = await supabase!
       .from('agents')
-      .insert({
-        org_id: req.org.id,
-        name,
-        description: description || '',
-        module: module || 'standalone',
-        status: status || 'idle',
-        config: config || {},
-      })
+      .insert(agentData)
       .select()
       .single();
+
+    // Fallback: if module constraint fails, retry with 'standalone'
+    if (error && error.message?.includes('module_check')) {
+      agentData.module = 'standalone';
+      const retry = await supabase!
+        .from('agents')
+        .insert(agentData)
+        .select()
+        .single();
+      data = retry.data;
+      error = retry.error;
+    }
 
     if (error) throw error;
     res.status(201).json(data);
