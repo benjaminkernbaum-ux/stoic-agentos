@@ -14,6 +14,7 @@ import { authenticate } from '../middleware/auth.js';
 import { supabase } from '../middleware/db.js';
 import type { AuthenticatedRequest } from '../types.js';
 import crypto from 'crypto';
+import { eventBus } from '../lib/eventBus.js';
 
 const router = Router();
 const API_VERSION = 'v1';
@@ -53,6 +54,7 @@ router.post(`/api/${API_VERSION}/audit/log`, authenticate, async (req: Authentic
       .single();
 
     if (error) throw error;
+    eventBus.emit('compliance.audit.logged', req.org.id, { id: data.id, event_type, verdict: verdict || 'PROCEED' });
     res.status(201).json(data);
   } catch (err: unknown) {
     res.status(500).json({ error: (err as Error).message });
@@ -232,6 +234,8 @@ router.post(`/api/${API_VERSION}/compliance/circuit-breaker`, authenticate, asyn
         triggered_by: req.user?.email || req.apiKey?.name || 'unknown',
       },
     });
+
+    eventBus.emit('compliance.circuit_breaker', req.org.id, { action, agents_affected: agents?.length || 0 });
 
     res.json({
       status: 'ok',

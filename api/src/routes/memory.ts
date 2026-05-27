@@ -14,6 +14,7 @@ import { authenticate } from '../middleware/auth.js';
 import { supabase } from '../middleware/db.js';
 import type { AuthenticatedRequest } from '../types.js';
 import { generateEmbedding } from '../lib/embeddings.js';
+import { eventBus } from '../lib/eventBus.js';
 
 const router = Router();
 const API_VERSION = 'v1';
@@ -48,6 +49,7 @@ router.post(`/api/${API_VERSION}/memory/working`, authenticate, async (req: Auth
       .single();
 
     if (error) throw error;
+    eventBus.emit('memory.working.set', req.org.id, { session_id, key, agent_id });
     res.status(201).json(data);
   } catch (err: unknown) {
     res.status(500).json({ error: (err as Error).message });
@@ -153,6 +155,7 @@ router.post(`/api/${API_VERSION}/memory/episodic`, authenticate, async (req: Aut
       .single();
 
     if (error) throw error;
+    eventBus.emit('memory.episode.created', req.org.id, { id: data.id, event_type: data.event_type, importance: data.importance });
     res.status(201).json(data);
   } catch (err: unknown) {
     res.status(500).json({ error: (err as Error).message });
