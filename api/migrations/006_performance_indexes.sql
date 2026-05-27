@@ -32,7 +32,7 @@ CREATE INDEX IF NOT EXISTS idx_traces_org_started
   ON traces (org_id, started_at DESC NULLS LAST);
 
 CREATE INDEX IF NOT EXISTS idx_traces_org_agent
-  ON traces (org_id, agent_id);
+  ON traces (org_id, agent);
 
 -- Knowledge items: text search
 CREATE INDEX IF NOT EXISTS idx_knowledge_org_name
