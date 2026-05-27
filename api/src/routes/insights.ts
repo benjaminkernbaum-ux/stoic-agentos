@@ -110,13 +110,19 @@ router.post(`/api/${API_VERSION}/insights/analyze-agent`, authenticate, async (r
     const { agent_id } = req.body;
     if (!agent_id) return res.status(400).json({ error: 'agent_id required' });
 
-    const { data: agent } = await supabase!
+    const { data: agent, error: agentErr } = await supabase!
       .from('agents')
       .select('*')
       .eq('id', agent_id)
       .eq('org_id', req.org.id)
       .single();
-    if (!agent) return res.status(404).json({ error: 'Agent not found' });
+    if (agentErr || !agent) {
+      return res.status(404).json({
+        error: 'Agent not found',
+        agent_id,
+        hint: 'Verify the agent_id belongs to your organization',
+      });
+    }
 
     const { data: observations } = await supabase!
       .from('observations')

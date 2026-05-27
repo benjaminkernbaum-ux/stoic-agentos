@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { BRAIN_FILTERS, TYPE_ICONS } from '../constants';
 import { supabase, API_BASE } from '../../../lib/supabase';
+import { EmptyState } from '../../../components/SkeletonLoader';
 
 // ── Hot Cache Panel (LLM Wiki pattern from claude-obsidian) ──
 function HotCachePanel() {
@@ -349,12 +350,18 @@ export default function BrainTab({ observations, brainFilter, setBrainFilter, ob
             ))}
           </div>
         ) : (
-          <div className="dash-empty" style={{ padding: 60 }}>
-            <div className="dash-empty-icon">🧠</div>
-            <h4>{brainFilter !== 'all' ? `No "${brainFilter}" observations` : 'Knowledge brain is empty'}</h4>
-            <p>Capture observations or seed demo data to get started.</p>
-            <button className="btn btn-primary btn-sm" style={{ marginTop: 8 }} onClick={() => handleSeedDemo()} disabled={seedLoading}>{seedLoading ? '...' : '⚡ Seed Demo Data'}</button>
-          </div>
+          <EmptyState
+            variant="brain"
+            title={brainFilter !== 'all' ? `No "${brainFilter}" observations` : 'Knowledge Brain Is Empty'}
+            description="Your agents' observations, decisions, and discoveries will appear here as a searchable knowledge base."
+            steps={brainFilter === 'all' ? [
+              'Use Quick Capture from the Overview tab',
+              'Or call os.observe() from any agent',
+              'Filter and search your knowledge over time',
+            ] : undefined}
+          >
+            <button className="btn-seed" onClick={() => handleSeedDemo()} disabled={seedLoading}>{seedLoading ? '...' : '⚡ Seed Demo Data'}</button>
+          </EmptyState>
         )}
       </div>
 
@@ -380,11 +387,13 @@ export default function BrainTab({ observations, brainFilter, setBrainFilter, ob
             ))}
           </div>
         ) : (
-          <div className="dash-empty">
-            <div className="dash-empty-icon">💡</div>
-            <p>Persist decisions, architecture choices, and discoveries.</p>
-            <button className="btn btn-primary btn-sm" style={{ marginTop: 8 }} onClick={() => setShowKiModal(true)}>+ Create Knowledge Item</button>
-          </div>
+          <EmptyState
+            variant="default"
+            title="Knowledge Items"
+            description="Persist architecture decisions, key discoveries, and important context that outlives individual observations."
+          >
+            <button className="btn-seed" onClick={() => setShowKiModal(true)}>+ Create Knowledge Item</button>
+          </EmptyState>
         )}
       </div>
     </div>

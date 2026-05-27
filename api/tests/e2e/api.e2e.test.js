@@ -133,6 +133,42 @@ describeE2E('Agents API', () => {
     expect(data.last_heartbeat).toBeTruthy();
     cleanup.agentIds.push(data.id);
   });
+
+  it('DELETE /agents/:id removes an agent', async () => {
+    // Create a throwaway agent to delete
+    const createRes = await api('/agents', {
+      method: 'POST',
+      body: JSON.stringify({
+        name: `e2e-delete-agent-${Date.now()}`,
+        description: 'Will be deleted immediately',
+        module: 'standalone',
+      }),
+    });
+    expect(createRes.status).toBe(201);
+    const created = await createRes.json();
+    expect(created.id).toBeTruthy();
+
+    // Delete it
+    const deleteRes = await api(`/agents/${created.id}`, { method: 'DELETE' });
+    expect(deleteRes.status).toBe(200);
+    const deleteData = await deleteRes.json();
+    expect(deleteData.deleted).toBe(true);
+    expect(deleteData.id).toBe(created.id);
+
+    // Verify it's gone
+    const listRes = await api('/agents');
+    const agents = await listRes.json();
+    const found = agents.find(a => a.id === created.id);
+    expect(found).toBeFalsy();
+  });
+
+  it('DELETE /agents/:id returns 404 for non-existent agent', async () => {
+    const res = await api('/agents/00000000-0000-0000-0000-000000000000', { method: 'DELETE' });
+    // Should be 404 or 500 (Supabase may throw PGRST116 for .single() on 0 rows)
+    expect([404, 500]).toContain(res.status);
+    const data = await res.json();
+    expect(data).toHaveProperty('error');
+  });
 });
 
 // ─────────────────────────────────────────────
@@ -221,6 +257,40 @@ describeE2E('Workspaces API', () => {
     const data = await res.json();
     expect(Array.isArray(data)).toBe(true);
   });
+
+  it('DELETE /workspaces/:id removes a workspace', async () => {
+    // Create a throwaway workspace
+    const createRes = await api('/workspaces', {
+      method: 'POST',
+      body: JSON.stringify({
+        name: `e2e-delete-ws-${Date.now()}`,
+        path: '/tmp/e2e-delete-test',
+        stack: 'node',
+      }),
+    });
+
+    if (createRes.status === 429) {
+      // At plan limit — skip this test gracefully
+      return;
+    }
+    expect(createRes.status).toBe(201);
+    const created = await createRes.json();
+    expect(created.id).toBeTruthy();
+
+    // Delete it
+    const deleteRes = await api(`/workspaces/${created.id}`, { method: 'DELETE' });
+    expect(deleteRes.status).toBe(200);
+    const deleteData = await deleteRes.json();
+    expect(deleteData.deleted).toBe(true);
+    expect(deleteData.id).toBe(created.id);
+  });
+
+  it('DELETE /workspaces/:id returns 404 for non-existent workspace', async () => {
+    const res = await api('/workspaces/00000000-0000-0000-0000-000000000000', { method: 'DELETE' });
+    expect([404, 500]).toContain(res.status);
+    const data = await res.json();
+    expect(data).toHaveProperty('error');
+  });
 });
 
 // ─────────────────────────────────────────────
@@ -254,6 +324,40 @@ describeE2E('Knowledge Items API', () => {
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(Array.isArray(data)).toBe(true);
+  });
+
+  it('DELETE /knowledge-items/:id removes a knowledge item', async () => {
+    // Create a throwaway KI
+    const createRes = await api('/knowledge-items', {
+      method: 'POST',
+      body: JSON.stringify({
+        name: `e2e-delete-ki-${Date.now()}`,
+        summary: 'Will be deleted immediately',
+        content: 'Throwaway knowledge item for DELETE test.',
+      }),
+    });
+
+    if (createRes.status === 429) {
+      // At plan limit — skip this test gracefully
+      return;
+    }
+    expect(createRes.status).toBe(201);
+    const created = await createRes.json();
+    expect(created.id).toBeTruthy();
+
+    // Delete it
+    const deleteRes = await api(`/knowledge-items/${created.id}`, { method: 'DELETE' });
+    expect(deleteRes.status).toBe(200);
+    const deleteData = await deleteRes.json();
+    expect(deleteData.deleted).toBe(true);
+    expect(deleteData.id).toBe(created.id);
+  });
+
+  it('DELETE /knowledge-items/:id returns 404 for non-existent item', async () => {
+    const res = await api('/knowledge-items/00000000-0000-0000-0000-000000000000', { method: 'DELETE' });
+    expect([404, 500]).toContain(res.status);
+    const data = await res.json();
+    expect(data).toHaveProperty('error');
   });
 });
 
@@ -290,6 +394,97 @@ describeE2E('API Keys API', () => {
       expect(data[0]).toHaveProperty('name');
       expect(data[0]).toHaveProperty('active');
     }
+  });
+
+  it('GET /api-keys/anthropic returns key status', async () => {
+    const res = await api('/api-keys/anthropic');
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    // Should always return a well-formed response, even if BYOK isn't configured
+    expect(data).toHaveProperty('configured');
+    expect(typeof data.configured).toBe('boolean');
+    // last4 is either null or a string
+    expect(data).toHaveProperty('last4');
+  });
+});
+
+// ─────────────────────────────────────────────
+// Alerts API
+// ─────────────────────────────────────────────
+
+describeE2E('Alerts API', () => {
+  it('GET /alerts returns rules and events (or graceful empty)', async () => {
+    const res = await api('/alerts');
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    // Should have rules and events arrays, or at least a hint
+    expect(data).toHaveProperty('rules');
+    expect(data).toHaveProperty('events');
+    expect(Array.isArray(data.rules)).toBe(true);
+    expect(Array.isArray(data.events)).toBe(true);
+  });
+
+  it('GET /alerts/rules returns an array', async () => {
+    const res = await api('/alerts/rules');
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(Array.isArray(data)).toBe(true);
+  });
+
+  it('GET /alerts/events returns an array', async () => {
+    const res = await api('/alerts/events');
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(Array.isArray(data)).toBe(true);
+  });
+});
+
+// ─────────────────────────────────────────────
+// Graph API
+// ─────────────────────────────────────────────
+
+describeE2E('Graph API', () => {
+  it('GET /graph returns nodes and edges with counts', async () => {
+    const res = await api('/graph');
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data).toHaveProperty('nodes');
+    expect(data).toHaveProperty('edges');
+    expect(data).toHaveProperty('node_count');
+    expect(data).toHaveProperty('edge_count');
+    expect(Array.isArray(data.nodes)).toBe(true);
+    expect(Array.isArray(data.edges)).toBe(true);
+    expect(data.node_count).toBe(data.nodes.length);
+    expect(data.edge_count).toBe(data.edges.length);
+  });
+});
+
+// ─────────────────────────────────────────────
+// Insights API (analyze-agent error handling)
+// ─────────────────────────────────────────────
+
+describeE2E('Insights API — analyze-agent', () => {
+  it('POST /insights/analyze-agent returns 400 without agent_id', async () => {
+    const res = await api('/insights/analyze-agent', {
+      method: 'POST',
+      body: JSON.stringify({}),
+    });
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data.error).toMatch(/agent_id/i);
+  });
+
+  it('POST /insights/analyze-agent returns 404 with proper JSON for invalid agent_id', async () => {
+    const res = await api('/insights/analyze-agent', {
+      method: 'POST',
+      body: JSON.stringify({ agent_id: '00000000-0000-0000-0000-000000000000' }),
+    });
+    // Should be 402 (no key) or 404 (agent not found) — both with JSON body
+    expect([402, 404]).toContain(res.status);
+    const data = await res.json();
+    expect(data).toHaveProperty('error');
+    expect(typeof data.error).toBe('string');
+    expect(data.error.length).toBeGreaterThan(0);
   });
 });
 
@@ -342,16 +537,34 @@ afterAll(async () => {
     }
   }
 
-  // Note: agents, workspaces, knowledge items don't have DELETE endpoints
-  // in the current API, so we log what was created for manual cleanup
-  if (cleanup.agentIds.length > 0) {
-    console.log(`  ℹ Created ${cleanup.agentIds.length} test agent(s): ${cleanup.agentIds.join(', ')}`);
+  // Delete agents (now has DELETE endpoint)
+  for (const id of cleanup.agentIds) {
+    try {
+      await api(`/agents/${id}`, { method: 'DELETE' });
+      console.log(`  ✓ Deleted agent ${id}`);
+    } catch (e) {
+      console.warn(`  ✗ Failed to delete agent ${id}:`, e.message);
+    }
   }
-  if (cleanup.workspaceIds.length > 0) {
-    console.log(`  ℹ Created ${cleanup.workspaceIds.length} test workspace(s): ${cleanup.workspaceIds.join(', ')}`);
+
+  // Delete workspaces
+  for (const id of cleanup.workspaceIds) {
+    try {
+      await api(`/workspaces/${id}`, { method: 'DELETE' });
+      console.log(`  ✓ Deleted workspace ${id}`);
+    } catch (e) {
+      console.warn(`  ✗ Failed to delete workspace ${id}:`, e.message);
+    }
   }
-  if (cleanup.knowledgeItemIds.length > 0) {
-    console.log(`  ℹ Created ${cleanup.knowledgeItemIds.length} test KI(s): ${cleanup.knowledgeItemIds.join(', ')}`);
+
+  // Delete knowledge items
+  for (const id of cleanup.knowledgeItemIds) {
+    try {
+      await api(`/knowledge-items/${id}`, { method: 'DELETE' });
+      console.log(`  ✓ Deleted knowledge item ${id}`);
+    } catch (e) {
+      console.warn(`  ✗ Failed to delete knowledge item ${id}:`, e.message);
+    }
   }
 
   console.log('🧹 Cleanup complete.\n');

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import AnimatedCounter from '../../../components/AnimatedCounter';
+import { SkeletonStatCards, SkeletonAgentRows, SkeletonTimeline, SkeletonUsageBar, EmptyState } from '../../../components/SkeletonLoader';
 import { STATUS_COLORS, TYPE_ICONS, CAPTURE_HINTS } from '../constants';
 
 const CAPTURE_TYPES = [
@@ -230,19 +231,23 @@ export default function OverviewTab({ stats, agents, observations, liveAgents, e
               ))}
             </div>
           ) : (
-            <div className="dash-empty">
-              <div className="dash-empty-icon">🚀</div>
-              <h4>Quick Start</h4>
-              <p>Get started in seconds — seed sample data or register your first agent manually.</p>
-              <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
-                <button className="btn btn-primary btn-sm" onClick={() => handleSeedDemo()} disabled={seedLoading}>
-                  {seedLoading ? 'Seeding...' : '⚡ Seed Demo Data'}
-                </button>
-                <button className="btn btn-ghost btn-sm" onClick={() => setShowAgentModal(true)}>
-                  + Register Agent
-                </button>
-              </div>
-            </div>
+            <EmptyState
+              variant="agents"
+              title="Launch Your Agent Fleet"
+              description="Get operational in seconds — seed sample data to preview your fleet, or register your first agent."
+              steps={[
+                'Install the SDK: npm i @stoic/agentos-sdk',
+                'Send your first heartbeat from any agent',
+                'Watch real-time status appear here',
+              ]}
+            >
+              <button className="btn-seed" onClick={() => handleSeedDemo()} disabled={seedLoading}>
+                {seedLoading ? 'Seeding...' : '⚡ Seed Demo Data'}
+              </button>
+              <button className="btn btn-ghost btn-sm" onClick={() => setShowAgentModal(true)}>
+                + Register Agent
+              </button>
+            </EmptyState>
           )}
         </div>
 
@@ -275,14 +280,15 @@ export default function OverviewTab({ stats, agents, observations, liveAgents, e
               ))}
             </div>
           ) : (
-            <div className="dash-empty">
-              <div className="dash-empty-icon">📝</div>
-              <h4>No activity yet</h4>
-              <p>Use the Quick Capture bar below, or seed demo data to see how observations work.</p>
-              <button className="btn btn-primary btn-sm" style={{ marginTop: 8 }} onClick={() => handleSeedDemo()} disabled={seedLoading}>
+            <EmptyState
+              variant="default"
+              title="Activity Feed"
+              description="Observations from your agents will appear here as a live timeline. Use Quick Capture below to add your first entry."
+            >
+              <button className="btn-seed" onClick={() => handleSeedDemo()} disabled={seedLoading}>
                 {seedLoading ? 'Seeding...' : '⚡ Seed Demo Data'}
               </button>
-            </div>
+            </EmptyState>
           )}
         </div>
       </div>

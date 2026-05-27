@@ -7,6 +7,66 @@ import type { AuthenticatedRequest } from '../types.js';
 const router = Router();
 const API_VERSION = 'v1';
 
+/**
+ * Helper: check if a Supabase error means the table doesn't exist.
+ * Returns true for "relation does not exist" or similar schema errors,
+ * so callers can degrade gracefully instead of returning 500.
+ */
+function isTableMissing(error: { message?: string; code?: string }): boolean {
+  const msg = (error.message || '').toLowerCase();
+  return (
+    msg.includes('relation') && msg.includes('does not exist') ||
+    msg.includes('could not find') ||
+    error.code === '42P01'   // PostgreSQL: undefined_table
+  );
+}
+
+// ══════════════════════════════════════
+// TOP-LEVEL ALERTS ENDPOINT
+// ══════════════════════════════════════
+
+// ── GET /alerts — summary of rules + recent events ──
+router.get(`/api/${API_VERSION}/alerts`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    // Try to fetch rules
+    const { data: rules, error: rulesErr } = await supabase!
+      .from('alert_rules')
+      .select('*')
+      .eq('org_id', req.org.id)
+      .order('created_at', { ascending: false });
+
+    if (rulesErr && isTableMissing(rulesErr)) {
+      // Tables haven't been created yet — return empty gracefully
+      return res.json({
+        rules: [],
+        events: [],
+        hint: 'Alert tables not yet created — run the alerts migration to enable this feature',
+      });
+    }
+    if (rulesErr) throw rulesErr;
+
+    // Try to fetch recent events
+    const { data: events, error: eventsErr } = await supabase!
+      .from('alert_events')
+      .select('*, alert_rules(name, type)')
+      .eq('org_id', req.org.id)
+      .order('created_at', { ascending: false })
+      .limit(20);
+
+    if (eventsErr && isTableMissing(eventsErr)) {
+      return res.json({ rules: rules || [], events: [] });
+    }
+    if (eventsErr) throw eventsErr;
+
+    res.json({
+      rules: rules || [],
+      events: events || [],
+    });
+  } catch (err: unknown) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
 // ══════════════════════════════════════
 // ALERT RULES
 // ══════════════════════════════════════
@@ -19,7 +79,10 @@ router.get(`/api/${API_VERSION}/alerts/rules`, authenticate, async (req: Authent
       .select('*')
       .eq('org_id', req.org.id)
       .order('created_at', { ascending: false });
-    if (error) throw error;
+    if (error) {
+      if (isTableMissing(error)) return res.json([]);
+      throw error;
+    }
     res.json(data || []);
   } catch (err: unknown) {
     res.status(500).json({ error: (err as Error).message });
@@ -119,7 +182,10 @@ router.get(`/api/${API_VERSION}/alerts/events`, authenticate, async (req: Authen
     if (unacknowledged === 'true') query = query.eq('acknowledged', false);
 
     const { data, error } = await query;
-    if (error) throw error;
+    if (error) {
+      if (isTableMissing(error)) return res.json([]);
+      throw error;
+    }
     res.json(data || []);
   } catch (err: unknown) {
     res.status(500).json({ error: (err as Error).message });

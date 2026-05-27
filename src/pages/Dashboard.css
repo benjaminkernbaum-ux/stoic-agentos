@@ -1551,3 +1551,432 @@
   width: 200px; height: 200px;
 }
 
+/* ═══════════════════════════════════════════════════════
+   SKELETON LOADING STATES
+   CSS-only pulse + shimmer for premium loading feel
+   ═══════════════════════════════════════════════════════ */
+
+/* ── Base skeleton box ── */
+.skel-box {
+  background: linear-gradient(
+    90deg,
+    rgba(124,58,237,0.06) 25%,
+    rgba(167,139,250,0.12) 50%,
+    rgba(124,58,237,0.06) 75%
+  );
+  background-size: 200% 100%;
+  animation: skelShimmer 1.8s ease-in-out infinite;
+  border-radius: 4px;
+}
+
+.skel-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: rgba(167,139,250,0.12);
+  animation: skelPulse 1.6s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+.skel-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+@keyframes skelShimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@keyframes skelPulse {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.8; }
+}
+
+/* ── Stat Card Skeleton ── */
+.skel-stat-card {
+  background: var(--surface-2);
+  border: 1px solid var(--line-mid);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
+  animation: skelFadeIn 0.5s ease-out both;
+}
+.skel-stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 10%; right: 10%; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(167,139,250,0.08), transparent);
+}
+.dash-metrics .skel-stat-card:nth-child(1) { animation-delay: 0s; }
+.dash-metrics .skel-stat-card:nth-child(2) { animation-delay: 0.08s; }
+.dash-metrics .skel-stat-card:nth-child(3) { animation-delay: 0.16s; }
+.dash-metrics .skel-stat-card:nth-child(4) { animation-delay: 0.24s; }
+
+@keyframes skelFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Agent Row Skeleton ── */
+.skel-agent-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 18px;
+}
+
+/* ── Agent Card Skeleton ── */
+.skel-agent-card {
+  background: var(--surface-2);
+  border: 1px solid var(--line-mid);
+  border-radius: var(--radius-lg);
+  padding: 18px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* ── Timeline Item Skeleton ── */
+.skel-timeline-item {
+  display: flex;
+  gap: 12px;
+  padding: 8px 18px;
+}
+
+/* ── Observation Row Skeleton ── */
+.skel-obs-row {
+  display: flex;
+  gap: 14px;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--line);
+}
+.skel-obs-row:last-child {
+  border-bottom: none;
+}
+
+/* ── Trace Row Skeleton ── */
+.skel-trace-row {
+  background: var(--surface-2);
+  border: 1px solid var(--line-mid);
+  border-radius: var(--radius-lg);
+  padding: 14px 18px;
+}
+
+/* ── Usage Bar Skeleton ── */
+.skel-usage-bar {
+  background: var(--surface-2);
+  border: 1px solid var(--line-mid);
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+/* ═══════════════════════════════════════════════════════
+   ENHANCED EMPTY STATES
+   Premium feel with animated SVG icons & step CTAs
+   ═══════════════════════════════════════════════════════ */
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 56px 24px;
+  text-align: center;
+  position: relative;
+}
+
+.empty-state__icon-wrap {
+  margin-bottom: 20px;
+  position: relative;
+}
+
+/* Glow ring behind icon */
+.empty-state__icon-wrap::after {
+  content: '';
+  position: absolute;
+  inset: -16px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(124,58,237,0.08) 0%, transparent 70%);
+  pointer-events: none;
+  animation: emptyGlow 3s ease-in-out infinite;
+}
+
+@keyframes emptyGlow {
+  0%, 100% { opacity: 0.5; transform: scale(0.95); }
+  50%      { opacity: 1; transform: scale(1.1); }
+}
+
+.empty-state__svg {
+  display: block;
+}
+
+/* SVG animation classes */
+.empty-state__svg-pulse {
+  animation: svgPulse 2.5s ease-in-out infinite;
+}
+@keyframes svgPulse {
+  0%, 100% { opacity: 0.4; }
+  50%      { opacity: 1; }
+}
+
+.empty-state__svg-rotate {
+  animation: svgRotate 20s linear infinite;
+  transform-origin: center;
+}
+@keyframes svgRotate {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+.empty-state__svg-orbit {
+  animation: svgOrbit 4s ease-in-out infinite;
+}
+@keyframes svgOrbit {
+  0%, 100% { opacity: 0.3; transform: scale(0.8); }
+  50%      { opacity: 1; transform: scale(1.2); }
+}
+
+.empty-state__svg-shimmer {
+  animation: svgShimmer 2s ease-in-out infinite;
+}
+@keyframes svgShimmer {
+  0%, 100% { opacity: 0.4; }
+  50%      { opacity: 1; }
+}
+
+.empty-state__title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--white);
+  margin-bottom: 8px;
+  letter-spacing: -0.02em;
+}
+
+.empty-state__desc {
+  font-size: 13px;
+  color: var(--gray-3);
+  line-height: 1.7;
+  max-width: 340px;
+  margin-bottom: 20px;
+}
+
+/* ── Step-by-step CTA ── */
+.empty-state__steps {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 24px;
+  text-align: left;
+  max-width: 340px;
+  width: 100%;
+}
+
+.empty-state__step {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: rgba(124,58,237,0.04);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  transition: all 0.2s;
+}
+.empty-state__step:hover {
+  background: rgba(124,58,237,0.08);
+  border-color: var(--line-mid);
+}
+
+.empty-state__step-num {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--gradient-hero);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 800;
+  color: white;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px var(--accent-glow);
+}
+
+.empty-state__step-text {
+  font-size: 12px;
+  color: var(--gray-2);
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.empty-state__actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+/* ── Prominent Seed Demo Button ── */
+.btn-seed {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 22px;
+  border-radius: 10px;
+  background: var(--gradient-hero);
+  border: none;
+  color: white;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  letter-spacing: -0.01em;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 20px var(--accent-glow);
+  animation: seedBtnGlow 3s ease-in-out infinite;
+}
+
+.btn-seed:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 8px 32px rgba(124,58,237,0.45);
+}
+
+.btn-seed:disabled {
+  opacity: 0.4;
+  cursor: default;
+  transform: none;
+  animation: none;
+}
+
+@keyframes seedBtnGlow {
+  0%, 100% { box-shadow: 0 4px 20px var(--accent-glow); }
+  50%      { box-shadow: 0 4px 32px rgba(124,58,237,0.5), 0 0 60px rgba(124,58,237,0.12); }
+}
+
+/* Shimmer sweep on seed button */
+.btn-seed::after {
+  content: '';
+  position: absolute;
+  top: 0; left: -100%;
+  width: 50%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  animation: seedShimmer 3s ease-in-out infinite;
+}
+@keyframes seedShimmer {
+  0%       { left: -100%; }
+  50%, 100% { left: 200%; }
+}
+
+/* ═══════════════════════════════════════════════════════
+   MICRO-ANIMATIONS — Premium Polish
+   ═══════════════════════════════════════════════════════ */
+
+/* ── Tab content transitions ── */
+.dash-content {
+  animation: tabFadeIn 0.35s ease-out;
+}
+@keyframes tabFadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Activity feed items — staggered slide-in ── */
+.dash-tl-item {
+  animation: feedSlideIn 0.4s ease-out both;
+}
+.dash-tl-item:nth-child(1) { animation-delay: 0s; }
+.dash-tl-item:nth-child(2) { animation-delay: 0.04s; }
+.dash-tl-item:nth-child(3) { animation-delay: 0.08s; }
+.dash-tl-item:nth-child(4) { animation-delay: 0.12s; }
+.dash-tl-item:nth-child(5) { animation-delay: 0.16s; }
+.dash-tl-item:nth-child(6) { animation-delay: 0.20s; }
+.dash-tl-item:nth-child(7) { animation-delay: 0.24s; }
+.dash-tl-item:nth-child(8) { animation-delay: 0.28s; }
+
+@keyframes feedSlideIn {
+  from { opacity: 0; transform: translateX(-12px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* ── Latest activity item highlight ── */
+.dash-tl-item-latest {
+  position: relative;
+}
+.dash-tl-item-latest::after {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0; width: 2px;
+  background: var(--gradient-hero);
+  border-radius: 0 2px 2px 0;
+  animation: latestPulse 2s ease-in-out infinite;
+}
+@keyframes latestPulse {
+  0%, 100% { opacity: 0.4; }
+  50%      { opacity: 1; }
+}
+
+/* ── Agent card stagger on grid ── */
+.dash-agent-grid .dash-agent-card {
+  animation: cardFadeIn 0.4s ease-out both;
+}
+.dash-agent-grid .dash-agent-card:nth-child(1) { animation-delay: 0s; }
+.dash-agent-grid .dash-agent-card:nth-child(2) { animation-delay: 0.06s; }
+.dash-agent-grid .dash-agent-card:nth-child(3) { animation-delay: 0.12s; }
+.dash-agent-grid .dash-agent-card:nth-child(4) { animation-delay: 0.18s; }
+.dash-agent-grid .dash-agent-card:nth-child(5) { animation-delay: 0.24s; }
+.dash-agent-grid .dash-agent-card:nth-child(6) { animation-delay: 0.30s; }
+
+@keyframes cardFadeIn {
+  from { opacity: 0; transform: translateY(12px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ── Observation rows stagger ── */
+.dash-obs-list .dash-obs-row {
+  animation: obsSlideIn 0.35s ease-out both;
+}
+.dash-obs-list .dash-obs-row:nth-child(1) { animation-delay: 0s; }
+.dash-obs-list .dash-obs-row:nth-child(2) { animation-delay: 0.03s; }
+.dash-obs-list .dash-obs-row:nth-child(3) { animation-delay: 0.06s; }
+.dash-obs-list .dash-obs-row:nth-child(4) { animation-delay: 0.09s; }
+.dash-obs-list .dash-obs-row:nth-child(5) { animation-delay: 0.12s; }
+.dash-obs-list .dash-obs-row:nth-child(6) { animation-delay: 0.15s; }
+.dash-obs-list .dash-obs-row:nth-child(7) { animation-delay: 0.18s; }
+.dash-obs-list .dash-obs-row:nth-child(8) { animation-delay: 0.21s; }
+
+@keyframes obsSlideIn {
+  from { opacity: 0; transform: translateX(-8px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* ── Traces empty state visualization ── */
+.traces-empty-viz {
+  margin-bottom: 8px;
+}
+
+/* ═══════════════════════════════════════════════════════
+   ACCESSIBILITY — Respect reduced motion
+   ═══════════════════════════════════════════════════════ */
+@media (prefers-reduced-motion: reduce) {
+  .skel-box,
+  .skel-dot,
+  .empty-state__svg-pulse,
+  .empty-state__svg-rotate,
+  .empty-state__svg-orbit,
+  .empty-state__svg-shimmer,
+  .btn-seed,
+  .btn-seed::after,
+  .dash-tl-item,
+  .dash-tl-item-latest::after,
+  .dash-agent-grid .dash-agent-card,
+  .dash-obs-list .dash-obs-row,
+  .skel-stat-card {
+    animation: none !important;
+  }
+}
+

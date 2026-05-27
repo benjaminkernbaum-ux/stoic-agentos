@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase, API_BASE } from '../../../lib/supabase';
+import { EmptyState, TracesEmptyViz } from '../../../components/SkeletonLoader';
 
 /**
  * ═══════════════════════════════════════════════════
@@ -439,22 +440,29 @@ export default function TracesTab({ traces: initialTraces, traceStats: initialSt
               Agent Traces
             </span>
           </div>
-          <div className="dash-empty" style={{ padding: 80 }}>
-            <div className="dash-empty-icon">📊</div>
-            <h4>No Traces Yet</h4>
-            <p>Instrument your LLM calls to capture execution traces with timing, token usage, and cost analytics.</p>
+          <EmptyState
+            variant="traces"
+            title="Trace Your Agent Execution"
+            description="Capture every LLM call, tool use, and retrieval step with timing, tokens, and cost breakdowns — all in a visual waterfall."
+            icon={<TracesEmptyViz />}
+            steps={[
+              'Install SDK: npm i @stoic/agentos-sdk',
+              'Call os.instrument() to auto-patch OpenAI & Anthropic',
+              'Every LLM call is captured as a trace with spans',
+            ]}
+          >
             <div style={{
-              marginTop: 16, padding: '14px 18px', background: 'var(--surface-3)',
+              marginTop: 4, padding: '14px 18px', background: 'var(--surface-3)',
               border: '1px solid var(--line-mid)', borderRadius: 10, fontSize: 12,
               color: 'var(--gray-3)', fontFamily: "'JetBrains Mono', monospace", textAlign: 'left',
-              maxWidth: 380,
+              maxWidth: 380, width: '100%',
             }}>
               <div style={{ color: 'var(--gray-4)', fontSize: 10, marginBottom: 4 }}>// Quick start</div>
               <div>import {'{'} AgentOS {'}'} from 'stoic-agentos-sdk';</div>
               <div>const os = new AgentOS({'{'} apiKey: 'sk_live_xxx' {'}'});</div>
               <div style={{ color: '#a78bfa' }}>os.instrument(); // patches OpenAI & Anthropic</div>
             </div>
-          </div>
+          </EmptyState>
         </div>
       </div>
     );

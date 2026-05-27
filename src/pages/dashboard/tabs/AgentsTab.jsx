@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../../lib/supabase';
+import { EmptyState } from '../../../components/SkeletonLoader';
 
 /**
  * ═══════════════════════════════════════════════════
@@ -229,15 +230,19 @@ export default function AgentsTab({ agents: initialAgents, setShowAgentModal, se
         </div>
       ) : (
         <div className="dash-panel">
-          <div className="dash-empty" style={{ padding: 60 }}>
-            <div className="dash-empty-icon">🤖</div>
-            <h4>Register your first agent</h4>
-            <p>Create agents manually or use the SDK to auto-register them.</p>
-            <div style={{ display: 'flex', gap: 8, marginTop: 12, justifyContent: 'center' }}>
-              <button className="btn btn-primary btn-sm" onClick={() => setShowAgentModal(true)}>+ Register Agent</button>
-              <button className="btn btn-ghost btn-sm" onClick={() => handleSeedDemo()} disabled={seedLoading}>{seedLoading ? '...' : '⚡ Seed Demo'}</button>
-            </div>
-          </div>
+          <EmptyState
+            variant="agents"
+            title="Register Your First Agent"
+            description="Create agents manually or use the SDK to auto-register them on first heartbeat."
+            steps={[
+              'Install SDK: npm i @stoic/agentos-sdk',
+              'Call os.wrapAgent() in your agent code',
+              'Agents auto-register on first run',
+            ]}
+          >
+            <button className="btn-seed" onClick={() => setShowAgentModal(true)}>+ Register Agent</button>
+            <button className="btn btn-ghost btn-sm" onClick={() => handleSeedDemo()} disabled={seedLoading}>{seedLoading ? '...' : '⚡ Seed Demo'}</button>
+          </EmptyState>
         </div>
       )}
 
