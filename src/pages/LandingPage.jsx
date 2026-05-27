@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import './LandingPage.css';
 import InfraSimulation from '../components/InfraSimulation';
 import NeuralHeroCanvas from '../components/NeuralHeroCanvas';
@@ -279,6 +280,7 @@ function TestimonialCard({ testimonial }) {
    LANDING PAGE
    ═══════════════════════════════════════════ */
 export default function LandingPage() {
+  const navigate = useNavigate();
   const [scrolled, setScrolled] = useState(false);
 
   // Section refs for scroll reveal
@@ -314,9 +316,9 @@ export default function LandingPage() {
             <span>Stoic <span style={{ color: 'var(--accent-purple)' }}>AgentOS</span></span>
           </div>
           <div className="nav-links">
-            {NAV_LINKS.map(l => <a key={l} className="nav-link" href={l === 'Docs' ? '/docs' : `#${l.toLowerCase()}`}>{l}</a>)}
-            <a className="nav-link" href="/login">Sign In</a>
-            <button className="btn btn-primary btn-sm" onClick={() => window.location.href = '/signup'}>Get Started Free</button>
+            {NAV_LINKS.map(l => l === 'Docs' ? <Link key={l} className="nav-link" to="/docs">{l}</Link> : <a key={l} className="nav-link" href={`#${l.toLowerCase()}`}>{l}</a>)}
+            <Link className="nav-link" to="/login">Sign In</Link>
+            <button className="btn btn-primary btn-sm" onClick={() => navigate('/signup')}>Get Started Free</button>
           </div>
         </div>
       </nav>
@@ -340,7 +342,7 @@ export default function LandingPage() {
             Knowledge persistence, auto-capture, and multi-workspace management — built for teams shipping AI.
           </p>
           <div className="hero-cta animate-in delay-3">
-            <button className="btn btn-primary btn-lg" onClick={() => window.location.href = '/signup'}>
+            <button className="btn btn-primary btn-lg" onClick={() => navigate('/signup')}>
               🚀 Start Free — No Credit Card
             </button>
             <button className="btn btn-secondary btn-lg" onClick={() => document.getElementById('preview')?.scrollIntoView({ behavior: 'smooth' })}>
@@ -432,7 +434,7 @@ export default function LandingPage() {
             <LiveDashboardPreview />
           </div>
           <div className="section-reveal" style={{ transitionDelay: '0.3s', marginTop: 32 }}>
-            <button className="btn btn-primary btn-lg" onClick={() => window.location.href = '/signup'}>
+            <button className="btn btn-primary btn-lg" onClick={() => navigate('/signup')}>
               🚀 Get Your Own Dashboard — Free
             </button>
           </div>
@@ -604,7 +606,7 @@ export default function LandingPage() {
                     if (p.name === 'Enterprise') {
                       window.location.href = 'mailto:benjamin@stoicagentos.com?subject=AgentOS Enterprise Inquiry';
                     } else {
-                      window.location.href = '/signup';
+                      navigate('/signup');
                     }
                   }}
                 >
@@ -632,7 +634,7 @@ export default function LandingPage() {
             Join 2,400+ engineers using AgentOS to ship AI faster, with full observability and zero knowledge loss.
           </p>
           <div className="hero-cta section-reveal" style={{ transitionDelay: '0.2s' }}>
-            <button className="btn btn-primary btn-lg" onClick={() => window.location.href = '/signup'}>🚀 Get Started Free</button>
+            <button className="btn btn-primary btn-lg" onClick={() => navigate('/signup')}>🚀 Get Started Free</button>
             <button className="btn btn-secondary btn-lg" onClick={() => window.location.href = 'mailto:benjamin@stoicagentos.com?subject=AgentOS Demo Request'}>📅 Book a Demo</button>
           </div>
           <div className="cta-trust section-reveal" style={{ transitionDelay: '0.3s' }}>
@@ -656,21 +658,21 @@ export default function LandingPage() {
               <a href="#features">Features</a>
               <a href="#pricing">Pricing</a>
               <a href="#sdk">SDK</a>
-              <a href="/docs">Documentation</a>
-              <a href="/changelog">Changelog</a>
+              <Link to="/docs">Documentation</Link>
+              <Link to="/changelog">Changelog</Link>
             </div>
             <div className="footer-col">
               <h4>Company</h4>
-              <a href="/about">About</a>
-              <a href="/blog">Blog</a>
-              <a href="https://github.com/benjaminkernbaum-ux">GitHub</a>
-              <a href="https://www.linkedin.com/company/17224756/">LinkedIn</a>
+              <Link to="/about">About</Link>
+              <Link to="/blog">Blog</Link>
+              <a href="https://github.com/benjaminkernbaum-ux" target="_blank" rel="noopener noreferrer">GitHub</a>
+              <a href="https://www.linkedin.com/company/17224756/" target="_blank" rel="noopener noreferrer">LinkedIn</a>
             </div>
             <div className="footer-col">
               <h4>Legal</h4>
-              <a href="/privacy">Privacy Policy</a>
-              <a href="/terms">Terms of Service</a>
-              <a href="/security">Security</a>
+              <Link to="/privacy">Privacy Policy</Link>
+              <Link to="/terms">Terms of Service</Link>
+              <Link to="/security">Security</Link>
             </div>
           </div>
           <div className="footer-bottom">

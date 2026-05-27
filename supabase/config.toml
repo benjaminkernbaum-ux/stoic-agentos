@@ -4,8 +4,7 @@
 # Use with `supabase start` for local development
 # Docs: https://supabase.com/docs/guides/cli/config
 
-[project]
-id = "viiagdhtzbvkfhcjqrlz"
+project_id = "viiagdhtzbvkfhcjqrlz"
 
 [api]
 enabled = true
