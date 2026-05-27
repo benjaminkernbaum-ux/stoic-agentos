@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import OnboardingTour from '../../components/OnboardingTour';
+import ChatAssistant from '../../components/ChatAssistant';
 import { useToast, ToastContainer } from './hooks/useToast.jsx';
 import { useDashboardData } from './hooks/useDashboardData';
 import { useDashboardActions } from './hooks/useDashboardActions';
@@ -256,6 +257,8 @@ export default function Dashboard() {
         setActiveTab={setActiveTab}
         onCaptureRef={onCaptureRef}
       />
+
+      <ChatAssistant />
 
       <ToastContainer toasts={toasts} />
 

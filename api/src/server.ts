@@ -41,6 +41,7 @@ import traceRoutes from './routes/traces.js';
 import alertRoutes from './routes/alerts.js';
 import graphRoutes from './routes/graph.js';
 import insightRoutes from './routes/insights.js';
+import chatRoutes from './routes/chat.js';
 import adminRoutes from './routes/admin.js';
 import { probeVaultRpc } from './lib/anthropic.js';
 
@@ -97,6 +98,7 @@ app.use(traceRoutes);
 app.use(alertRoutes);
 app.use(graphRoutes);
 app.use(insightRoutes);
+app.use(chatRoutes);       // AI Chat Assistant
 app.use(adminRoutes); // TEMPORARY — remove after migrations
 
 // ── 404 handler ──
