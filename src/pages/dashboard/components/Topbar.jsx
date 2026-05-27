@@ -9,12 +9,8 @@ export default function Topbar({ activeTab, setActiveTab, setCmdOpen, setCmdQuer
         className="dash-search-btn"
         onClick={() => { setCmdOpen(true); setCmdQuery(''); }}
       >
-        <span className="dash-search-icon">🔍</span>
-        <span className="dash-search-text">Search everything...</span>
-        <span className="dash-search-shortcut">
-          <span className="dash-kbd">⌘</span>
-          <span className="dash-kbd">K</span>
-        </span>
+        <span className="dash-search-icon" style={{ opacity: 0.5, fontSize: 11 }}>⌘K</span>
+        <span className="dash-search-text">Search or jump to...</span>
       </button>
       <div className="dash-topbar-spacer" />
       <div className="dash-live-indicator">
@@ -22,11 +18,18 @@ export default function Topbar({ activeTab, setActiveTab, setCmdOpen, setCmdQuer
         {liveAgents} live
       </div>
       <span className="dash-time">
-        {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+        {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
       </span>
       <button
         className="dash-topbar-capture"
         onClick={() => setActiveTab('overview')}
+        style={{
+          background: 'var(--surface-4)',
+          border: '1px solid var(--line-mid)',
+          boxShadow: 'none',
+          fontWeight: 500,
+          letterSpacing: 0,
+        }}
       >
         + Capture
       </button>

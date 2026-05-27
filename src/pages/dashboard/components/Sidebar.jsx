@@ -2,7 +2,7 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen, activeTab, setAct
   return (
     <aside className={`dash-sidebar${sidebarOpen ? '' : ' collapsed'}`}>
       <div className="dash-brand">
-        <div className="dash-brand-icon" style={{ animation: 'pulse-dot 3s ease-in-out infinite' }}>⚡</div>
+        <div className="dash-brand-icon">⚡</div>
         {sidebarOpen && (
           <>
             <span className="dash-brand-name">AgentOS</span>
@@ -15,14 +15,14 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen, activeTab, setAct
         <div className="dash-nav-section">Main</div>
 
         {[
-          { id: 'commandcenter', icon: '⚡', label: 'Command Center', badge: { text: 'HQ', color: 'purple' } },
-          { id: 'overview',   icon: '📊', label: 'Overview',   badge: errorAgents > 0 ? { text: errorAgents, color: 'red' } : null },
-          { id: 'agents',     icon: '🤖', label: 'Agents',     badge: liveAgents > 0 ? { text: liveAgents, color: 'green' } : null },
-          { id: 'workspaces', icon: '📦', label: 'Workspaces', badge: null },
-          { id: 'brain',      icon: '🧠', label: 'Brain',      badge: null },
-          { id: 'graph',      icon: '🕸️', label: 'Graph',      badge: null },
-          { id: 'traces',     icon: '📈', label: 'Traces',     badge: null },
-          { id: 'workflows',  icon: '🔗', label: 'Workflows',  badge: null },
+          { id: 'commandcenter', icon: '⌘', label: 'Command Center', badge: { text: 'HQ', color: 'purple' } },
+          { id: 'overview',   icon: '◎', label: 'Overview',   badge: errorAgents > 0 ? { text: errorAgents, color: 'red' } : null },
+          { id: 'agents',     icon: '◈', label: 'Agents',     badge: liveAgents > 0 ? { text: liveAgents, color: 'green' } : null },
+          { id: 'workspaces', icon: '▦', label: 'Workspaces', badge: null },
+          { id: 'brain',      icon: '◉', label: 'Brain',      badge: null },
+          { id: 'graph',      icon: '◬', label: 'Graph',      badge: null },
+          { id: 'traces',     icon: '▤', label: 'Traces',     badge: null },
+          { id: 'workflows',  icon: '◫', label: 'Workflows',  badge: null },
         ].map(item => (
           <button
             key={item.id}
@@ -44,7 +44,7 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen, activeTab, setAct
           className={`dash-nav-btn${activeTab === 'settings' ? ' active' : ''}`}
           onClick={() => setActiveTab('settings')}
         >
-          <span className="dash-nav-icon">⚙️</span>
+          <span className="dash-nav-icon">⚙</span>
           <span className="dash-nav-label">Settings</span>
         </button>
       </nav>
@@ -60,7 +60,7 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen, activeTab, setAct
           <span style={{ marginLeft: 4 }}>Command palette</span>
         </div>
         <button className="dash-nav-btn" onClick={handleLogout}>
-          <span className="dash-nav-icon">🚪</span>
+          <span className="dash-nav-icon">→</span>
           <span className="dash-nav-label">Sign out</span>
         </button>
         <button
@@ -68,7 +68,7 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen, activeTab, setAct
           onClick={() => setSidebarOpen(!sidebarOpen)}
           title={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
         >
-          {sidebarOpen ? '◀' : '▶'}
+          {sidebarOpen ? '◂' : '▸'}
         </button>
       </div>
     </aside>

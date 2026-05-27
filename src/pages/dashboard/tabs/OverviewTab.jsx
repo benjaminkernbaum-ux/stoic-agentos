@@ -14,73 +14,39 @@ const CAPTURE_TYPES = [
 /* ═══════════════════════════════════════════
    MINI SPARKLINE — SVG inline chart
    ═══════════════════════════════════════════ */
-function Sparkline({ data, color = '#9b59ff', width = 80, height = 28 }) {
+function Sparkline({ data, color = 'rgba(250,250,250,0.2)', width = 64, height = 20 }) {
   if (!data || data.length < 2) return null;
-
   const max = Math.max(...data, 1);
   const min = Math.min(...data, 0);
   const range = max - min || 1;
   const padY = 2;
   const stepX = width / (data.length - 1);
-
   const points = data.map((val, i) => {
     const x = i * stepX;
     const y = height - padY - ((val - min) / range) * (height - padY * 2);
     return `${x},${y}`;
   }).join(' ');
-
-  // Gradient fill area
-  const areaPoints = `0,${height} ${points} ${width},${height}`;
-
   return (
-    <svg
-      width={width}
-      height={height}
-      viewBox={`0 0 ${width} ${height}`}
-      style={{ display: 'block', overflow: 'visible' }}
-    >
-      <defs>
-        <linearGradient id={`sparkGrad-${color.replace('#', '')}`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={color} stopOpacity="0.3" />
-          <stop offset="100%" stopColor={color} stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      <polygon
-        points={areaPoints}
-        fill={`url(#sparkGrad-${color.replace('#', '')})`}
-      />
-      <polyline
-        points={points}
-        fill="none"
-        stroke={color}
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+    <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} style={{ display: 'block', overflow: 'visible' }}>
+      <polyline points={points} fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.5" />
     </svg>
   );
 }
 
-/* ═══════════════════════════════════════════
-   STAT CARD with sparkline + glow hover
-   ═══════════════════════════════════════════ */
 function StatCard({ icon, trend, trendType = 'neutral', value, label, sublabel, colorClass, sparkData, sparkColor }) {
   return (
-    <div className={`dash-metric ${colorClass} dash-metric-glow`}>
+    <div className={`dash-metric ${colorClass}`}>
       <div className="dash-metric-top">
-        <div className="dash-metric-icon">{icon}</div>
-        <span className={`dash-metric-trend ${trendType}`}>{trend}</span>
-      </div>
-      <div className="dash-metric-value">{value}</div>
-      <div className="dash-metric-label">{label}</div>
-      <div className="dash-metric-bottom">
-        <div className="dash-metric-sub">{sublabel}</div>
+        <div className="dash-metric-icon" style={{ filter: 'grayscale(0.8)', opacity: 0.6 }}>{icon}</div>
         {sparkData && sparkData.length > 1 && (
           <div className="dash-metric-spark">
-            <Sparkline data={sparkData} color={sparkColor} />
+            <Sparkline data={sparkData} color={sparkColor || 'rgba(250,250,250,0.25)'} />
           </div>
         )}
       </div>
+      <div className="dash-metric-value">{value}</div>
+      <div className="dash-metric-label">{label}</div>
+      <div className="dash-metric-sub">{sublabel}</div>
     </div>
   );
 }
