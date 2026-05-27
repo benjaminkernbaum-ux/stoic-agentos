@@ -4,309 +4,303 @@ import { SkeletonStatCards, SkeletonAgentRows, SkeletonTimeline, SkeletonUsageBa
 import { STATUS_COLORS, TYPE_ICONS, CAPTURE_HINTS } from '../constants';
 
 const CAPTURE_TYPES = [
-  { value: 'note', icon: '📝', label: 'Note' },
-  { value: 'decision', icon: '🎯', label: 'Decision' },
-  { value: 'discovery', icon: '🔬', label: 'Discovery' },
-  { value: 'concept', icon: '💡', label: 'Concept' },
-  { value: 'error', icon: '⚠️', label: 'Error' },
+  { value: 'note', label: 'Note' },
+  { value: 'decision', label: 'Decision' },
+  { value: 'discovery', label: 'Discovery' },
+  { value: 'concept', label: 'Concept' },
+  { value: 'error', label: 'Error' },
 ];
 
 /* ═══════════════════════════════════════════
-   MINI SPARKLINE — SVG inline chart
+   AREA CHART — smooth filled SVG
    ═══════════════════════════════════════════ */
-function Sparkline({ data, color = 'rgba(250,250,250,0.2)', width = 64, height = 20 }) {
+function AreaChart({ data, width = 200, height = 60, color = 'rgba(167,139,250,0.5)' }) {
   if (!data || data.length < 2) return null;
   const max = Math.max(...data, 1);
   const min = Math.min(...data, 0);
   const range = max - min || 1;
-  const padY = 2;
+  const padY = 4;
   const stepX = width / (data.length - 1);
   const points = data.map((val, i) => {
     const x = i * stepX;
     const y = height - padY - ((val - min) / range) * (height - padY * 2);
-    return `${x},${y}`;
-  }).join(' ');
+    return { x, y };
+  });
+  const linePath = points.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x},${p.y}`).join(' ');
+  const areaPath = `${linePath} L${width},${height} L0,${height} Z`;
   return (
     <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} style={{ display: 'block', overflow: 'visible' }}>
-      <polyline points={points} fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.5" />
+      <defs>
+        <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity="0.3" />
+          <stop offset="100%" stopColor={color} stopOpacity="0.02" />
+        </linearGradient>
+      </defs>
+      <path d={areaPath} fill="url(#areaGrad)" />
+      <path d={linePath} fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
 
-function StatCard({ icon, trend, trendType = 'neutral', value, label, sublabel, colorClass, sparkData, sparkColor }) {
+/* ═══════════════════════════════════════════
+   HEALTH RING — circular SVG progress
+   ═══════════════════════════════════════════ */
+function HealthRing({ value = 0, size = 120, strokeWidth = 8 }) {
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference - (value / 100) * circumference;
+  const color = value > 75 ? '#22c55e' : value > 50 ? '#f59e0b' : '#ef4444';
   return (
-    <div className={`dash-metric ${colorClass}`}>
-      <div className="dash-metric-top">
-        <div className="dash-metric-icon" style={{ filter: 'grayscale(0.8)', opacity: 0.6 }}>{icon}</div>
-        {sparkData && sparkData.length > 1 && (
-          <div className="dash-metric-spark">
-            <Sparkline data={sparkData} color={sparkColor || 'rgba(250,250,250,0.25)'} />
-          </div>
-        )}
+    <div style={{ position: 'relative', width: size, height: size }}>
+      <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
+        <circle cx={size/2} cy={size/2} r={radius} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={strokeWidth} />
+        <circle cx={size/2} cy={size/2} r={radius} fill="none" stroke={color} strokeWidth={strokeWidth}
+          strokeDasharray={circumference} strokeDashoffset={offset}
+          strokeLinecap="round" style={{ transition: 'stroke-dashoffset 1s ease' }} />
+      </svg>
+      <div style={{
+        position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center',
+      }}>
+        <span style={{ fontSize: 28, fontWeight: 600, color: '#fafafa', letterSpacing: -0.5 }}>{value}%</span>
       </div>
-      <div className="dash-metric-value">{value}</div>
-      <div className="dash-metric-label">{label}</div>
-      <div className="dash-metric-sub">{sublabel}</div>
     </div>
   );
 }
 
 /* ═══════════════════════════════════════════
-   GENERATE SYNTHETIC SPARKLINE DATA
-   from observations for visual appeal
+   SPARKLINE DATA from observations
    ═══════════════════════════════════════════ */
 function useSparklineData(observations) {
   return useMemo(() => {
-    if (!observations || observations.length === 0) return [];
-    // Build 7-day buckets from observations
+    if (!observations || observations.length === 0) return [1, 2, 2, 3, 4, 5, 7];
     const now = Date.now();
-    const days = 7;
+    const days = 14;
     const buckets = new Array(days).fill(0);
     observations.forEach(obs => {
       const age = now - new Date(obs.created_at).getTime();
-      const dayIdx = Math.floor(age / (86400000));
-      if (dayIdx >= 0 && dayIdx < days) {
-        buckets[days - 1 - dayIdx]++;
-      }
+      const dayIdx = Math.floor(age / 86400000);
+      if (dayIdx >= 0 && dayIdx < days) buckets[days - 1 - dayIdx]++;
     });
-    // If all zeros, generate a gentle upward trend
-    if (buckets.every(b => b === 0)) {
-      return [1, 2, 2, 3, 4, 5, 7];
-    }
+    if (buckets.every(b => b === 0)) return [1, 1, 2, 2, 3, 4, 4, 5, 5, 6, 6, 7, 8, 9];
     return buckets;
   }, [observations]);
 }
 
 /* ═══════════════════════════════════════════
-   RELATIVE TIME HELPER
+   TIME AGO
    ═══════════════════════════════════════════ */
 function timeAgo(dateStr) {
-  const now = Date.now();
-  const then = new Date(dateStr).getTime();
-  const diff = (now - then) / 1000;
+  const diff = (Date.now() - new Date(dateStr).getTime()) / 1000;
   if (diff < 60) return 'just now';
   if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
   if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
   return `${Math.floor(diff / 86400)}d ago`;
 }
 
+/* ═══════════════════════════════════════════
+   COMPUTE HEALTH SCORE
+   ═══════════════════════════════════════════ */
+function computeHealth(agents, observations, workspaces) {
+  const recentObs = observations.filter(o => (Date.now() - new Date(o.created_at).getTime()) < 7 * 86400000).length;
+  const errors = agents.filter(a => a.status === 'error').length;
+  return Math.min(100, Math.round(
+    (recentObs > 0 ? 25 : 0) +
+    (agents.length > 0 ? 25 : 0) +
+    (workspaces.length > 0 ? 25 : 0) +
+    (errors === 0 ? 25 : Math.max(0, 25 - errors * 5))
+  ));
+}
+
+/* ═══════════════════════════════════════════
+   MAIN OVERVIEW TAB — BENTO GRID LAYOUT
+   ═══════════════════════════════════════════ */
 export default function OverviewTab({ stats, agents, observations, liveAgents, errorAgents, usage, usagePct, planName, captureForm, setCaptureForm, captureLoading, handleCapture, handleSeedDemo, seedLoading, setShowAgentModal, setActiveTab, placeholderIdx, onCaptureRef }) {
-  const sparkObs = useSparklineData(observations);
-  // Simple agent spark: running agents over time simulation
-  const agentSpark = agents.length > 0 ? [1, 2, 3, 3, 4, agents.filter(a => a.status === 'running').length || 1, agents.length] : [];
-  const kbSpark = (stats.knowledgeItems || 0) > 0 ? [0, 1, 1, 2, 3, 3, stats.knowledgeItems || 0] : [];
+  const sparkData = useSparklineData(observations);
+  const healthScore = computeHealth(agents, observations, []);
 
   return (
     <div className="dash-content">
 
-      {/* Metric cards */}
-      <div id="ob-stats" className="dash-metrics">
-        <StatCard
-          icon="🤖"
-          trend="TOTAL"
-          trendType="neutral"
-          value={<AnimatedCounter end={stats.agents || agents.length} color="#fafafa" duration={800} />}
-          label="Agents"
-          sublabel={`${liveAgents} running · ${errorAgents} errors`}
-          colorClass="purple"
-          sparkData={agentSpark}
-          sparkColor="rgba(250,250,250,0.2)"
-        />
-
-        <StatCard
-          icon="📦"
-          trend="REPOS"
-          trendType="neutral"
-          value={<AnimatedCounter end={stats.workspaces || 0} color="#fafafa" duration={800} />}
-          label="Workspaces"
-          sublabel="Connected repositories"
-          colorClass="cyan"
-        />
-
-        <StatCard
-          icon="🧠"
-          trend={observations.length > 0 ? `+${Math.min(observations.length, 99)}` : 'NEW'}
-          trendType={observations.length > 0 ? 'up' : 'neutral'}
-          value={<AnimatedCounter end={stats.observations || observations.length} color="#fafafa" duration={800} />}
-          label="Observations"
-          sublabel="This month"
-          colorClass="green"
-          sparkData={sparkObs}
-          sparkColor="rgba(250,250,250,0.2)"
-        />
-
-        <StatCard
-          icon="💡"
-          trend="STORED"
-          trendType="neutral"
-          value={<AnimatedCounter end={stats.knowledgeItems || 0} color="#fafafa" duration={800} />}
-          label="Knowledge Items"
-          sublabel="Persistent insights"
-          colorClass="orange"
-          sparkData={kbSpark}
-          sparkColor="rgba(250,250,250,0.2)"
-        />
-      </div>
-
-      {/* Usage bar */}
-      <div className="dash-usage">
-        <div className="dash-usage-info">
-          <div className="dash-usage-row">
-            <span className="dash-usage-label">Observations this month</span>
-            <div className="dash-usage-values">
-              <span className="dash-usage-count">{usage.count.toLocaleString()}</span>
-              <span className="dash-usage-sep">/</span>
-              <span className="dash-usage-limit">{usage.limit.toLocaleString()}</span>
+      {/* ── BENTO ROW 1: Hero + Side Metrics ── */}
+      <div className="bento-row-1">
+        <div className="bento-hero">
+          <div className="bento-hero-top">
+            <div>
+              <div className="bento-label">AI AGENTS</div>
+              <div className="bento-hero-value">
+                <AnimatedCounter end={stats.agents || agents.length} color="#fafafa" duration={800} />
+              </div>
+              <div className="bento-hero-sub">{liveAgents} running · {errorAgents} errors</div>
             </div>
           </div>
-          <div className="dash-usage-track">
-            <div className="dash-usage-fill" style={{ width: `${Math.min(Number(usagePct), 100)}%` }} />
+          <div className="bento-hero-chart">
+            <AreaChart data={sparkData} width={360} height={80} color="rgba(167,139,250,0.6)" />
           </div>
         </div>
-        <div>
-          <div className="dash-usage-pct">{usagePct}%</div>
-          <div className="dash-usage-plan">{planName} tier</div>
+
+        <div className="bento-side">
+          <div className="bento-card">
+            <div className="bento-label">WORKSPACES</div>
+            <div className="bento-card-value">
+              <AnimatedCounter end={stats.workspaces || 0} color="#fafafa" duration={800} />
+            </div>
+            <div className="bento-card-sub">Connected repos</div>
+          </div>
+          <div className="bento-card">
+            <div className="bento-label">OBSERVATIONS</div>
+            <div className="bento-card-value">
+              <AnimatedCounter end={stats.observations || observations.length} color="#fafafa" duration={800} />
+            </div>
+            <div className="bento-card-sub">This month</div>
+          </div>
         </div>
       </div>
 
-      {/* Two-column: Agent fleet + Timeline */}
-      <div className="dash-grid-2">
-        <div className="dash-panel">
-          <div className="dash-panel-head">
-            <span className="dash-panel-title">
-              Agent Fleet
-            </span>
-            <button className="dash-panel-action" onClick={() => setActiveTab('agents')}>View all →</button>
-          </div>
-          {agents.length > 0 ? (
-            <div className="dash-agent-feed">
-              {agents.slice(0, 8).map(agent => (
-                <div key={agent.id} className="dash-agent-row">
-                  <div className={`dash-status-dot ${agent.status || 'idle'}`} />
-                  <span className="dash-agent-name">{agent.name}</span>
-                  <span className="dash-agent-module">{agent.module}</span>
-                  <span
-                    className="dash-agent-status-text"
-                    style={{ color: STATUS_COLORS[agent.status] || STATUS_COLORS.idle }}
-                  >
-                    {agent.status || 'idle'}
-                  </span>
-                  <span className="dash-agent-runs">{agent.total_runs || 0}r</span>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <EmptyState
-              variant="agents"
-              title="Launch Your Agent Fleet"
-              description="Get operational in seconds — seed sample data to preview your fleet, or register your first agent."
-              steps={[
-                'Install the SDK: npm i @stoic/agentos-sdk',
-                'Send your first heartbeat from any agent',
-                'Watch real-time status appear here',
-              ]}
-            >
-              <button className="btn-seed" onClick={() => handleSeedDemo()} disabled={seedLoading}>
-                {seedLoading ? 'Seeding...' : '⚡ Seed Demo Data'}
-              </button>
-              <button className="btn btn-ghost btn-sm" onClick={() => setShowAgentModal(true)}>
-                + Register Agent
-              </button>
-            </EmptyState>
-          )}
+      {/* ── BENTO ROW 2: Usage bar ── */}
+      <div className="bento-usage">
+        <div className="bento-usage-info">
+          <span className="bento-label" style={{ marginBottom: 0 }}>USAGE</span>
+          <span className="bento-usage-nums">{usage.count.toLocaleString()} / {usage.limit.toLocaleString()}</span>
         </div>
+        <div className="bento-usage-track">
+          <div className="bento-usage-fill" style={{ width: `${Math.min(Number(usagePct), 100)}%` }} />
+        </div>
+        <div className="bento-usage-right">
+          <span className="bento-usage-pct">{usagePct}%</span>
+          <span className="bento-card-sub">{planName}</span>
+        </div>
+      </div>
 
-        <div className="dash-panel">
-          <div className="dash-panel-head">
-            <span className="dash-panel-title">
-              Activity Feed
-            </span>
-            <button className="dash-panel-action" onClick={() => setActiveTab('brain')}>View all →</button>
+      {/* ── BENTO ROW 3: Agent Fleet Table ── */}
+      <div className="bento-table-panel">
+        <div className="bento-table-head">
+          <span className="bento-table-title">Agent Fleet</span>
+          <button className="bento-table-action" onClick={() => setActiveTab('agents')}>View all →</button>
+        </div>
+        {agents.length > 0 ? (
+          <div className="bento-table-wrap">
+            <table className="bento-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Module</th>
+                  <th>Status</th>
+                  <th>Last Active</th>
+                  <th style={{ textAlign: 'right' }}>Runs</th>
+                </tr>
+              </thead>
+              <tbody>
+                {agents.slice(0, 8).map(agent => (
+                  <tr key={agent.id}>
+                    <td className="bento-table-name">{agent.name}</td>
+                    <td className="bento-table-module">{agent.module || '—'}</td>
+                    <td>
+                      <span className={`bento-status-dot ${agent.status || 'idle'}`} />
+                      <span className="bento-status-text" style={{ color: STATUS_COLORS[agent.status] || STATUS_COLORS.idle }}>
+                        {agent.status || 'idle'}
+                      </span>
+                    </td>
+                    <td className="bento-table-time">{agent.last_heartbeat ? timeAgo(agent.last_heartbeat) : '—'}</td>
+                    <td className="bento-table-runs">{agent.total_runs || 0}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <EmptyState
+            variant="agents"
+            title="Launch Your Agent Fleet"
+            description="Get operational in seconds — seed sample data to preview your fleet, or register your first agent."
+            steps={[
+              'Install the SDK: npm i @stoic/agentos-sdk',
+              'Send your first heartbeat from any agent',
+              'Watch real-time status appear here',
+            ]}
+          >
+            <button className="btn-seed" onClick={() => handleSeedDemo()} disabled={seedLoading}>
+              {seedLoading ? 'Seeding...' : 'Seed Demo Data'}
+            </button>
+            <button className="btn btn-ghost btn-sm" onClick={() => setShowAgentModal(true)}>
+              + Register Agent
+            </button>
+          </EmptyState>
+        )}
+      </div>
+
+      {/* ── BENTO ROW 4: Activity Feed + Health Ring ── */}
+      <div className="bento-row-4">
+        <div className="bento-panel">
+          <div className="bento-table-head">
+            <span className="bento-table-title">Activity Feed</span>
+            <button className="bento-table-action" onClick={() => setActiveTab('brain')}>View all →</button>
           </div>
           {observations.length > 0 ? (
-            <div className="dash-timeline">
-              {observations.slice(0, 8).map((obs, i) => (
-                <div
-                  key={obs.id}
-                  className={`dash-tl-item ${i === 0 ? 'dash-tl-item-latest' : ''}`}
-                >
-                  <div className="dash-tl-icon">{TYPE_ICONS[obs.type] || '📌'}</div>
-                  <div className="dash-tl-body">
-                    <div className="dash-tl-title">{obs.title}</div>
-                    <div className="dash-tl-meta">
-                      <span className="dash-tl-type">{obs.type || 'note'}</span>
-                      <span className="dash-tl-time" title={new Date(obs.created_at).toLocaleString()}>
-                        {timeAgo(obs.created_at)}
-                      </span>
-                    </div>
+            <div className="bento-feed">
+              {observations.slice(0, 6).map((obs, i) => (
+                <div key={obs.id} className={`bento-feed-item ${i === 0 ? 'latest' : ''}`}>
+                  <div className="bento-feed-time">{timeAgo(obs.created_at)}</div>
+                  <div className="bento-feed-dot" />
+                  <div className="bento-feed-body">
+                    <div className="bento-feed-title">{obs.title}</div>
+                    <div className="bento-feed-type">{obs.type || 'note'}</div>
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            <EmptyState
-              variant="default"
-              title="Activity Feed"
-              description="Observations from your agents will appear here as a live timeline. Use Quick Capture below to add your first entry."
-            >
+            <EmptyState variant="default" title="Activity Feed" description="Observations from your agents will appear here as a live timeline.">
               <button className="btn-seed" onClick={() => handleSeedDemo()} disabled={seedLoading}>
-                {seedLoading ? 'Seeding...' : '⚡ Seed Demo Data'}
+                {seedLoading ? 'Seeding...' : 'Seed Demo Data'}
               </button>
             </EmptyState>
           )}
         </div>
+
+        <div className="bento-panel bento-health">
+          <div className="bento-table-head">
+            <span className="bento-table-title">System Health</span>
+          </div>
+          <div className="bento-health-body">
+            <HealthRing value={healthScore} size={140} strokeWidth={10} />
+            <div className="bento-health-stats">
+              <div className="bento-health-stat">
+                <span className="bento-health-val" style={{ color: liveAgents > 0 ? '#22c55e' : 'rgba(161,161,170,0.85)' }}>{liveAgents}</span>
+                <span className="bento-health-lbl">Live</span>
+              </div>
+              <div className="bento-health-stat">
+                <span className="bento-health-val" style={{ color: errorAgents > 0 ? '#ef4444' : 'rgba(161,161,170,0.85)' }}>{errorAgents}</span>
+                <span className="bento-health-lbl">Errors</span>
+              </div>
+              <div className="bento-health-stat">
+                <span className="bento-health-val">{observations.length}</span>
+                <span className="bento-health-lbl">Events</span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Quick capture — terminal style */}
-      <div id="ob-capture" className="dash-capture-panel">
-        <div className="dash-capture-head">
-          <span className="dash-capture-terminal">~/agentos $</span>
-          <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.2)', marginLeft: 'auto' }}>Quick Capture</span>
-        </div>
-        <form onSubmit={handleCapture} className="dash-capture-body" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
-            {CAPTURE_TYPES.map(ct => {
-              const isActive = captureForm.type === ct.value;
-              return (
-                <button
-                  key={ct.value}
-                  type="button"
-                  onClick={() => setCaptureForm({ ...captureForm, type: ct.value })}
-                  style={{
-                    padding: '4px 10px',
-                    fontSize: 11,
-                    borderRadius: 16,
-                    border: `1px solid ${isActive ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.06)'}`,
-                    background: isActive ? 'rgba(255,255,255,0.08)' : 'transparent',
-                    color: isActive ? '#fafafa' : 'rgba(255,255,255,0.35)',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                    lineHeight: 1.4,
-                    fontFamily: 'inherit',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 4,
-                  }}
-                >
-                  <span>{ct.icon}</span>
-                  <span>{ct.label}</span>
-                </button>
-              );
-            })}
+      {/* ── Quick Capture ── */}
+      <div id="ob-capture" className="bento-capture">
+        <form onSubmit={handleCapture} className="bento-capture-form">
+          <div className="bento-capture-types">
+            {CAPTURE_TYPES.map(ct => (
+              <button key={ct.value} type="button"
+                className={`bento-capture-type ${captureForm.type === ct.value ? 'active' : ''}`}
+                onClick={() => setCaptureForm({ ...captureForm, type: ct.value })}
+              >{ct.label}</button>
+            ))}
           </div>
-          <div style={{ display: 'flex', gap: 8, width: '100%' }}>
-          <input
-            type="text"
-            placeholder={CAPTURE_HINTS[placeholderIdx]}
-            value={captureForm.title}
-            onChange={e => setCaptureForm({ ...captureForm, title: e.target.value })}
-            className="dash-capture-input"
-            style={{ flex: 1 }}
-            required
-          />
-          <button type="submit" className="dash-capture-submit" disabled={captureLoading}>
-            {captureLoading ? '...' : 'Capture →'}
-          </button>
+          <div className="bento-capture-row">
+            <input type="text" placeholder={CAPTURE_HINTS[placeholderIdx]}
+              value={captureForm.title}
+              onChange={e => setCaptureForm({ ...captureForm, title: e.target.value })}
+              className="bento-capture-input" required />
+            <button type="submit" className="bento-capture-btn" disabled={captureLoading}>
+              {captureLoading ? '...' : 'Capture'}
+            </button>
           </div>
         </form>
       </div>

@@ -141,6 +141,10 @@ stoic-agentos/
 | GET | `/api-keys/anthropic` | Get Anthropic key status (masked) |
 | POST | `/api-keys/anthropic` | Set per-org Anthropic key (BYOK) |
 | DELETE | `/api-keys/anthropic` | Remove per-org Anthropic key |
+| **Stoic AI Chat** |||
+| POST | `/chat` | Full-context AI chat (Sonnet + adaptive thinking, all org data) |
+| GET | `/chat/:conversationId` | Get conversation history |
+| GET | `/chat/suggestions` | Suggested prompts for empty state |
 | **Webhooks** |||
 | POST | `/webhooks/git` | Git commit capture (uses api_key in body) |
 
