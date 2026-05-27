@@ -38,6 +38,14 @@ function injectKeyframes() {
       0%, 100% { transform: translateY(0); }
       50%      { transform: translateY(-6px); }
     }
+    @keyframes teamhq-slide-up {
+      0%   { opacity: 0; transform: translate(-50%, 60px); }
+      100% { opacity: 1; transform: translate(-50%, 0); }
+    }
+    @keyframes teamhq-blur-in {
+      0%   { opacity: 0; }
+      100% { opacity: 1; }
+    }
   `;
   document.head.appendChild(sheet);
 }
@@ -45,13 +53,19 @@ function injectKeyframes() {
 export default function TeamHQTab({ planName, handleUpgrade, upgradeLoading }) {
   const [time, setTime] = useState(new Date());
   const [iframeLoaded, setIframeLoaded] = useState(false);
+  const [showCTA, setShowCTA] = useState(false);
   const isPaid = planName !== 'FREE';
 
   useEffect(() => {
     injectKeyframes();
     const t = setInterval(() => setTime(new Date()), 1000);
-    return () => clearInterval(t);
-  }, []);
+    // Delay the upgrade popup so free users enjoy the 3D scene first
+    let ctaTimer;
+    if (!isPaid) {
+      ctaTimer = setTimeout(() => setShowCTA(true), 10000);
+    }
+    return () => { clearInterval(t); if (ctaTimer) clearTimeout(ctaTimer); };
+  }, [isPaid]);
 
   const clockStr = time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
@@ -117,10 +131,10 @@ export default function TeamHQTab({ planName, handleUpgrade, upgradeLoading }) {
           />
         </div>
 
-        {/* FREE overlay */}
-        {!isPaid && (
+        {/* FREE overlay — appears after 10s delay */}
+        {!isPaid && showCTA && (
           <>
-            {/* Gradient blur overlay on bottom */}
+            {/* Gradient blur overlay on bottom — lighter so scene stays visible */}
             <div style={s.blurOverlay} />
 
             {/* Upgrade card */}
@@ -323,21 +337,22 @@ const s = {
     left: 0,
     right: 0,
     bottom: 0,
-    height: '55%',
-    background: 'linear-gradient(to bottom, transparent 0%, rgba(9,9,11,.6) 30%, rgba(9,9,11,.92) 70%, rgba(9,9,11,.98) 100%)',
-    backdropFilter: 'blur(6px)',
-    WebkitBackdropFilter: 'blur(6px)',
+    height: '40%',
+    background: 'linear-gradient(to bottom, transparent 0%, rgba(9,9,11,.35) 35%, rgba(9,9,11,.75) 70%, rgba(9,9,11,.92) 100%)',
+    backdropFilter: 'blur(3px)',
+    WebkitBackdropFilter: 'blur(3px)',
     zIndex: 10,
     pointerEvents: 'none',
+    animation: 'teamhq-blur-in 1s ease-out forwards',
   },
   upgradeCard: {
     position: 'absolute',
-    bottom: 32,
+    bottom: 24,
     left: '50%',
     zIndex: 20,
     width: '100%',
-    maxWidth: 520,
-    animation: 'teamhq-float 4s ease-in-out infinite',
+    maxWidth: 500,
+    animation: 'teamhq-slide-up 0.8s cubic-bezier(.4,0,.2,1) forwards',
   },
   upgradeGlow: {
     position: 'absolute',
