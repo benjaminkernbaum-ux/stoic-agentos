@@ -9,16 +9,16 @@ const styles = {
     padding: '10px 14px',
     background: isHovered ? colors.bgCardHover : colors.bgCard,
     border: `1px solid ${isHovered ? colors.borderGlow : colors.border}`,
-    borderRadius: 10,
-    transition: 'all 0.2s',
+    borderRadius: 8,
+    transition: 'all 0.12s ease',
     fontSize: 13,
     marginBottom: 6,
   }),
   agentId: {
-    fontFamily: "'JetBrains Mono', monospace",
+    fontFamily: "'SF Mono', 'JetBrains Mono', monospace",
     fontSize: 11,
-    fontWeight: 600,
-    color: colors.accentCyan,
+    fontWeight: 500,
+    color: 'rgba(161,161,170,0.85)',
     minWidth: 85,
   },
   agentName: {
@@ -29,6 +29,7 @@ const styles = {
     fontSize: 11,
     color: colors.textDim,
     textAlign: 'right',
+    fontVariantNumeric: 'tabular-nums',
   },
   emptyState: {
     textAlign: 'center',
@@ -40,7 +41,6 @@ const styles = {
 export default function AgentFleetPanel({ agents = [] }) {
   const [hoveredAgent, setHoveredAgent] = useState(null);
 
-  // Group agents by module
   const grouped = {};
   agents.forEach(agent => {
     const mod = agent.module || 'General';
@@ -53,7 +53,7 @@ export default function AgentFleetPanel({ agents = [] }) {
     <div>
       <div style={shared.sectionHeader}>
         <div style={shared.sectionTitle}>
-          🤖 Agent Fleet{' '}
+          Agent Fleet{' '}
           <span style={shared.badge}>{agents.length} agent{agents.length !== 1 ? 's' : ''}</span>
         </div>
       </div>
@@ -62,17 +62,17 @@ export default function AgentFleetPanel({ agents = [] }) {
         departments.map(dept => (
           <div key={dept.title} style={{ marginBottom: 28 }}>
             <div style={{
-              fontSize: 14,
-              fontWeight: 700,
-              color: colors.textSecondary,
+              fontSize: 11,
+              fontWeight: 500,
+              color: colors.textDim,
               textTransform: 'uppercase',
-              letterSpacing: 1.5,
-              marginBottom: 14,
+              letterSpacing: 1,
+              marginBottom: 12,
               display: 'flex',
               alignItems: 'center',
               gap: 10,
             }}>
-              ⚡ {dept.title}
+              {dept.title}
               <div style={{ flex: 1, height: 1, background: colors.border }} />
             </div>
             <div>
@@ -94,7 +94,7 @@ export default function AgentFleetPanel({ agents = [] }) {
         ))
       ) : (
         <div style={styles.emptyState}>
-          <div style={{ fontSize: 48, marginBottom: 16 }}>🤖</div>
+          <div style={{ fontSize: 24, marginBottom: 16, opacity: 0.4 }}>◈</div>
           <h3 style={{ color: colors.textSecondary, marginBottom: 8 }}>No agents registered</h3>
           <p>Register agents via the SDK or the Agents tab to see them here.</p>
         </div>
