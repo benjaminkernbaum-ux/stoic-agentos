@@ -24,6 +24,8 @@ import TracesTab from './tabs/TracesTab';
 import WorkflowsTab from './tabs/WorkflowsTab';
 import CommandCenterTab from './tabs/CommandCenterTab';
 import SettingsTab from './tabs/SettingsTab';
+import MemoryTab from './tabs/MemoryTab';
+import ComplianceTab from './tabs/ComplianceTab';
 
 import '../Dashboard.css';
 
@@ -230,6 +232,14 @@ export default function Dashboard() {
             planName={planName}
             handleUpgrade={(plan) => actions.handleUpgrade(plan, setUpgradeLoading)}
           />
+        )}
+
+        {activeTab === 'memory' && (
+          <MemoryTab />
+        )}
+
+        {activeTab === 'compliance' && (
+          <ComplianceTab />
         )}
 
         {activeTab === 'settings' && (

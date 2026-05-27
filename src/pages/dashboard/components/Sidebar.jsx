@@ -23,6 +23,8 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen, activeTab, setAct
           { id: 'graph',      icon: '◬', label: 'Graph',      badge: null },
           { id: 'traces',     icon: '▤', label: 'Traces',     badge: null },
           { id: 'workflows',  icon: '◫', label: 'Workflows',  badge: null },
+          { id: 'memory',     icon: '🧠', label: 'Memory',     badge: null },
+          { id: 'compliance', icon: '🛡️', label: 'Compliance', badge: null },
         ].map(item => (
           <button
             key={item.id}

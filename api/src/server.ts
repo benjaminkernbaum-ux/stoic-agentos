@@ -44,6 +44,7 @@ import insightRoutes from './routes/insights.js';
 import chatRoutes from './routes/chat.js';
 import memoryRoutes from './routes/memory.js';
 import complianceRoutes from './routes/compliance.js';
+import reflectionRoutes from './routes/reflection.js';
 import { probeVaultRpc } from './lib/anthropic.js';
 
 // ── Install process-level safety nets ──
@@ -102,6 +103,7 @@ app.use(insightRoutes);
 app.use(chatRoutes);       // AI Chat Assistant
 app.use(memoryRoutes);     // Three-Tier Memory (Working/Episodic/Semantic)
 app.use(complianceRoutes); // Audit Log + Circuit Breaker + SIEM Export
+app.use(reflectionRoutes); // Reflection Worker + Memory Decay
 
 // ── 404 handler ──
 app.use((req: Request, res: Response) => {

@@ -412,6 +412,26 @@ export class AgentOS {
     return this._send('/insights/ask', { question, context });
   }
 
+  // ═══════════════════════════════════
+  // THREE-TIER MEMORY (v3.0)
+  // ═══════════════════════════════════
+
+  /** @type {MemoryClient} */
+  get memory() {
+    if (!this._memory) this._memory = new MemoryClient(this);
+    return this._memory;
+  }
+
+  // ═══════════════════════════════════
+  // COMPLIANCE & AUDIT (v3.0)
+  // ═══════════════════════════════════
+
+  /** @type {ComplianceClient} */
+  get compliance() {
+    if (!this._compliance) this._compliance = new ComplianceClient(this);
+    return this._compliance;
+  }
+
   /**
    * Graceful shutdown — flush all pending data
    */
@@ -510,6 +530,180 @@ export class AgentOS {
     }
     return null;
   }
+}
+
+// ═══════════════════════════════════════════════
+// MEMORY CLIENT — Three-Tier Memory Architecture
+// ═══════════════════════════════════════════════
+
+class MemoryClient {
+  constructor(sdk) { this._sdk = sdk; }
+
+  // ── Tier 1: Working Memory ──
+
+  /** Store/update a working memory entry */
+  async setWorking(sessionId, key, value, { agentId, expiresInSeconds } = {}) {
+    return this._sdk._send('/memory/working', {
+      session_id: sessionId, key, value,
+      agent_id: agentId || null,
+      expires_in_seconds: expiresInSeconds || null,
+    });
+  }
+
+  /** Retrieve working memory for a session */
+  async getWorking(sessionId, { agentId, key } = {}) {
+    const params = new URLSearchParams({ session_id: sessionId });
+    if (agentId) params.set('agent_id', agentId);
+    if (key) params.set('key', key);
+    return this._sdk._fetch(`/memory/working?${params}`);
+  }
+
+  /** Clear all working memory for a session */
+  async clearWorking(sessionId, { agentId } = {}) {
+    const params = new URLSearchParams({ session_id: sessionId });
+    if (agentId) params.set('agent_id', agentId);
+    return this._sdk._send(`/memory/working?${params}`, null, 'DELETE');
+  }
+
+  // ── Tier 2: Episodic Memory ──
+
+  /** Record a timestamped episode */
+  async recordEpisode(content, { eventType, importance, agentId, metadata } = {}) {
+    return this._sdk._send('/memory/episodic', {
+      content, event_type: eventType || 'observation',
+      importance: importance || 5, agent_id: agentId || null,
+      metadata: metadata || {},
+    });
+  }
+
+  /** List episodes with filters */
+  async listEpisodes({ agentId, eventType, limit, since, until } = {}) {
+    const params = new URLSearchParams();
+    if (agentId) params.set('agent_id', agentId);
+    if (eventType) params.set('event_type', eventType);
+    if (limit) params.set('limit', String(limit));
+    if (since) params.set('since', since);
+    if (until) params.set('until', until);
+    const qs = params.toString();
+    return this._sdk._fetch(`/memory/episodic${qs ? `?${qs}` : ''}`);
+  }
+
+  /** Mark an episode as no longer valid */
+  async invalidateEpisode(episodeId) {
+    return this._sdk._send(`/memory/episodic/${episodeId}/invalidate`, {}, 'PATCH');
+  }
+
+  // ── Tier 3: Semantic Memory ──
+
+  /** Store or strengthen a knowledge triple */
+  async storeTriple(subject, relation, object, { confidence, sourceType } = {}) {
+    return this._sdk._send('/memory/semantic', {
+      subject, relation, object,
+      confidence: confidence ?? null, source_type: sourceType || null,
+    });
+  }
+
+  /** Query knowledge triples */
+  async queryTriples({ subject, relation, object, minConfidence, limit } = {}) {
+    const params = new URLSearchParams();
+    if (subject) params.set('subject', subject);
+    if (relation) params.set('relation', relation);
+    if (object) params.set('object', object);
+    if (minConfidence != null) params.set('min_confidence', String(minConfidence));
+    if (limit) params.set('limit', String(limit));
+    const qs = params.toString();
+    return this._sdk._fetch(`/memory/semantic${qs ? `?${qs}` : ''}`);
+  }
+
+  /** Delete a semantic triple */
+  async deleteTriple(tripleId) {
+    return this._sdk._send(`/memory/semantic/${tripleId}`, null, 'DELETE');
+  }
+
+  // ── Hybrid Recall ──
+
+  /**
+   * Fused retrieval across all three memory tiers
+   * @param {string} query - Search query
+   * @param {Object} [options]
+   * @param {'quick'|'standard'|'deep'} [options.mode='standard']
+   * @param {string} [options.agentId]
+   * @param {string} [options.sessionId]
+   * @param {string} [options.temporalWindow] - e.g. '7d', '24h', '30d'
+   * @param {number} [options.maxResults=20]
+   */
+  async recall(query, { mode, agentId, sessionId, temporalWindow, maxResults } = {}) {
+    return this._sdk._send('/memory/recall', {
+      query, mode: mode || 'standard',
+      agent_id: agentId || null, session_id: sessionId || null,
+      temporal_window: temporalWindow || null, max_results: maxResults || 20,
+    });
+  }
+
+  /** Get memory statistics across all tiers */
+  async stats() { return this._sdk._fetch('/memory/stats'); }
+}
+
+// ═══════════════════════════════════════════════
+// COMPLIANCE CLIENT — Audit + Circuit Breaker
+// ═══════════════════════════════════════════════
+
+class ComplianceClient {
+  constructor(sdk) { this._sdk = sdk; }
+
+  /** Log an audit event (immutable) */
+  async logEvent(eventType, action, { agentId, reasoning, context, policyVersion, verdict, metadata } = {}) {
+    return this._sdk._send('/audit/log', {
+      event_type: eventType, action,
+      agent_id: agentId || null, reasoning: reasoning || null,
+      context: context || null, policy_version: policyVersion || null,
+      verdict: verdict || 'PROCEED', metadata: metadata || {},
+    });
+  }
+
+  /** Batch-log up to 100 audit events */
+  async logBatch(events) {
+    return this._sdk._send('/audit/log/batch', { events });
+  }
+
+  /** Query audit log with filters */
+  async getEvents({ agentId, eventType, verdict, from, to, limit } = {}) {
+    const params = new URLSearchParams();
+    if (agentId) params.set('agent_id', agentId);
+    if (eventType) params.set('event_type', eventType);
+    if (verdict) params.set('verdict', verdict);
+    if (from) params.set('from', from);
+    if (to) params.set('to', to);
+    if (limit) params.set('limit', String(limit));
+    const qs = params.toString();
+    return this._sdk._fetch(`/audit/log${qs ? `?${qs}` : ''}`);
+  }
+
+  /**
+   * Export audit trail for compliance (Team+ plans only)
+   * @param {string} from - ISO date
+   * @param {string} to - ISO date
+   * @param {'json'|'ndjson'} [format='json']
+   */
+  async export(from, to, { format, agentId, eventType } = {}) {
+    const params = new URLSearchParams({ from, to });
+    if (format) params.set('format', format);
+    if (agentId) params.set('agent_id', agentId);
+    if (eventType) params.set('event_type', eventType);
+    return this._sdk._fetch(`/compliance/export?${params}`);
+  }
+
+  /**
+   * Fleet-wide circuit breaker (EU AI Act Article 14)
+   * @param {'HALT_ALL'|'RESUME_ALL'} action
+   * @param {string} [reason]
+   */
+  async circuitBreaker(action, reason) {
+    return this._sdk._send('/compliance/circuit-breaker', { action, reason: reason || null });
+  }
+
+  /** Get compliance dashboard stats */
+  async stats() { return this._sdk._fetch('/compliance/stats'); }
 }
 
 // ── Convenience exports ──

@@ -13,6 +13,7 @@ import type { Response } from 'express';
 import { authenticate } from '../middleware/auth.js';
 import { supabase } from '../middleware/db.js';
 import type { AuthenticatedRequest } from '../types.js';
+import { generateEmbedding } from '../lib/embeddings.js';
 
 const router = Router();
 const API_VERSION = 'v1';
@@ -118,18 +119,36 @@ router.post(`/api/${API_VERSION}/memory/episodic`, authenticate, async (req: Aut
       return res.status(400).json({ error: 'content is required' });
     }
 
+    // Generate embedding for semantic search
+    let embedding: number[] | null = null;
+    try {
+      embedding = await generateEmbedding(content, {
+        provider: process.env.EMBEDDING_PROVIDER || 'hash',
+        apiKey: process.env.OPENAI_API_KEY,
+      });
+    } catch (embErr) {
+      console.warn('[Memory] Embedding generation failed (non-fatal):', (embErr as Error).message);
+    }
+
+    const insertData: Record<string, unknown> = {
+      org_id: req.org.id,
+      agent_id: agent_id || null,
+      content,
+      event_type: event_type || 'observation',
+      importance: Math.min(10, Math.max(1, importance || 5)),
+      metadata: metadata || {},
+      valid_from: valid_from || new Date().toISOString(),
+      valid_to: valid_to || null,
+    };
+
+    // Only include embedding if generated
+    if (embedding) {
+      insertData.embedding = JSON.stringify(embedding);
+    }
+
     const { data, error } = await supabase!
       .from('episodic_memory')
-      .insert({
-        org_id: req.org.id,
-        agent_id: agent_id || null,
-        content,
-        event_type: event_type || 'observation',
-        importance: Math.min(10, Math.max(1, importance || 5)),
-        metadata: metadata || {},
-        valid_from: valid_from || new Date().toISOString(),
-        valid_to: valid_to || null,
-      })
+      .insert(insertData)
       .select()
       .single();
 
