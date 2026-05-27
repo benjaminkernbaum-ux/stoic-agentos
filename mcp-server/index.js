@@ -14,6 +14,15 @@
  *   agentos_agent_heartbeat — Send agent heartbeat
  *   agentos_list_knowledge  — List knowledge items
  *   agentos_create_knowledge — Create knowledge item
+ *   agentos_memory_recall   — Hybrid 3-tier memory recall
+ *   agentos_memory_store_episode — Record episodic memory
+ *   agentos_memory_store_triple — Store semantic knowledge triple
+ *   agentos_memory_query_triples — Query knowledge graph
+ *   agentos_memory_reflect  — Claude-powered knowledge extraction
+ *   agentos_memory_stats    — Memory tier statistics
+ *   agentos_audit_log       — Immutable audit event logging
+ *   agentos_circuit_breaker — Fleet-wide agent kill switch
+ *   agentos_compliance_stats — Compliance dashboard metrics
  *   railway_health         — Check Railway services
  *   supabase_health        — Check Supabase database
  *   github_status          — Cross-repo GitHub status
@@ -446,6 +455,158 @@ server.tool(
 );
 
 // ════════════════════════════════════════
+// TOOLS: Three-Tier Memory
+// ════════════════════════════════════════
+
+server.tool(
+  'agentos_memory_recall',
+  'Hybrid recall across all 3 memory tiers (working, episodic, semantic). Use mode: quick (~1.5K tokens), standard (~3K), deep (~8K+).',
+  {
+    query: z.string().describe('Search query'),
+    mode: z.enum(['quick', 'standard', 'deep']).optional().default('standard').describe('Retrieval depth'),
+    session_id: z.string().optional().describe('Session ID for working memory context'),
+    agent_id: z.string().optional().describe('Filter by agent UUID'),
+    temporal_window: z.string().optional().describe('Time window: 24h, 7d, 30d'),
+  },
+  async ({ query, mode, session_id, agent_id, temporal_window }) => {
+    const { status, data } = await apiCall('POST', '/memory/recall', {
+      query, mode, session_id, agent_id, temporal_window,
+    });
+    return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+  }
+);
+
+server.tool(
+  'agentos_memory_store_episode',
+  'Record an episodic memory — timestamped event with importance scoring. Auto-generates pgvector embedding.',
+  {
+    content: z.string().describe('Episode content (what happened)'),
+    event_type: z.string().optional().default('observation').describe('Event type: observation, decision, error, deployment, discovery'),
+    importance: z.number().optional().default(5).describe('Importance 1-10 (10 = critical)'),
+    agent_id: z.string().optional().describe('Agent UUID'),
+    metadata: z.record(z.any()).optional().describe('Additional metadata'),
+  },
+  async ({ content, event_type, importance, agent_id, metadata }) => {
+    const { status, data } = await apiCall('POST', '/memory/episodic', {
+      content, event_type, importance, agent_id, metadata,
+    });
+    return { content: [{ type: 'text', text: JSON.stringify({ http_status: status, ...data }, null, 2) }] };
+  }
+);
+
+server.tool(
+  'agentos_memory_store_triple',
+  'Store or strengthen a knowledge triple in semantic memory: subject → relation → object',
+  {
+    subject: z.string().describe('Subject entity (e.g. "email-agent")'),
+    relation: z.string().describe('Relation: uses, depends_on, deployed_to, configured_with, replaced, caused, resolved, prefers, avoids, handles'),
+    object: z.string().describe('Object entity (e.g. "GPT-4o")'),
+    confidence: z.number().optional().describe('Confidence 0.0-1.0 (default: 0.7)'),
+    source_type: z.string().optional().default('observation').describe('Source: observation, reflection, manual'),
+  },
+  async ({ subject, relation, object, confidence, source_type }) => {
+    const { status, data } = await apiCall('POST', '/memory/semantic', {
+      subject, relation, object, confidence, source_type,
+    });
+    return { content: [{ type: 'text', text: JSON.stringify({ http_status: status, ...data }, null, 2) }] };
+  }
+);
+
+server.tool(
+  'agentos_memory_query_triples',
+  'Query the semantic knowledge graph — find knowledge triples by subject, relation, or object',
+  {
+    subject: z.string().optional().describe('Filter by subject (fuzzy match)'),
+    relation: z.string().optional().describe('Filter by relation (exact match)'),
+    object: z.string().optional().describe('Filter by object (fuzzy match)'),
+    min_confidence: z.number().optional().default(0.0).describe('Minimum confidence threshold'),
+    limit: z.number().optional().default(20).describe('Max results'),
+  },
+  async ({ subject, relation, object, min_confidence, limit }) => {
+    const params = new URLSearchParams({ min_confidence: String(min_confidence), limit: String(limit) });
+    if (subject) params.set('subject', subject);
+    if (relation) params.set('relation', relation);
+    if (object) params.set('object', object);
+    const { status, data } = await apiCall('GET', `/memory/semantic?${params}`);
+    return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+  }
+);
+
+server.tool(
+  'agentos_memory_reflect',
+  'Trigger reflection — Claude Haiku scans recent episodic memories and extracts knowledge triples into semantic memory',
+  {
+    hours: z.number().optional().default(24).describe('Look back N hours (default 24)'),
+    max_episodes: z.number().optional().default(30).describe('Max episodes to process'),
+    dry_run: z.boolean().optional().default(false).describe('If true, show triples without storing'),
+  },
+  async ({ hours, max_episodes, dry_run }) => {
+    const { status, data } = await apiCall('POST', '/memory/reflect', {
+      hours, max_episodes, dry_run,
+    });
+    return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+  }
+);
+
+server.tool(
+  'agentos_memory_stats',
+  'Get memory statistics — counts across all 3 tiers (working, episodic, semantic)',
+  {},
+  async () => {
+    const { status, data } = await apiCall('GET', '/memory/stats');
+    return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+  }
+);
+
+// ════════════════════════════════════════
+// TOOLS: Compliance & Audit
+// ════════════════════════════════════════
+
+server.tool(
+  'agentos_audit_log',
+  'Log an immutable audit event — EU AI Act Article 12 compliant. Every event is hashed and cannot be modified.',
+  {
+    event_type: z.string().describe('Event type: tool_call, decision, escalation, circuit_breaker, reflection'),
+    action: z.string().describe('What action was taken'),
+    agent_id: z.string().optional().describe('Agent UUID'),
+    reasoning: z.string().optional().describe('Why this action was taken'),
+    verdict: z.enum(['PROCEED', 'HALT', 'ESCALATE', 'MONITOR']).optional().default('PROCEED').describe('Decision verdict'),
+    metadata: z.record(z.any()).optional().describe('Additional metadata'),
+  },
+  async ({ event_type, action, agent_id, reasoning, verdict, metadata }) => {
+    const { status, data } = await apiCall('POST', '/audit/log', {
+      event_type, action, agent_id, reasoning, verdict, metadata,
+    });
+    return { content: [{ type: 'text', text: JSON.stringify({ http_status: status, ...data }, null, 2) }] };
+  }
+);
+
+server.tool(
+  'agentos_circuit_breaker',
+  'Fleet-wide agent kill switch (EU AI Act Article 14 — Human Oversight). HALT_ALL stops all agents, RESUME_ALL restarts them.',
+  {
+    action: z.enum(['HALT_ALL', 'RESUME_ALL']).describe('HALT_ALL or RESUME_ALL'),
+    reason: z.string().optional().describe('Human-readable reason for the action'),
+  },
+  async ({ action, reason }) => {
+    const { status, data } = await apiCall('POST', '/compliance/circuit-breaker', {
+      action, reason,
+    });
+    return { content: [{ type: 'text', text: JSON.stringify({ http_status: status, ...data }, null, 2) }] };
+  }
+);
+
+server.tool(
+  'agentos_compliance_stats',
+  'Get compliance dashboard metrics — total events, halts, escalations, SIEM export availability',
+  {},
+  async () => {
+    const { status, data } = await apiCall('GET', '/compliance/stats');
+    return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+  }
+);
+
+// ════════════════════════════════════════
 // RESOURCES: Project Context
 // ════════════════════════════════════════
 
@@ -467,7 +628,20 @@ server.resource(
 - **SDK**: npm @stoic/agentos-sdk (CLI + JS client)
 
 ## Key Tables
-organizations, org_members, agents, observations, workspaces, knowledge_items, api_keys
+organizations, org_members, agents, observations, workspaces, knowledge_items, api_keys,
+working_memory, episodic_memory (pgvector), semantic_memory, audit_log (immutable)
+
+## Memory System (Three-Tier)
+- Tier 1: Working Memory — per-session mutable JSONB state
+- Tier 2: Episodic Memory — time-series events with pgvector(384) embeddings
+- Tier 3: Semantic Memory — knowledge triples (subject → relation → object)
+- Hybrid Recall: quick/standard/deep modes across all tiers
+- Reflection: Claude Haiku auto-extracts knowledge from episodes
+
+## Compliance (EU AI Act Ready)
+- Immutable audit log with SHA-256 context hashing
+- Circuit breaker (HALT_ALL / RESUME_ALL)
+- SIEM export (JSON + NDJSON for Splunk/Datadog)
 
 ## Observation Types
 file_edit, command, decision, error, discovery, architecture, dependency, config, deployment, note, git_commit

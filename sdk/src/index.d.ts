@@ -285,8 +285,85 @@ export declare class AgentOS {
    */
   ask(question: string, context?: string): Promise<AskResult | null>;
 
+  /** Three-Tier Memory system: working, episodic, semantic + hybrid recall */
+  readonly memory: MemoryClient;
+
+  /** Compliance & Audit: immutable logs, circuit breaker, SIEM export */
+  readonly compliance: ComplianceClient;
+
   /** Graceful shutdown — flush all pending data */
   shutdown(): Promise<void>;
+}
+
+// ── Memory Client ──
+
+export interface RecallResult {
+  mode: 'quick' | 'standard' | 'deep';
+  query: string;
+  temporal_window: string | null;
+  working: any[];
+  episodic: any[];
+  semantic: any[];
+  total: number;
+}
+
+export interface MemoryStats {
+  working_memory: { count: number };
+  episodic_memory: { count: number };
+  semantic_memory: { count: number };
+  total: number;
+}
+
+export declare class MemoryClient {
+  /** Store/update a working memory entry */
+  setWorking(sessionId: string, key: string, value: any, options?: { agentId?: string; expiresInSeconds?: number }): Promise<any>;
+  /** Retrieve working memory for a session */
+  getWorking(sessionId: string, options?: { agentId?: string; key?: string }): Promise<any[] | null>;
+  /** Clear all working memory for a session */
+  clearWorking(sessionId: string, options?: { agentId?: string }): Promise<any>;
+  /** Record a timestamped episode with auto-embedding */
+  recordEpisode(content: string, options?: { eventType?: string; importance?: number; agentId?: string; metadata?: Record<string, unknown> }): Promise<any>;
+  /** List episodes with filters */
+  listEpisodes(options?: { agentId?: string; eventType?: string; limit?: number; since?: string; until?: string }): Promise<any[] | null>;
+  /** Mark an episode as no longer valid */
+  invalidateEpisode(episodeId: string): Promise<any>;
+  /** Store or strengthen a knowledge triple */
+  storeTriple(subject: string, relation: string, object: string, options?: { confidence?: number; sourceType?: string }): Promise<any>;
+  /** Query knowledge triples */
+  queryTriples(options?: { subject?: string; relation?: string; object?: string; minConfidence?: number; limit?: number }): Promise<any[] | null>;
+  /** Delete a semantic triple */
+  deleteTriple(tripleId: string): Promise<any>;
+  /** Fused retrieval across all three memory tiers */
+  recall(query: string, options?: { mode?: 'quick' | 'standard' | 'deep'; agentId?: string; sessionId?: string; temporalWindow?: string; maxResults?: number }): Promise<RecallResult | null>;
+  /** Get memory statistics across all tiers */
+  stats(): Promise<MemoryStats | null>;
+}
+
+// ── Compliance Client ──
+
+export interface ComplianceStats {
+  total_events: number;
+  last_24h: number;
+  last_7d: number;
+  halts: number;
+  escalations: number;
+  circuit_breaker_available: boolean;
+  siem_export_available: boolean;
+}
+
+export declare class ComplianceClient {
+  /** Log an immutable audit event */
+  logEvent(eventType: string, action: string, options?: { agentId?: string; reasoning?: string; context?: any; policyVersion?: string; verdict?: string; metadata?: Record<string, unknown> }): Promise<any>;
+  /** Batch-log up to 100 audit events */
+  logBatch(events: Array<{ event_type: string; action: string; [key: string]: any }>): Promise<any>;
+  /** Query audit log with filters */
+  getEvents(options?: { agentId?: string; eventType?: string; verdict?: string; from?: string; to?: string; limit?: number }): Promise<any[] | null>;
+  /** Export audit trail for compliance (Team+ plans) */
+  export(from: string, to: string, options?: { format?: 'json' | 'ndjson'; agentId?: string; eventType?: string }): Promise<any>;
+  /** Fleet-wide circuit breaker (EU AI Act Article 14) */
+  circuitBreaker(action: 'HALT_ALL' | 'RESUME_ALL', reason?: string): Promise<any>;
+  /** Get compliance dashboard stats */
+  stats(): Promise<ComplianceStats | null>;
 }
 
 /** Create an AgentOS instance (convenience function) */
