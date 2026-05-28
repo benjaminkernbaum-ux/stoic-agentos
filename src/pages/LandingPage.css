@@ -701,4 +701,22 @@
   .logo-text {
     font-size: 13px;
   }
+  .social-badge {
+    font-size: 11px;
+    padding: 6px 10px;
+  }
+}
+
+/* ── Ecosystem grid: 3col desktop, stack mobile ── */
+@media (min-width: 769px) {
+  .features-grid.ecosystem-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* ── SDK badges: stack on mobile ── */
+@media (max-width: 768px) {
+  .hero .container {
+    padding: 0 16px;
+  }
 }

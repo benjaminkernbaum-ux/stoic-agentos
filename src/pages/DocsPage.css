@@ -317,22 +317,96 @@
 
 /* ── Mobile Toggle ── */
 .docs-mobile-toggle {
-  display: none; position: fixed; bottom: 20px; right: 20px; z-index: 200;
-  width: 48px; height: 48px; border-radius: 50%; border: none;
-  background: var(--gradient-cta); color: white; font-size: 20px;
-  cursor: pointer; box-shadow: 0 4px 20px rgba(77,124,255,0.3);
+  display: none;
+  align-items: center; justify-content: center;
+  width: 36px; height: 36px;
+  background: none; border: 1px solid var(--border-glow);
+  border-radius: 8px; color: var(--text-primary);
+  font-size: 18px; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: all 0.2s;
+}
+.docs-mobile-toggle:hover { background: rgba(255,255,255,0.04); border-color: var(--accent-purple); }
+
+/* Mobile sidebar backdrop */
+.docs-sidebar-backdrop {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(4px);
+  z-index: 140;
 }
 
-/* ── Responsive ── */
+/* ── Responsive — 1100px ── */
 @media (max-width: 1100px) {
   .docs-toc { display: none; }
   .docs-content { max-width: 100%; }
 }
+
+/* ── Responsive — 768px ── */
 @media (max-width: 768px) {
-  .docs-sidebar { display: none; }
-  .docs-sidebar.open { display: block; z-index: 150; width: 280px; }
-  .docs-content { margin-left: 0; padding: 24px 20px 60px; }
-  .docs-mobile-toggle { display: flex; align-items: center; justify-content: center; }
-  .docs-page-title { font-size: 28px; }
+  /* Show hamburger toggle in topbar */
+  .docs-mobile-toggle { display: flex; }
   .docs-topbar-right { display: none; }
+  .docs-topbar { padding: 0 16px; }
+
+  /* Sidebar: hidden by default, overlay when open */
+  .docs-sidebar {
+    position: fixed;
+    top: 56px; left: -280px; bottom: 0;
+    width: 280px; min-width: 280px;
+    z-index: 150;
+    transition: left 0.3s cubic-bezier(.4,0,.2,1);
+    box-shadow: none;
+  }
+  .docs-sidebar.open {
+    left: 0;
+    box-shadow: 8px 0 40px rgba(0,0,0,0.5);
+  }
+  .docs-sidebar.open ~ .docs-sidebar-backdrop { display: block; }
+
+  /* Content: full width */
+  .docs-content {
+    margin-left: 0;
+    padding: 24px 16px 60px;
+  }
+
+  /* Typography scaling */
+  .docs-page-title { font-size: 24px; }
+  .docs-page-desc { font-size: 14px; }
+  .docs-content h2 { font-size: 20px; margin-top: 32px; }
+  .docs-content h3 { font-size: 16px; }
+
+  /* Code blocks: horizontal scroll */
+  .docs-codeblock-body { font-size: 12px; padding: 14px 16px; }
+
+  /* Tables: horizontal scroll */
+  .docs-params { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .docs-params { min-width: 500px; }
+
+  /* Endpoint cards */
+  .docs-endpoint-header { flex-wrap: wrap; gap: 8px; }
+  .docs-endpoint-path { font-size: 12px; word-break: break-all; }
+
+  /* Steps */
+  .docs-step { flex-direction: column; gap: 12px; padding: 16px; }
+  .docs-step-number { width: 28px; height: 28px; font-size: 12px; }
+
+  /* Touch targets */
+  .docs-nav-item { padding: 10px 12px; min-height: 40px; }
+  .docs-codeblock-copy { min-height: 32px; padding: 4px 10px; }
+
+  /* Prevent iOS zoom on inputs */
+  .docs-content input,
+  .docs-content textarea,
+  .docs-content select { font-size: 16px; }
+}
+
+/* ── Responsive — 480px ── */
+@media (max-width: 480px) {
+  .docs-page-title { font-size: 20px; }
+  .docs-content { padding: 16px 12px 48px; }
+  .docs-topbar-divider { display: none; }
+  .docs-topbar-title { font-size: 12px; }
+  .docs-callout { padding: 12px 14px; font-size: 13px; }
 }

@@ -1,15 +1,20 @@
-import { useRef, useEffect, useCallback } from 'react';
+import { useRef, useEffect, useCallback, useState } from 'react';
 
 export default function NeuralHeroCanvas() {
   const canvasRef = useRef(null);
   const nodesRef = useRef([]);
   const mouseRef = useRef({ x: -1000, y: -1000 });
   const rafRef = useRef(null);
+  const [prefersReducedMotion] = useState(() =>
+    typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+  );
 
   const initNodes = useCallback((w, h) => {
     const nodes = [];
+    const isMobile = window.innerWidth < 768;
+    const count = isMobile ? 45 : 120;
     // Main network nodes
-    for (let i = 0; i < 120; i++) {
+    for (let i = 0; i < count; i++) {
       nodes.push({
         x: Math.random() * w,
         y: Math.random() * h,
@@ -197,9 +202,16 @@ export default function NeuralHeroCanvas() {
     };
   }, [initNodes]);
 
+  if (prefersReducedMotion) {
+    return (
+      <div style={{ position: 'absolute', inset: 0, zIndex: 0, overflow: 'hidden',
+        background: 'linear-gradient(135deg, #06060c 0%, #0a0a14 50%, #0a0a0f 100%)' }} />
+    );
+  }
+
   return (
     <div style={{ position: 'absolute', inset: 0, zIndex: 0, overflow: 'hidden' }}>
-      <canvas ref={canvasRef} style={{ display: 'block' }} />
+      <canvas ref={canvasRef} style={{ display: 'block', willChange: 'transform' }} />
       <div style={{
         position: 'absolute', bottom: 0, left: 0, right: 0, height: '40%',
         background: 'linear-gradient(to top, var(--bg-primary, #0a0a1a), transparent)',

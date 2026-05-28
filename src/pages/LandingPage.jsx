@@ -282,6 +282,8 @@ function TestimonialCard({ testimonial }) {
 export default function LandingPage() {
   const navigate = useNavigate();
   const [scrolled, setScrolled] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   // Section refs for scroll reveal
   const infraRef = useScrollReveal();
@@ -306,19 +308,50 @@ export default function LandingPage() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
+  // Mobile detection for performance optimization
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      if (!mobile) setMobileMenuOpen(false);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Close mobile menu on navigation
+  const handleMobileNav = (target) => {
+    setMobileMenuOpen(false);
+    if (target.startsWith('/')) {
+      navigate(target);
+    } else {
+      document.getElementById(target)?.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
   return (
     <div className="landing">
       {/* ── NAV ── */}
       <nav className={`nav ${scrolled ? 'scrolled' : ''}`}>
         <div className="nav-inner">
-          <div className="nav-logo">
+          <div className="nav-logo" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} style={{ cursor: 'pointer' }}>
             <div className="nav-logo-icon">⚡</div>
             <span>Stoic <span style={{ color: 'var(--accent-purple)' }}>AgentOS</span></span>
           </div>
-          <div className="nav-links">
-            {NAV_LINKS.map(l => l === 'Docs' ? <Link key={l} className="nav-link" to="/docs">{l}</Link> : <a key={l} className="nav-link" href={`#${l.toLowerCase()}`}>{l}</a>)}
-            <Link className="nav-link" to="/login">Sign In</Link>
-            <button className="btn btn-primary btn-sm" onClick={() => navigate('/signup')}>Get Started Free</button>
+          <button
+            className="nav-mobile-toggle"
+            onClick={() => setMobileMenuOpen(o => !o)}
+            aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+          >
+            {mobileMenuOpen ? '✕' : '☰'}
+          </button>
+          <div className={`nav-links${mobileMenuOpen ? ' mobile-open' : ''}`}>
+            {NAV_LINKS.map(l => l === 'Docs'
+              ? <Link key={l} className="nav-link" to="/docs" onClick={() => setMobileMenuOpen(false)}>{l}</Link>
+              : <a key={l} className="nav-link" href={`#${l.toLowerCase()}`} onClick={(e) => { if (isMobile) { e.preventDefault(); handleMobileNav(l.toLowerCase()); } }}>{l}</a>
+            )}
+            <Link className="nav-link" to="/login" onClick={() => setMobileMenuOpen(false)}>Sign In</Link>
+            <button className="btn btn-primary btn-sm" onClick={() => { setMobileMenuOpen(false); navigate('/signup'); }}>Get Started Free</button>
           </div>
         </div>
       </nav>
@@ -404,7 +437,7 @@ export default function LandingPage() {
            PERFORMANCE METRICS — Animated Counters
          ══════════════════════════════════ */}
       <section className="section metrics-section" ref={metricsRef}>
-        <ParticleMesh particleCount={30} color="#00f0ff" speed={0.15} connectionDistance={100} />
+        <ParticleMesh particleCount={isMobile ? 12 : 30} color="#00f0ff" speed={0.15} connectionDistance={isMobile ? 60 : 100} />
         <div className="container" style={{ position: 'relative', zIndex: 1 }}>
           <div className="section-center section-reveal">
             <div className="section-label">⚡ RAW POWER</div>
@@ -493,28 +526,30 @@ export default function LandingPage() {
           <div className="section-label section-reveal">📊 COMPARISON</div>
           <h2 className="section-title section-reveal">Why teams choose AgentOS</h2>
           <p className="section-sub section-reveal">We&apos;re the only platform combining agent monitoring + knowledge persistence + workspace management in one dashboard.</p>
-          <table className="compare-table section-reveal" style={{ transitionDelay: '0.2s' }}>
-            <thead>
-              <tr>
-                <th>Feature</th>
-                <th className="us">⚡ AgentOS</th>
-                <th>CrewAI</th>
-                <th>Langfuse</th>
-                <th>AgentOps</th>
-              </tr>
-            </thead>
-            <tbody>
-              {COMPARE.map((row, i) => (
-                <tr key={i}>
-                  <td>{row.feature}</td>
-                  <td className="us">{row.us}</td>
-                  <td>{row.crewai}</td>
-                  <td>{row.langfuse}</td>
-                  <td>{row.agentops}</td>
+          <div className="compare-table-wrap section-reveal" style={{ transitionDelay: '0.2s' }}>
+            <table className="compare-table">
+              <thead>
+                <tr>
+                  <th>Feature</th>
+                  <th className="us">⚡ AgentOS</th>
+                  <th>CrewAI</th>
+                  <th>Langfuse</th>
+                  <th>AgentOps</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {COMPARE.map((row, i) => (
+                  <tr key={i}>
+                    <td>{row.feature}</td>
+                    <td className="us">{row.us}</td>
+                    <td>{row.crewai}</td>
+                    <td>{row.langfuse}</td>
+                    <td>{row.agentops}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </section>
 
@@ -540,14 +575,14 @@ export default function LandingPage() {
            ECOSYSTEM — with Particle Background
          ══════════════════════════════════ */}
       <section className="section section-particles" id="ecosystem" ref={ecoRef}>
-        <ParticleMesh particleCount={25} color="#9b59ff" speed={0.2} connectionDistance={100} />
+        <ParticleMesh particleCount={isMobile ? 10 : 25} color="#9b59ff" speed={0.2} connectionDistance={isMobile ? 60 : 100} />
         <div className="container section-center" style={{ position: 'relative', zIndex: 1 }}>
           <div className="section-label section-reveal">🌐 ECOSYSTEM</div>
           <h2 className="section-title section-reveal">Built on AgentOS. Deployed on Vercel.</h2>
           <p className="section-sub section-reveal">
             Every product in our ecosystem runs on AgentOS. Real production fleets, not demos.
           </p>
-          <div className="features-grid section-reveal" style={{ gridTemplateColumns: 'repeat(3, 1fr)', transitionDelay: '0.2s' }}>
+          <div className="features-grid section-reveal" style={{ transitionDelay: '0.2s' }}>
             {ECOSYSTEM.map((e, i) => (
               <a
                 key={i}
@@ -627,7 +662,7 @@ export default function LandingPage() {
            CTA — with Particle Background
          ══════════════════════════════════ */}
       <section className="section section-center section-particles" style={{ paddingBottom: 120 }} ref={ctaRef}>
-        <ParticleMesh particleCount={35} color="#00ff88" speed={0.25} connectionDistance={110} />
+        <ParticleMesh particleCount={isMobile ? 14 : 35} color="#00ff88" speed={0.25} connectionDistance={isMobile ? 65 : 110} />
         <div className="container" style={{ position: 'relative', zIndex: 1 }}>
           <h2 className="section-title section-reveal">Ready to command your AI fleet?</h2>
           <p className="section-sub section-reveal" style={{ margin: '0 auto 32px', transitionDelay: '0.1s' }}>

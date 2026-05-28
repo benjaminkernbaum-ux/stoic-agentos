@@ -38,6 +38,7 @@ export default function Dashboard() {
 
   const [activeTab, setActiveTab] = useState('overview');
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [time, setTime] = useState(new Date());
   const [cmdOpen, setCmdOpen] = useState(false);
   const [cmdQuery, setCmdQuery] = useState('');
@@ -81,6 +82,16 @@ export default function Dashboard() {
     const t = setInterval(() => setTime(new Date()), 1000);
     return () => clearInterval(t);
   }, []);
+
+  // Lock body scroll when mobile sidebar is open
+  useEffect(() => {
+    if (mobileSidebarOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [mobileSidebarOpen]);
 
   // Rotate capture placeholder
   useEffect(() => {
@@ -146,6 +157,7 @@ export default function Dashboard() {
         activeTab={activeTab} setActiveTab={setActiveTab}
         liveAgents={liveAgents} errorAgents={errorAgents}
         planName={planName} handleLogout={handleLogout}
+        mobileSidebarOpen={mobileSidebarOpen} setMobileSidebarOpen={setMobileSidebarOpen}
       />
 
       <div className="dash-body">
@@ -154,6 +166,7 @@ export default function Dashboard() {
           setCmdOpen={setCmdOpen} setCmdQuery={setCmdQuery}
           liveAgents={liveAgents} time={time}
           userName={userName} orgName={orgName} firstInit={firstInit}
+          onMobileMenuToggle={() => setMobileSidebarOpen(o => !o)}
         />
 
         {activeTab === 'overview' && (

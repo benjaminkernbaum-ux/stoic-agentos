@@ -1,8 +1,16 @@
 import { TAB_TITLES } from '../constants';
 
-export default function Topbar({ activeTab, setActiveTab, setCmdOpen, setCmdQuery, liveAgents, time, userName, orgName, firstInit }) {
+export default function Topbar({ activeTab, setActiveTab, setCmdOpen, setCmdQuery, liveAgents, time, userName, orgName, firstInit, onMobileMenuToggle }) {
   return (
     <header className="dash-topbar">
+      {/* Mobile hamburger toggle */}
+      <button
+        className="dash-mobile-hamburger"
+        onClick={onMobileMenuToggle}
+        aria-label="Open navigation"
+      >
+        ☰
+      </button>
       <span className="dash-topbar-title">{TAB_TITLES[activeTab]}</span>
       <div className="dash-topbar-divider" />
       <button
@@ -31,7 +39,8 @@ export default function Topbar({ activeTab, setActiveTab, setCmdOpen, setCmdQuer
           letterSpacing: 0,
         }}
       >
-        + Capture
+        <span className="dash-capture-text">+ Capture</span>
+        <span className="dash-capture-icon-only">+</span>
       </button>
       <div
         className="dash-avatar"

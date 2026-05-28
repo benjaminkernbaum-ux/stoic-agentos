@@ -438,6 +438,9 @@ export default function DocsPage() {
       {/* Top Bar */}
       <div className="docs-topbar">
         <div className="docs-topbar-left">
+          <button className="docs-mobile-toggle" onClick={() => setSidebarOpen(!sidebarOpen)} aria-label={sidebarOpen ? 'Close menu' : 'Open menu'}>
+            {sidebarOpen ? '✕' : '☰'}
+          </button>
           <a className="docs-topbar-logo" href="/" onClick={e => { e.preventDefault(); navigate('/'); }}>
             <span className="logo-icon">⚡</span>
             <span>Stoic <span style={{ color: 'var(--accent-purple)' }}>AgentOS</span></span>
@@ -470,6 +473,7 @@ export default function DocsPage() {
           </div>
         ))}
       </aside>
+      {sidebarOpen && <div className="docs-sidebar-backdrop" onClick={() => setSidebarOpen(false)} />}
 
       {/* Content */}
       <main className="docs-content">
@@ -482,11 +486,6 @@ export default function DocsPage() {
         </div>
         <ContentComponent />
       </main>
-
-      {/* Mobile Toggle */}
-      <button className="docs-mobile-toggle" onClick={() => setSidebarOpen(!sidebarOpen)}>
-        {sidebarOpen ? '✕' : '☰'}
-      </button>
     </div>
   );
 }

@@ -345,13 +345,33 @@
 
 /* ── Responsive ── */
 @media (max-width: 768px) {
-  .sp-nav { padding: 12px 20px; }
-  .sp-hero { padding: 48px 20px 28px; }
-  .sp-hero h1 { font-size: 32px; }
-  .sp-body { padding: 32px 20px; }
+  .sp-nav { padding: 12px 16px; }
+  .sp-hero { padding: 48px 16px 28px; }
+  .sp-hero h1 { font-size: 32px; letter-spacing: -1px; }
+  .sp-subtitle { font-size: 14px; }
+  .sp-body { padding: 32px 16px; }
   .sp-grid { grid-template-columns: 1fr; }
   .sp-stack { grid-template-columns: repeat(2, 1fr); }
-  .sp-founder { flex-direction: column; }
-  .sp-footer { flex-direction: column; gap: 8px; padding: 16px 20px; }
-  .sp-nav-links { gap: 14px; }
+  .sp-founder { flex-direction: column; padding: 20px; }
+  .sp-footer { flex-direction: column; gap: 8px; padding: 16px; }
+  .sp-nav-links { gap: 12px; }
+  .sp-nav-links a { font-size: 12px; padding: 4px 0; min-height: 36px; display: flex; align-items: center; }
+  .sp-section h2 { font-size: 19px; }
+  .sp-blog-card { padding: 20px; }
+  .sp-blog-card h2 { font-size: 18px; }
+  .sp-404-code { font-size: 80px; letter-spacing: -3px; }
+}
+
+@media (max-width: 480px) {
+  .sp-nav { padding: 10px 12px; }
+  .sp-hero { padding: 36px 12px 20px; }
+  .sp-hero h1 { font-size: 26px; }
+  .sp-subtitle { font-size: 13px; }
+  .sp-body { padding: 24px 12px; }
+  .sp-stack { grid-template-columns: 1fr; }
+  .sp-card { padding: 18px; }
+  .sp-section h2 { font-size: 17px; }
+  .sp-release-header { flex-direction: column; gap: 4px; }
+  .sp-blog-card { padding: 16px; }
+  .sp-404-btn { padding: 11px 20px; font-size: 13px; width: 100%; justify-content: center; }
 }

@@ -135,3 +135,40 @@
 .auth-footer-text a:hover {
   color: var(--accent-cyan, #00d2ff);
 }
+
+/* ══════════════════════════════════
+   AUTH — Mobile Responsive
+   ══════════════════════════════════ */
+@media (max-width: 768px) {
+  .auth-page { padding: 24px 16px; }
+  .auth-card { padding: 32px 24px; }
+  .auth-logo { font-size: 24px; }
+  .auth-title { font-size: 20px; }
+  .auth-subtitle { font-size: 13px; }
+
+  /* Prevent iOS auto-zoom */
+  .auth-field input { font-size: 16px; padding: 13px 14px; }
+
+  /* Touch-friendly buttons */
+  .auth-btn { min-height: 44px; padding: 13px 16px; font-size: 15px; }
+  .auth-btn.primary { min-height: 48px; }
+}
+
+@media (max-width: 480px) {
+  .auth-page { padding: 16px 12px; }
+  .auth-card {
+    padding: 28px 20px;
+    border-radius: 12px;
+    max-width: 100%;
+  }
+  .auth-logo { font-size: 22px; }
+  .auth-title { font-size: 18px; }
+  .auth-bg-glow { width: 300px; height: 300px; top: -100px; }
+}
+
+/* Safe area for notched phones */
+@supports (padding: env(safe-area-inset-bottom)) {
+  .auth-page {
+    padding-bottom: calc(24px + env(safe-area-inset-bottom));
+  }
+}

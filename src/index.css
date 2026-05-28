@@ -387,14 +387,114 @@ a:hover { color: var(--accent-blue); }
 }
 
 /* ══════════════════════════════════
-   RESPONSIVE
+   MOBILE — Global Touch & Safe Area
+   ══════════════════════════════════ */
+html { -webkit-tap-highlight-color: transparent; }
+
+/* Safe area for notched phones */
+@supports (padding: env(safe-area-inset-bottom)) {
+  body { padding-bottom: env(safe-area-inset-bottom); }
+}
+
+/* ── Mobile Nav Hamburger ── */
+.nav-mobile-toggle {
+  display: none;
+  align-items: center; justify-content: center;
+  width: 40px; height: 40px;
+  background: none; border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer; color: var(--text-primary);
+  font-size: 20px; padding: 0;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.2s, border-color 0.2s;
+}
+.nav-mobile-toggle:hover { background: rgba(255,255,255,0.05); border-color: var(--border-glow); }
+
+/* Mobile nav drawer */
+.nav-links.mobile-open {
+  display: flex !important;
+  flex-direction: column;
+  position: absolute;
+  top: 64px; left: 0; right: 0;
+  background: rgba(10,10,15,0.98);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--glass-border);
+  padding: 16px 24px 24px;
+  gap: 0;
+  z-index: 999;
+  animation: nav-drawer-in 0.25s ease-out;
+}
+.nav-links.mobile-open .nav-link {
+  padding: 14px 0;
+  font-size: 16px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.nav-links.mobile-open .nav-link:last-of-type { border-bottom: none; }
+.nav-links.mobile-open .btn { margin-top: 8px; width: 100%; justify-content: center; min-height: 44px; }
+@keyframes nav-drawer-in {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Comparison Table Scroll Wrapper ── */
+.compare-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin-top: 48px;
+  position: relative;
+}
+.compare-table-wrap .compare-table { margin-top: 0; }
+
+/* ══════════════════════════════════
+   RESPONSIVE — 768px
    ══════════════════════════════════ */
 @media (max-width: 768px) {
-  .hero { padding: 120px 0 60px; }
-  .hero-metrics { gap: 24px; flex-wrap: wrap; }
+  .hero { padding: 100px 0 40px; }
+  .hero-sub { font-size: 16px; }
+  .hero-cta .btn-lg { width: 100%; justify-content: center; min-height: 48px; }
+  .hero-metrics {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .hero-metric-value { font-size: 24px; }
+  .hero-metric-label { font-size: 10px; }
+
+  .section { padding: 64px 0; }
   .features-grid { grid-template-columns: 1fr; }
-  .pricing-grid { grid-template-columns: 1fr; }
+  .pricing-grid { grid-template-columns: 1fr; max-width: 400px; margin-left: auto; margin-right: auto; }
   .footer-grid { grid-template-columns: 1fr 1fr; gap: 24px; }
-  .nav-links { display: none; }
-  .compare-table { font-size: 12px; }
+  .footer-bottom { flex-direction: column; gap: 8px; text-align: center; }
+
+  /* Nav: show hamburger, hide desktop links */
+  .nav-mobile-toggle { display: flex; }
+  .nav-links:not(.mobile-open) { display: none; }
+  .nav-inner { padding: 0 16px; }
+
+  /* Comparison table scroll */
+  .compare-table { font-size: 12px; min-width: 600px; }
+
+  /* Buttons: ensure touch-friendly */
+  .btn { min-height: 40px; }
+  .btn-lg { min-height: 48px; font-size: 15px; padding: 12px 24px; }
+
+  /* Container padding */
+  .container, .container-wide { padding: 0 16px; }
+}
+
+/* ══════════════════════════════════
+   RESPONSIVE — 480px
+   ══════════════════════════════════ */
+@media (max-width: 480px) {
+  .hero { padding: 88px 0 32px; min-height: auto; }
+  .hero h1 { font-size: clamp(28px, 8vw, 40px); }
+  .hero-sub { font-size: 14px; margin-bottom: 24px; }
+  .hero-metrics { grid-template-columns: 1fr 1fr; gap: 12px; }
+  .hero-metric-value { font-size: 20px; }
+
+  .section { padding: 48px 0; }
+  .section-title { font-size: clamp(22px, 6vw, 28px); }
+
+  .pricing-grid { max-width: 100%; }
+  .footer-grid { grid-template-columns: 1fr; gap: 20px; }
+  .code-body { font-size: 11px; padding: 14px; }
 }
