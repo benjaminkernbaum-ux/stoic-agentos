@@ -27,18 +27,18 @@ async def main():
 
     api_key = args.api_key or os.environ.get("AGENTOS_API_KEY")
     if not api_key:
-        print("❌ Error: No API Key provided.")
+        print("[Error] No API Key provided.")
         print("Please provide it via --api-key or set AGENTOS_API_KEY environment variable.")
         sys.exit(1)
 
-    print("🚀 Initializing StoicOS Python client...")
-    print(f"🔗 Target Workspace: {args.workspace}")
+    print("[StoicOS] Initializing client...")
+    print(f"  - Target Workspace: {args.workspace}")
 
     # Initialize client
     client = StoicOS(api_key=api_key, workspace=args.workspace, debug=True)
 
     agent_name = "stoic-github-agent"
-    print(f"\n📦 Registering agent: {agent_name}...")
+    print(f"\n[StoicOS] Registering agent: {agent_name}...")
     await client.register_agent(
         name=agent_name,
         description="Autonomous agent auditing repository pull requests, dependencies, and code compliance.",
@@ -48,7 +48,7 @@ async def main():
     # Decorate sync and async functions to simulate real-world operations
     @client.wrap_agent(name=agent_name)
     async def audit_pull_request(pr_id: int, files_changed: list[str]):
-        print(f"🕵️  Auditing Pull Request #{pr_id}...")
+        print(f"  - Auditing Pull Request #{pr_id}...")
         
         # 1. Ephemeral state in Tier 1 Working Memory
         session_id = f"pr-audit-{pr_id}-{random.randint(1000, 9999)}"
@@ -112,7 +112,7 @@ async def main():
 
     @client.wrap_agent(name=agent_name)
     def deploy_release(version: str):
-        print(f"🚀 Deploying Release {version}...")
+        print(f"  - Deploying Release {version}...")
         if "beta" in version:
             # Let's trigger a failure to demonstrate error logging and heartbeats!
             raise RuntimeError(f"Deploy failed: Unresolved peer dependencies in beta branch.")
@@ -120,34 +120,34 @@ async def main():
 
     async with client:
         # Run 1: Normal agent execution (Success path)
-        print("\n--- 🏁 Executing Success Scenario ---")
+        print("\n--- Executing Success Scenario ---")
         result = await audit_pull_request(
             pr_id=1402, 
             files_changed=["package.json", "src/auth/auth.py", "Dockerfile"]
         )
-        print(f"✅ Success Result: {result}")
+        print(f"  - Success Result: {result}")
 
         await asyncio.sleep(1)
 
         # Run 2: Failed agent execution (Error/Failure path)
-        print("\n--- 🏁 Executing Failure Scenario ---")
+        print("\n--- Executing Failure Scenario ---")
         try:
             deploy_release(version="v2.1.0-beta3")
         except RuntimeError as e:
-            print(f"❌ Handled Expected Simulation Error: {e}")
+            print(f"  - Handled Expected Simulation Error: {e}")
 
         # Final Dashboard Summary
-        print("\n📊 Fetching fresh dashboard statistics from platform...")
+        print("\n[StoicOS] Fetching fresh dashboard statistics from platform...")
         stats = await client.get_stats()
         if stats:
-            print(f"✨ Telemetry Successful! Live Platform Stats:")
-            print(f"   👥 Organizations: {stats.get('orgs_count', 0)}")
-            print(f"   🤖 Active Agents: {stats.get('agents_count', 0)}")
-            print(f"   📈 Observations Captured: {stats.get('observations_count', 0)}")
+            print(f"  - Telemetry Successful! Live Platform Stats:")
+            print(f"    Organizations: {stats.get('orgs_count', 0)}")
+            print(f"    Active Agents: {stats.get('agents_count', 0)}")
+            print(f"    Observations Captured: {stats.get('observations_count', 0)}")
         else:
-            print("⚠️ Could not fetch stats (verify connection).")
+            print("  - Could not fetch stats (verify connection).")
 
-    print("\n🏁 Live Agent Telemetry Simulation Complete! Check your dashboard at https://stoicagentos.com/dashboard 🚀")
+    print("\n[StoicOS] Live Agent Telemetry Simulation Complete! Check your dashboard at https://stoicagentos.com/dashboard")
 
 
 if __name__ == "__main__":
