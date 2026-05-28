@@ -115,9 +115,10 @@ function computeHealth(agents, observations, workspaces) {
 /* ═══════════════════════════════════════════
    MAIN OVERVIEW TAB — BENTO GRID LAYOUT
    ═══════════════════════════════════════════ */
-export default function OverviewTab({ stats, agents, observations, liveAgents, errorAgents, usage, usagePct, planName, captureForm, setCaptureForm, captureLoading, handleCapture, handleSeedDemo, seedLoading, setShowAgentModal, setActiveTab, placeholderIdx, onCaptureRef }) {
+export default function OverviewTab({ stats, agents, observations, workspaces = [], liveAgents, errorAgents, usage, usagePct, planName, captureForm, setCaptureForm, captureLoading, handleCapture, handleSeedDemo, seedLoading, setShowAgentModal, setActiveTab, placeholderIdx, onCaptureRef }) {
   const sparkData = useSparklineData(observations);
-  const healthScore = computeHealth(agents, observations, []);
+  const safeUsage = usage || { count: 0, limit: 10000 };
+  const healthScore = computeHealth(agents, observations, workspaces);
 
   return (
     <div className="dash-content">
@@ -161,7 +162,7 @@ export default function OverviewTab({ stats, agents, observations, liveAgents, e
       <div className="bento-usage">
         <div className="bento-usage-info">
           <span className="bento-label" style={{ marginBottom: 0 }}>USAGE</span>
-          <span className="bento-usage-nums">{usage.count.toLocaleString()} / {usage.limit.toLocaleString()}</span>
+          <span className="bento-usage-nums">{safeUsage.count.toLocaleString()} / {safeUsage.limit.toLocaleString()}</span>
         </div>
         <div className="bento-usage-track">
           <div className="bento-usage-fill" style={{ width: `${Math.min(Number(usagePct), 100)}%` }} />

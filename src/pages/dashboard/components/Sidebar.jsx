@@ -89,7 +89,7 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen, activeTab, setAct
             <span style={{ marginLeft: 4 }}>Command palette</span>
           </div>
           <button className="dash-nav-btn" onClick={handleLogout}>
-            <span className="dash-nav-icon">→</span>
+            <span className="dash-nav-icon">🚪</span>
             <span className="dash-nav-label">Sign out</span>
           </button>
           <button

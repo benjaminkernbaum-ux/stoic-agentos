@@ -172,6 +172,7 @@ export default function Dashboard() {
         {activeTab === 'overview' && (
           <OverviewTab
             stats={data.stats} agents={data.agents} observations={data.observations}
+            workspaces={data.workspaces}
             liveAgents={liveAgents} errorAgents={errorAgents}
             usage={data.usage} usagePct={usagePct} planName={planName}
             captureForm={captureForm} setCaptureForm={setCaptureForm}

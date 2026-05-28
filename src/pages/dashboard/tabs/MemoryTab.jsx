@@ -18,6 +18,9 @@ export default function MemoryTab() {
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState({ working: true, episodic: true, semantic: true });
   const [seeding, setSeeding] = useState(false);
+  const [reflectionStatus, setReflectionStatus] = useState(null);
+  const [reflecting, setReflecting] = useState(false);
+  const [decaying, setDecaying] = useState(false);
 
   const headers = useCallback(async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -27,19 +30,44 @@ export default function MemoryTab() {
   const fetchAll = useCallback(async () => {
     try {
       const h = await headers();
-      const [statsR, workR, epiR, semR] = await Promise.all([
+      const [statsR, workR, epiR, semR, refR] = await Promise.all([
         fetch(`${API}/api/v1/memory/stats`, { headers: h }).then(r => r.json()).catch(() => ({ working: 0, episodic: 0, semantic: 0 })),
         fetch(`${API}/api/v1/memory/working`, { headers: h }).then(r => r.json()).catch(() => []),
         fetch(`${API}/api/v1/memory/episodic`, { headers: h }).then(r => r.json()).catch(() => []),
         fetch(`${API}/api/v1/memory/semantic`, { headers: h }).then(r => r.json()).catch(() => []),
+        fetch(`${API}/api/v1/reflection/status`, { headers: h }).then(r => r.json()).catch(() => null),
       ]);
       setStats(statsR);
       setWorking(Array.isArray(workR) ? workR : []);
       setEpisodic(Array.isArray(epiR) ? epiR : []);
       setSemantic(Array.isArray(semR) ? semR : []);
+      if (refR) setReflectionStatus(refR);
     } catch { /* silently degrade */ }
     setLoading(false);
   }, [headers]);
+
+  const triggerReflection = async () => {
+    setReflecting(true);
+    try {
+      const h = await headers();
+      const res = await fetch(`${API}/api/v1/reflection/run`, { method: 'POST', headers: h });
+      const data = await res.json();
+      if (data.triplets_extracted !== undefined) {
+        await fetchAll();
+      }
+    } catch { /* ignore */ }
+    setReflecting(false);
+  };
+
+  const triggerDecay = async () => {
+    setDecaying(true);
+    try {
+      const h = await headers();
+      await fetch(`${API}/api/v1/reflection/decay`, { method: 'POST', headers: h });
+      await fetchAll();
+    } catch { /* ignore */ }
+    setDecaying(false);
+  };
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
@@ -110,6 +138,45 @@ export default function MemoryTab() {
             <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{s.label}</div>
           </div>
         ))}
+      </div>
+
+      {/* Reflection Panel */}
+      <div className="dash-card" style={{ marginBottom: '1rem', padding: '1rem 1.25rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <h3 style={{ margin: '0 0 0.25rem', color: 'hsl(45, 90%, 65%)' }}>⚡ Reflection Engine</h3>
+            <div style={{ display: 'flex', gap: '1.5rem', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+              <span>
+                Last extraction: {reflectionStatus?.last_reflection
+                  ? new Date(reflectionStatus.last_reflection.created_at).toLocaleString()
+                  : 'Never'}
+              </span>
+              <span>
+                Last decay: {reflectionStatus?.last_decay
+                  ? new Date(reflectionStatus.last_decay.created_at).toLocaleString()
+                  : 'Never'}
+              </span>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button
+              className="dash-btn"
+              onClick={triggerDecay}
+              disabled={decaying}
+              style={{ padding: '0.4rem 0.9rem', fontSize: '0.8rem', background: 'hsla(0, 70%, 60%, 0.12)', color: 'hsl(0, 70%, 65%)', border: '1px solid hsla(0, 70%, 60%, 0.2)', borderRadius: '6px', cursor: 'pointer' }}
+            >
+              {decaying ? '⏳ Decaying...' : '🗑️ Run Decay'}
+            </button>
+            <button
+              className="dash-btn"
+              onClick={triggerReflection}
+              disabled={reflecting}
+              style={{ padding: '0.4rem 0.9rem', fontSize: '0.8rem', background: 'hsla(45, 90%, 65%, 0.12)', color: 'hsl(45, 90%, 65%)', border: '1px solid hsla(45, 90%, 65%, 0.2)', borderRadius: '6px', cursor: 'pointer' }}
+            >
+              {reflecting ? '⏳ Extracting...' : '🧠 Run Reflection'}
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Tier 1: Working Memory */}

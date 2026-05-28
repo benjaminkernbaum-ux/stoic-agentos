@@ -12,6 +12,7 @@ export default function CommandPalette({ cmdOpen, setCmdOpen, cmdQuery, setCmdQu
   useEffect(() => { setSelectedIdx(0); }, [cmdQuery]);
 
   const handleKeyDown = useCallback((e) => {
+    if (!filteredCmds.length) return;
     if (e.key === 'ArrowDown') {
       e.preventDefault();
       setSelectedIdx(i => (i + 1) % filteredCmds.length);
