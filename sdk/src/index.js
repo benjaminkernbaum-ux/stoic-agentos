@@ -26,7 +26,7 @@ import { instrumentOpenAIClient } from './instrumentors/openai.js';
 import { instrumentAnthropicClient } from './instrumentors/anthropic.js';
 import { estimateCost, MODEL_PRICING } from './pricing.js';
 
-const DEFAULT_API_URL = 'https://stoic-agentos-api-production.up.railway.app/api/v1';
+const DEFAULT_API_URL = 'https://agent-ops-production.up.railway.app/api/v1';
 
 const VALID_OBSERVATION_TYPES = [
   'note', 'decision', 'architecture', 'deployment', 'discovery',

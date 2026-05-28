@@ -16,7 +16,7 @@ describe('AgentOS constructor', () => {
 
   it('defaults to production API URL', () => {
     const os = new AgentOS({ apiKey: 'sk_live_x' });
-    expect(os.apiUrl).toContain('stoic-agentos-api-production');
+    expect(os.apiUrl).toContain('agent-ops-production');
   });
 });
 

@@ -7,7 +7,7 @@
  * Env:   AGENTOS_API_KEY, AGENTOS_API_URL
  */
 
-const API_URL = process.env.AGENTOS_API_URL || 'https://stoic-agentos-api-production.up.railway.app/api/v1';
+const API_URL = process.env.AGENTOS_API_URL || 'https://agent-ops-production.up.railway.app/api/v1';
 const API_KEY = process.env.AGENTOS_API_KEY || '';
 
 if (!API_KEY) {

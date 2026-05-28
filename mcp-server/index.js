@@ -47,7 +47,7 @@ import { execSync } from 'child_process';
 import Anthropic from '@anthropic-ai/sdk';
 
 // ── Config ──
-const API_URL = process.env.AGENTOS_API_URL || 'https://stoic-agentos-api-production.up.railway.app';
+const API_URL = process.env.AGENTOS_API_URL || 'https://agent-ops-production.up.railway.app';
 const API_KEY = process.env.AGENTOS_API_KEY || '';
 const INFRA_PATH = process.env.INFRA_AGENT_PATH || '';
 const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY || '';
@@ -680,7 +680,7 @@ server.resource(
 ## Quick Facts
 - **Product**: AI Agent Operations Platform (SaaS)
 - **Frontend**: Vite + React 19 → Vercel (stoic-agentos.vercel.app)
-- **API**: Express.js → Railway (stoic-agentos-api-production.up.railway.app)
+- **API**: Express.js → Railway (agent-ops-production.up.railway.app)
 - **Database**: Supabase (viiagdhtzbvkfhcjqrlz)
 - **Billing**: Stripe (Pro $29/mo, Team $79/mo)
 - **SDK**: npm @stoic/agentos-sdk (CLI + JS client) + Python SDK (stoicos)

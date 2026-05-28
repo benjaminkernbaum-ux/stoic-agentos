@@ -3,7 +3,7 @@
 > **Owner**: Benjamin Kernbaum (`benjaminkernbaum-ux`)
 > **Product**: AI Agent Operations Platform — SaaS for monitoring, orchestrating, and persisting knowledge across AI agent fleets
 > **Live URL**: https://stoic-agentos.vercel.app
-> **API**: https://stoic-agentos-api-production.up.railway.app
+> **API**: https://agent-ops-production.up.railway.app
 > **Repo**: https://github.com/benjaminkernbaum-ux/stoic-agentos
 
 ---
@@ -98,7 +98,7 @@ stoic-agentos/
 
 ## API Endpoints
 
-**Base URL**: `https://stoic-agentos-api-production.up.railway.app/api/v1`
+**Base URL**: `https://agent-ops-production.up.railway.app/api/v1`
 **Auth**: `Authorization: Bearer sk_live_xxx` (API key) or Supabase JWT.
 
 | Method | Endpoint | Description |

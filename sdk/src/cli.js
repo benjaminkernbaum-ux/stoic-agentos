@@ -34,7 +34,7 @@ function initProject() {
   const config = {
     api_key: apiKey,
     workspace: workspace,
-    api_url: 'https://stoic-agentos-api-production.up.railway.app/api/v1',
+    api_url: 'https://agent-ops-production.up.railway.app/api/v1',
     auto_capture: true,
     git_hooks: true,
     instrument: {
@@ -91,7 +91,7 @@ if [ -f .agentos.json ]; then
   AUTHOR=$(git log -1 --pretty=%an)
 
   if [ -n "$API_KEY" ]; then
-    curl -s -X POST "https://stoic-agentos-api-production.up.railway.app/api/v1/webhooks/git" \\
+    curl -s -X POST "https://agent-ops-production.up.railway.app/api/v1/webhooks/git" \\
       -H "Content-Type: application/json" \\
       -d "{\\"api_key\\":\\"$API_KEY\\",\\"repo\\":\\"$REPO\\",\\"branch\\":\\"$BRANCH\\",\\"commit_hash\\":\\"$HASH\\",\\"commit_message\\":\\"$MSG\\",\\"author\\":\\"$AUTHOR\\"}" \\
       > /dev/null 2>&1 &
@@ -185,7 +185,7 @@ function testConnection() {
     return;
   }
 
-  fetch('https://stoic-agentos-api-production.up.railway.app/api/v1/stats', {
+  fetch('https://agent-ops-production.up.railway.app/api/v1/stats', {
     headers: { 'Authorization': `Bearer ${apiKey}` },
   })
     .then(r => r.json())
