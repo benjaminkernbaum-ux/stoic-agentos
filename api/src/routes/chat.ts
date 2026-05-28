@@ -348,7 +348,7 @@ Observation Types: decision | error | deployment | discovery | note | git_commit
 
   // ── API REFERENCE (immutable knowledge base) ──
   const API_REFERENCE = `<api_reference>
-Base URL: https://agent-ops-production.up.railway.app/api/v1
+Base URL: https://api.stoicagentos.com/api/v1
 Authentication: Bearer token (API key) in Authorization header
 
 | Method | Endpoint                    | Description                                    |

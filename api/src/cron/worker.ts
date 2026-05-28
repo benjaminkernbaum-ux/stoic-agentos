@@ -28,7 +28,7 @@ import { createClient } from '@supabase/supabase-js';
 const SUPABASE_URL = process.env.SUPABASE_URL || '';
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 const CRON_API_KEY = process.env.CRON_API_KEY || '';
-const API_URL = (process.env.AGENTOS_API_URL || 'https://agent-ops-production.up.railway.app').replace(/\/$/, '');
+const API_URL = (process.env.AGENTOS_API_URL || 'https://api.stoicagentos.com').replace(/\/$/, '');
 
 function log(job: string, ...args: unknown[]) {
   const ts = new Date().toISOString().slice(11, 19);

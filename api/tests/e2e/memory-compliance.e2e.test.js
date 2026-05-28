@@ -8,7 +8,7 @@
 import { describe, it, expect, afterAll } from 'vitest';
 
 const API_KEY = process.env.AGENTOS_E2E_API_KEY || '';
-const API_URL = process.env.AGENTOS_E2E_API_URL || 'https://agent-ops-production.up.railway.app/api/v1';
+const API_URL = process.env.AGENTOS_E2E_API_URL || 'https://api.stoicagentos.com/api/v1';
 
 const describeE2E = API_KEY ? describe : describe.skip;
 

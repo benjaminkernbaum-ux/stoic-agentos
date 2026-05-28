@@ -51,7 +51,7 @@ export function AuthProvider({ children }) {
         return;
       }
 
-      const res = await fetch(`${import.meta.env.VITE_API_URL || 'https://agent-ops-production.up.railway.app'}/api/v1/auth/me`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'https://api.stoicagentos.com'}/api/v1/auth/me`, {
         headers: { 'Authorization': `Bearer ${session.access_token}` },
       });
 
@@ -90,7 +90,7 @@ export function AuthProvider({ children }) {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 10000);
 
-      const res = await fetch(`${import.meta.env.VITE_API_URL || 'https://agent-ops-production.up.railway.app'}/api/v1/auth/setup-org`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'https://api.stoicagentos.com'}/api/v1/auth/setup-org`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

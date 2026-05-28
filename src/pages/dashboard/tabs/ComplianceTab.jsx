@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../../lib/supabase';
 
-const API = import.meta.env.VITE_API_URL || 'https://agent-ops-production.up.railway.app';
+const API = import.meta.env.VITE_API_URL || 'https://api.stoicagentos.com';
 
 const VERDICT_COLORS = { PROCEED: '#22c55e', BLOCK: '#ef4444', WARN: '#eab308' };
 const CIRCUIT_COLORS = { closed: '#22c55e', 'half-open': '#eab308', open: '#ef4444' };
