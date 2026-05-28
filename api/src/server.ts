@@ -62,14 +62,23 @@ const app = express();
 app.use(requestIdMiddleware);
 
 // 2. CORS
+const ALLOWED_ORIGINS = [
+  'https://stoicagentos.com',
+  'https://stoic-agentos.vercel.app',
+  'https://agent-ops-production.up.railway.app',
+];
+if (process.env.NODE_ENV === 'development') ALLOWED_ORIGINS.push('http://localhost:5173');
+
 app.use(cors({
-  origin: [
-    'https://stoicagentos.com',
-    'https://stoic-agentos.vercel.app',
-    'https://stoic-agentos-benjaminkernbaum-uxs-projects.vercel.app',
-    'https://agent-ops-production.up.railway.app',
-    process.env.NODE_ENV === 'development' && 'http://localhost:5173',
-  ].filter(Boolean) as string[],
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, curl, etc.)
+    if (!origin) return callback(null, true);
+    // Allow any Vercel preview deployment
+    if (origin.endsWith('.vercel.app') || ALLOWED_ORIGINS.includes(origin)) {
+      return callback(null, true);
+    }
+    callback(new Error(`CORS: ${origin} not allowed`));
+  },
   credentials: true,
   exposedHeaders: ['X-Request-ID', 'X-RateLimit-Limit', 'X-RateLimit-Remaining', 'X-RateLimit-Reset', 'Retry-After'],
 }));

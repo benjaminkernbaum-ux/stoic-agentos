@@ -20,9 +20,21 @@ export default function LoginPage() {
     e.preventDefault();
     setError('');
     setLoading(true);
-    const { error: authError } = await signIn(form.email, form.password);
-    setLoading(false);
-    if (authError) setError(authError.message);
+    try {
+      const { error: authError } = await signIn(form.email, form.password);
+      setLoading(false);
+      if (authError) {
+        if (authError.message?.includes('Invalid login')) {
+          setError('Invalid email or password. Don\'t have an account? Sign up first.');
+        } else {
+          setError(authError.message);
+        }
+      }
+    } catch (err) {
+      setLoading(false);
+      setError('Connection error. Please try again.');
+      console.error('Login error:', err);
+    }
     // success: onAuthStateChange fires SIGNED_IN → AuthContext → ProtectedRoute redirects
   };
 
