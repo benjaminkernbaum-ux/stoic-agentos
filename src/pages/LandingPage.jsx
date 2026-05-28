@@ -82,38 +82,38 @@ os.<span class="fn">capture</span>({
 /* ─── TESTIMONIALS DATA ─── */
 const TESTIMONIALS = [
   {
-    name: 'Sarah Chen',
-    role: 'VP Engineering',
-    company: 'Nexus AI',
-    avatar: 'SC',
+    name: 'Benjamin K.',
+    role: 'Founder & Lead Developer',
+    company: 'Stoic AgentOS',
+    avatar: 'BK',
     color: '#9b59ff',
-    quote: 'AgentOS cut our agent debugging time by 80%. We went from spending 3 hours tracking down context issues to having everything in one place. It\'s become our single source of truth.',
+    quote: 'I built AgentOS because I was managing 23 AI agents across 14 workspaces with zero visibility. Now every decision, error, and deployment is captured automatically. This is the tool I wished existed.',
   },
   {
-    name: 'Marcus Rivera',
-    role: 'CTO',
-    company: 'DataForge',
-    avatar: 'MR',
+    name: 'Early Adopter',
+    role: 'Beta Program',
+    company: 'Invite Only',
+    avatar: '🚀',
     color: '#4d7cff',
-    quote: 'We manage 47 agents across 12 repos. Before AgentOS, knowledge was scattered across Notion, Slack, and people\'s heads. Now every decision is captured automatically.',
+    quote: 'We\'re onboarding our first cohort of teams building with AI agents. Join the beta to get lifetime Pro access and shape the product roadmap.',
   },
   {
-    name: 'Yuki Tanaka',
-    role: 'Lead AI Engineer',
-    company: 'Orbital Labs',
-    avatar: 'YT',
+    name: 'Open Source',
+    role: 'Community',
+    company: 'GitHub',
+    avatar: '⭐',
     color: '#00d4ff',
-    quote: 'The Knowledge Graph alone is worth the upgrade. Being able to see how our agents\' decisions connect across workspaces has helped us catch architectural issues before they become incidents.',
+    quote: 'AgentOS is MIT-licensed and open source. Star us on GitHub, contribute, or fork it for your own agent fleet. Built in public, for the community.',
   },
 ];
 
 const LOGOS = [
-  { name: 'Nexus AI', width: 'auto' },
-  { name: 'DataForge', width: 'auto' },
-  { name: 'Orbital Labs', width: 'auto' },
-  { name: 'Synthwave', width: 'auto' },
-  { name: 'Cortex', width: 'auto' },
-  { name: 'Arclight', width: 'auto' },
+  { name: 'OpenAI', width: 'auto' },
+  { name: 'Anthropic', width: 'auto' },
+  { name: 'Vercel', width: 'auto' },
+  { name: 'Supabase', width: 'auto' },
+  { name: 'Railway', width: 'auto' },
+  { name: 'Stripe', width: 'auto' },
 ];
 
 /* ─── SIMULATED DASHBOARD AGENTS ─── */
@@ -351,20 +351,20 @@ export default function LandingPage() {
           </div>
           <div className="hero-metrics animate-in delay-4">
             <div className="hero-metric">
-              <div className="hero-metric-value" style={{ color: 'var(--accent-purple)' }}>2,400+</div>
-              <div className="hero-metric-label">Engineers</div>
+              <div className="hero-metric-value" style={{ color: 'var(--accent-purple)' }}>Open</div>
+              <div className="hero-metric-label">MIT Licensed</div>
             </div>
             <div className="hero-metric">
-              <div className="hero-metric-value" style={{ color: 'var(--accent-cyan)' }}>12M+</div>
-              <div className="hero-metric-label">Observations</div>
+              <div className="hero-metric-value" style={{ color: 'var(--accent-cyan)' }}>28,600+</div>
+              <div className="hero-metric-label">Lines of Code</div>
             </div>
             <div className="hero-metric">
-              <div className="hero-metric-value" style={{ color: 'var(--accent-green)' }}>99.99%</div>
-              <div className="hero-metric-label">Uptime</div>
+              <div className="hero-metric-value" style={{ color: 'var(--accent-green)' }}>18</div>
+              <div className="hero-metric-label">API Endpoints</div>
             </div>
             <div className="hero-metric">
-              <div className="hero-metric-value" style={{ color: 'var(--accent-orange)' }}>&lt;12ms</div>
-              <div className="hero-metric-label">Latency</div>
+              <div className="hero-metric-value" style={{ color: 'var(--accent-orange)' }}>&lt;65ms</div>
+              <div className="hero-metric-label">p50 Latency</div>
             </div>
           </div>
         </div>
@@ -380,7 +380,7 @@ export default function LandingPage() {
          ══════════════════════════════════ */}
       <section className="section social-proof-section" ref={socialRef} style={{ paddingTop: 40, paddingBottom: 40 }}>
         <div className="container section-center">
-          <div className="social-proof-label section-reveal">Trusted by engineering teams at</div>
+          <div className="social-proof-label section-reveal">Powered by</div>
           <div className="logo-bar section-reveal" style={{ transitionDelay: '0.1s' }}>
             {LOGOS.map(logo => (
               <div key={logo.name} className="logo-item">
@@ -523,10 +523,10 @@ export default function LandingPage() {
          ══════════════════════════════════ */}
       <section className="section" style={{ background: 'var(--bg-deep)' }} ref={testimonialsRef}>
         <div className="container section-center">
-          <div className="section-label section-reveal">💬 TESTIMONIALS</div>
-          <h2 className="section-title section-reveal">Loved by engineers shipping AI</h2>
+          <div className="section-label section-reveal">💬 FROM THE BUILDER</div>
+          <h2 className="section-title section-reveal">Built by an AI operator, for AI operators</h2>
           <p className="section-sub section-reveal">
-            Teams trust AgentOS to keep their agent fleets observable and their knowledge persistent.
+            From the founder who manages 23 AI agents daily — and the community building with us.
           </p>
           <div className="testimonials-grid section-reveal" style={{ transitionDelay: '0.2s' }}>
             {TESTIMONIALS.map((t, i) => (
@@ -631,7 +631,7 @@ export default function LandingPage() {
         <div className="container" style={{ position: 'relative', zIndex: 1 }}>
           <h2 className="section-title section-reveal">Ready to command your AI fleet?</h2>
           <p className="section-sub section-reveal" style={{ margin: '0 auto 32px', transitionDelay: '0.1s' }}>
-            Join 2,400+ engineers using AgentOS to ship AI faster, with full observability and zero knowledge loss.
+            Join the first wave of teams using AgentOS to ship AI faster, with full observability and zero knowledge loss.
           </p>
           <div className="hero-cta section-reveal" style={{ transitionDelay: '0.2s' }}>
             <button className="btn btn-primary btn-lg" onClick={() => navigate('/signup')}>🚀 Get Started Free</button>
