@@ -37,13 +37,8 @@ async def main():
     # Initialize client
     client = StoicOS(api_key=api_key, workspace=args.workspace, debug=True)
 
-    agent_name = "stoic-github-agent"
-    print(f"\n[StoicOS] Registering agent: {agent_name}...")
-    await client.register_agent(
-        name=agent_name,
-        description="Autonomous agent auditing repository pull requests, dependencies, and code compliance.",
-        module="security"
-    )
+    agent_name = "STOICBOT"
+    print(f"\n[StoicOS] Wiring up agent telemetry for: {agent_name}...")
 
     # Decorate sync and async functions to simulate real-world operations
     @client.wrap_agent(name=agent_name)
