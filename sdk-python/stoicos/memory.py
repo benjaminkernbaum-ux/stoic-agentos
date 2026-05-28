@@ -1,14 +1,14 @@
 """
 Three-Tier Memory Client
 
-Tier 1: Working Memory  — per-session mutable JSONB state
-Tier 2: Episodic Memory — time-series events with embeddings
-Tier 3: Semantic Memory — knowledge triplets (subject→relation→object)
+Tier 1: Working Memory  — ephemeral, session-scoped key-value store
+Tier 2: Episodic Memory — time-series events with importance scoring
+Tier 3: Semantic Memory — persistent knowledge triplets (subject->relation->object)
 """
 
 from __future__ import annotations
 
-from typing import Any, Optional, Literal, TYPE_CHECKING
+from typing import Any, Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from stoicos.client import StoicOS
@@ -28,7 +28,7 @@ class Memory:
         key: str,
         value: Any,
         agent_id: str | None = None,
-        expires_in_seconds: int | None = None,
+        ttl_seconds: int | None = None,
     ) -> dict[str, Any] | None:
         """Store or update a working memory entry."""
         return await self._sdk._post("/memory/working", {
@@ -36,33 +36,25 @@ class Memory:
             "key": key,
             "value": value,
             "agent_id": agent_id,
-            "expires_in_seconds": expires_in_seconds,
+            "ttl_seconds": ttl_seconds,
         })
 
     async def get_working(
         self,
-        session_id: str,
+        session_id: str | None = None,
         agent_id: str | None = None,
-        key: str | None = None,
     ) -> list[dict[str, Any]] | None:
-        """Retrieve working memory for a session."""
-        params: dict[str, str] = {"session_id": session_id}
+        """Retrieve working memory entries."""
+        params: dict[str, str] = {}
+        if session_id:
+            params["session_id"] = session_id
         if agent_id:
             params["agent_id"] = agent_id
-        if key:
-            params["key"] = key
         return await self._sdk._get("/memory/working", params)
 
-    async def clear_working(
-        self,
-        session_id: str,
-        agent_id: str | None = None,
-    ) -> dict[str, Any] | None:
-        """Clear all working memory for a session."""
-        params = f"session_id={session_id}"
-        if agent_id:
-            params += f"&agent_id={agent_id}"
-        return await self._sdk._post(f"/memory/working?{params}", method="DELETE")
+    async def delete_working(self, entry_id: str) -> dict[str, Any] | None:
+        """Delete a working memory entry by ID."""
+        return await self._sdk._delete(f"/memory/working/{entry_id}")
 
     # ── Tier 2: Episodic Memory ─────────────────────────
 
@@ -87,25 +79,21 @@ class Memory:
         self,
         agent_id: str | None = None,
         event_type: str | None = None,
-        limit: int = 50,
-        since: str | None = None,
-        until: str | None = None,
+        min_importance: int | None = None,
     ) -> list[dict[str, Any]] | None:
         """List episodic memories with filters."""
-        params: dict[str, str] = {"limit": str(limit)}
+        params: dict[str, str] = {}
         if agent_id:
             params["agent_id"] = agent_id
         if event_type:
             params["event_type"] = event_type
-        if since:
-            params["since"] = since
-        if until:
-            params["until"] = until
+        if min_importance is not None:
+            params["min_importance"] = str(min_importance)
         return await self._sdk._get("/memory/episodic", params)
 
-    async def invalidate_episode(self, episode_id: str) -> dict[str, Any] | None:
-        """Mark an episode as no longer valid."""
-        return await self._sdk._post(f"/memory/episodic/{episode_id}/invalidate", {}, method="PATCH")
+    async def timeline(self) -> dict[str, Any] | None:
+        """Get episodic memory as a timeline grouped by day."""
+        return await self._sdk._get("/memory/episodic/timeline")
 
     # ── Tier 3: Semantic Memory ─────────────────────────
 
@@ -117,7 +105,7 @@ class Memory:
         confidence: float | None = None,
         source_type: str | None = None,
     ) -> dict[str, Any] | None:
-        """Store or strengthen a knowledge triple."""
+        """Store a knowledge triple."""
         return await self._sdk._post("/memory/semantic", {
             "subject": subject,
             "relation": relation,
@@ -130,54 +118,18 @@ class Memory:
         self,
         subject: str | None = None,
         relation: str | None = None,
-        object_: str | None = None,
-        min_confidence: float = 0.0,
-        limit: int = 50,
     ) -> list[dict[str, Any]] | None:
         """Query knowledge triples."""
-        params: dict[str, str] = {
-            "min_confidence": str(min_confidence),
-            "limit": str(limit),
-        }
+        params: dict[str, str] = {}
         if subject:
             params["subject"] = subject
         if relation:
             params["relation"] = relation
-        if object_:
-            params["object"] = object_
         return await self._sdk._get("/memory/semantic", params)
 
     async def delete_triple(self, triple_id: str) -> dict[str, Any] | None:
         """Delete a semantic triple."""
-        return await self._sdk._post(f"/memory/semantic/{triple_id}", method="DELETE")
-
-    # ── Hybrid Recall ───────────────────────────────────
-
-    async def recall(
-        self,
-        query: str,
-        mode: Literal["quick", "standard", "deep"] = "standard",
-        agent_id: str | None = None,
-        session_id: str | None = None,
-        temporal_window: str | None = None,
-        max_results: int = 20,
-    ) -> dict[str, Any] | None:
-        """
-        Fused retrieval across all three memory tiers.
-
-        Args:
-            query: Search query
-            mode: quick (~1.5K tokens) | standard (~3K) | deep (~8K+)
-            temporal_window: e.g. '7d', '24h', '30d'
-        """
-        return await self._sdk._post("/memory/recall", {
-            "query": query,
-            "mode": mode,
-            "agent_id": agent_id,
-            "session_id": session_id,
-            "temporal_window": temporal_window,
-            "max_results": max_results,
-        })
+        return await self._sdk._delete(f"/memory/semantic/{triple_id}")
 
     async def stats(self) -> dict[str, Any] | None:
         """Get memory statistics across all tiers."""

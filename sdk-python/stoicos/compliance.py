@@ -1,18 +1,20 @@
 """
 Compliance & Audit Client
-EU AI Act Article 12 (Logging) + Article 14 (Human Oversight)
+
+Immutable audit trail for all agent decisions.
+Circuit breaker calculates agent health from recent BLOCK verdicts.
 """
 
 from __future__ import annotations
 
-from typing import Any, Literal, TYPE_CHECKING
+from typing import Any, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from stoicos.client import StoicOS
 
 
 class Compliance:
-    """Immutable audit log, SIEM export, and circuit breaker."""
+    """Audit log + circuit breaker status."""
 
     def __init__(self, sdk: StoicOS):
         self._sdk = sdk
@@ -25,26 +27,22 @@ class Compliance:
         action: str,
         agent_id: str | None = None,
         reasoning: str | None = None,
-        context: dict[str, Any] | None = None,
-        policy_version: str | None = None,
         verdict: str = "PROCEED",
         metadata: dict[str, Any] | None = None,
+        policy_version: str = "1.0",
+        context_hash: str | None = None,
     ) -> dict[str, Any] | None:
         """Log an immutable audit event."""
-        return await self._sdk._post("/audit/log", {
+        return await self._sdk._post("/compliance/audit-log", {
             "event_type": event_type,
             "action": action,
             "agent_id": agent_id,
             "reasoning": reasoning,
-            "context": context,
-            "policy_version": policy_version,
             "verdict": verdict,
             "metadata": metadata or {},
+            "policy_version": policy_version,
+            "context_hash": context_hash,
         })
-
-    async def log_batch(self, events: list[dict[str, Any]]) -> dict[str, Any] | None:
-        """Batch-log up to 100 audit events."""
-        return await self._sdk._post("/audit/log/batch", {"events": events})
 
     async def get_events(
         self,
@@ -53,10 +51,9 @@ class Compliance:
         verdict: str | None = None,
         from_date: str | None = None,
         to_date: str | None = None,
-        limit: int = 50,
     ) -> list[dict[str, Any]] | None:
         """Query audit log with filters."""
-        params: dict[str, str] = {"limit": str(limit)}
+        params: dict[str, str] = {}
         if agent_id:
             params["agent_id"] = agent_id
         if event_type:
@@ -67,45 +64,36 @@ class Compliance:
             params["from"] = from_date
         if to_date:
             params["to"] = to_date
-        return await self._sdk._get("/audit/log", params)
+        return await self._sdk._get("/compliance/audit-log", params)
 
-    # ── SIEM Export ─────────────────────────────────────
+    # ── Export ──────────────────────────────────────────
 
     async def export(
         self,
-        from_date: str,
-        to_date: str,
-        format: Literal["json", "ndjson"] = "json",
-        agent_id: str | None = None,
-        event_type: str | None = None,
-    ) -> dict[str, Any] | None:
-        """Export audit trail for compliance tools (Team+ plans)."""
-        params: dict[str, str] = {"from": from_date, "to": to_date, "format": format}
-        if agent_id:
-            params["agent_id"] = agent_id
-        if event_type:
-            params["event_type"] = event_type
-        return await self._sdk._get("/compliance/export", params)
+        from_date: str | None = None,
+        to_date: str | None = None,
+    ) -> list[dict[str, Any]] | None:
+        """Export audit trail as downloadable JSON."""
+        params: dict[str, str] = {}
+        if from_date:
+            params["from"] = from_date
+        if to_date:
+            params["to"] = to_date
+        return await self._sdk._get("/compliance/audit-log/export", params)
 
     # ── Circuit Breaker ─────────────────────────────────
 
-    async def circuit_breaker(
-        self,
-        action: Literal["HALT_ALL", "RESUME_ALL"],
-        reason: str | None = None,
-    ) -> dict[str, Any] | None:
+    async def circuit_breaker(self) -> list[dict[str, Any]] | None:
         """
-        Fleet-wide agent kill switch (EU AI Act Article 14).
+        Get circuit breaker status for all agents (read-only).
 
-        Args:
-            action: HALT_ALL stops all agents, RESUME_ALL restarts them
-            reason: Human-readable reason for the action
+        Returns a list of agents with their circuit status:
+        - closed: healthy (0 blocks in last hour)
+        - half-open: degraded (1-5 blocks)
+        - open: unhealthy (>5 blocks)
         """
-        return await self._sdk._post("/compliance/circuit-breaker", {
-            "action": action,
-            "reason": reason,
-        })
+        return await self._sdk._get("/compliance/circuit-breaker")
 
     async def stats(self) -> dict[str, Any] | None:
-        """Get compliance dashboard statistics."""
-        return await self._sdk._get("/compliance/stats")
+        """Get audit log statistics — by type, verdict, and day."""
+        return await self._sdk._get("/compliance/audit-log/stats")

@@ -542,27 +542,26 @@ class MemoryClient {
   // ── Tier 1: Working Memory ──
 
   /** Store/update a working memory entry */
-  async setWorking(sessionId, key, value, { agentId, expiresInSeconds } = {}) {
+  async setWorking(sessionId, key, value, { agentId, ttlSeconds } = {}) {
     return this._sdk._send('/memory/working', {
       session_id: sessionId, key, value,
       agent_id: agentId || null,
-      expires_in_seconds: expiresInSeconds || null,
+      ttl_seconds: ttlSeconds || null,
     });
   }
 
   /** Retrieve working memory for a session */
-  async getWorking(sessionId, { agentId, key } = {}) {
-    const params = new URLSearchParams({ session_id: sessionId });
+  async getWorking({ agentId, sessionId } = {}) {
+    const params = new URLSearchParams();
+    if (sessionId) params.set('session_id', sessionId);
     if (agentId) params.set('agent_id', agentId);
-    if (key) params.set('key', key);
-    return this._sdk._fetch(`/memory/working?${params}`);
+    const qs = params.toString();
+    return this._sdk._fetch(`/memory/working${qs ? `?${qs}` : ''}`);
   }
 
-  /** Clear all working memory for a session */
-  async clearWorking(sessionId, { agentId } = {}) {
-    const params = new URLSearchParams({ session_id: sessionId });
-    if (agentId) params.set('agent_id', agentId);
-    return this._sdk._send(`/memory/working?${params}`, null, 'DELETE');
+  /** Delete a working memory entry by ID */
+  async deleteWorking(id) {
+    return this._sdk._send(`/memory/working/${id}`, null, 'DELETE');
   }
 
   // ── Tier 2: Episodic Memory ──
@@ -577,25 +576,23 @@ class MemoryClient {
   }
 
   /** List episodes with filters */
-  async listEpisodes({ agentId, eventType, limit, since, until } = {}) {
+  async listEpisodes({ agentId, eventType, minImportance } = {}) {
     const params = new URLSearchParams();
     if (agentId) params.set('agent_id', agentId);
     if (eventType) params.set('event_type', eventType);
-    if (limit) params.set('limit', String(limit));
-    if (since) params.set('since', since);
-    if (until) params.set('until', until);
+    if (minImportance) params.set('min_importance', String(minImportance));
     const qs = params.toString();
     return this._sdk._fetch(`/memory/episodic${qs ? `?${qs}` : ''}`);
   }
 
-  /** Mark an episode as no longer valid */
-  async invalidateEpisode(episodeId) {
-    return this._sdk._send(`/memory/episodic/${episodeId}/invalidate`, {}, 'PATCH');
+  /** Get episodic memory as a timeline grouped by day */
+  async timeline() {
+    return this._sdk._fetch('/memory/episodic/timeline');
   }
 
   // ── Tier 3: Semantic Memory ──
 
-  /** Store or strengthen a knowledge triple */
+  /** Store a knowledge triple */
   async storeTriple(subject, relation, object, { confidence, sourceType } = {}) {
     return this._sdk._send('/memory/semantic', {
       subject, relation, object,
@@ -604,13 +601,10 @@ class MemoryClient {
   }
 
   /** Query knowledge triples */
-  async queryTriples({ subject, relation, object, minConfidence, limit } = {}) {
+  async queryTriples({ subject, relation } = {}) {
     const params = new URLSearchParams();
     if (subject) params.set('subject', subject);
     if (relation) params.set('relation', relation);
-    if (object) params.set('object', object);
-    if (minConfidence != null) params.set('min_confidence', String(minConfidence));
-    if (limit) params.set('limit', String(limit));
     const qs = params.toString();
     return this._sdk._fetch(`/memory/semantic${qs ? `?${qs}` : ''}`);
   }
@@ -618,26 +612,6 @@ class MemoryClient {
   /** Delete a semantic triple */
   async deleteTriple(tripleId) {
     return this._sdk._send(`/memory/semantic/${tripleId}`, null, 'DELETE');
-  }
-
-  // ── Hybrid Recall ──
-
-  /**
-   * Fused retrieval across all three memory tiers
-   * @param {string} query - Search query
-   * @param {Object} [options]
-   * @param {'quick'|'standard'|'deep'} [options.mode='standard']
-   * @param {string} [options.agentId]
-   * @param {string} [options.sessionId]
-   * @param {string} [options.temporalWindow] - e.g. '7d', '24h', '30d'
-   * @param {number} [options.maxResults=20]
-   */
-  async recall(query, { mode, agentId, sessionId, temporalWindow, maxResults } = {}) {
-    return this._sdk._send('/memory/recall', {
-      query, mode: mode || 'standard',
-      agent_id: agentId || null, session_id: sessionId || null,
-      temporal_window: temporalWindow || null, max_results: maxResults || 20,
-    });
   }
 
   /** Get memory statistics across all tiers */
@@ -652,58 +626,43 @@ class ComplianceClient {
   constructor(sdk) { this._sdk = sdk; }
 
   /** Log an audit event (immutable) */
-  async logEvent(eventType, action, { agentId, reasoning, context, policyVersion, verdict, metadata } = {}) {
-    return this._sdk._send('/audit/log', {
+  async logEvent(eventType, action, { agentId, reasoning, verdict, metadata, policyVersion, contextHash } = {}) {
+    return this._sdk._send('/compliance/audit-log', {
       event_type: eventType, action,
       agent_id: agentId || null, reasoning: reasoning || null,
-      context: context || null, policy_version: policyVersion || null,
       verdict: verdict || 'PROCEED', metadata: metadata || {},
+      policy_version: policyVersion || '1.0',
+      context_hash: contextHash || null,
     });
   }
 
-  /** Batch-log up to 100 audit events */
-  async logBatch(events) {
-    return this._sdk._send('/audit/log/batch', { events });
-  }
-
   /** Query audit log with filters */
-  async getEvents({ agentId, eventType, verdict, from, to, limit } = {}) {
+  async getEvents({ agentId, eventType, verdict, from, to } = {}) {
     const params = new URLSearchParams();
     if (agentId) params.set('agent_id', agentId);
     if (eventType) params.set('event_type', eventType);
     if (verdict) params.set('verdict', verdict);
     if (from) params.set('from', from);
     if (to) params.set('to', to);
-    if (limit) params.set('limit', String(limit));
     const qs = params.toString();
-    return this._sdk._fetch(`/audit/log${qs ? `?${qs}` : ''}`);
+    return this._sdk._fetch(`/compliance/audit-log${qs ? `?${qs}` : ''}`);
   }
 
-  /**
-   * Export audit trail for compliance (Team+ plans only)
-   * @param {string} from - ISO date
-   * @param {string} to - ISO date
-   * @param {'json'|'ndjson'} [format='json']
-   */
-  async export(from, to, { format, agentId, eventType } = {}) {
-    const params = new URLSearchParams({ from, to });
-    if (format) params.set('format', format);
-    if (agentId) params.set('agent_id', agentId);
-    if (eventType) params.set('event_type', eventType);
-    return this._sdk._fetch(`/compliance/export?${params}`);
+  /** Export audit trail (returns downloadable JSON) */
+  async export({ from, to } = {}) {
+    const params = new URLSearchParams();
+    if (from) params.set('from', from);
+    if (to) params.set('to', to);
+    return this._sdk._fetch(`/compliance/audit-log/export?${params}`);
   }
 
-  /**
-   * Fleet-wide circuit breaker (EU AI Act Article 14)
-   * @param {'HALT_ALL'|'RESUME_ALL'} action
-   * @param {string} [reason]
-   */
-  async circuitBreaker(action, reason) {
-    return this._sdk._send('/compliance/circuit-breaker', { action, reason: reason || null });
+  /** Get circuit breaker status for all agents (read-only) */
+  async circuitBreaker() {
+    return this._sdk._fetch('/compliance/circuit-breaker');
   }
 
-  /** Get compliance dashboard stats */
-  async stats() { return this._sdk._fetch('/compliance/stats'); }
+  /** Get audit log statistics — by type, verdict, and day */
+  async stats() { return this._sdk._fetch('/compliance/audit-log/stats'); }
 }
 
 // ── Convenience exports ──

@@ -1,5 +1,5 @@
 /**
- * @stoic/agentos-sdk — TypeScript Definitions v2.1.0
+ * @stoic/agentos-sdk — TypeScript Definitions v3.0.0
  * Complete type-safe interface for the Stoic AgentOS SDK
  */
 
@@ -285,10 +285,10 @@ export declare class AgentOS {
    */
   ask(question: string, context?: string): Promise<AskResult | null>;
 
-  /** Three-Tier Memory system: working, episodic, semantic + hybrid recall */
+  /** Three-Tier Memory system: working, episodic, semantic */
   readonly memory: MemoryClient;
 
-  /** Compliance & Audit: immutable logs, circuit breaker, SIEM export */
+  /** Compliance & Audit: audit log, circuit breaker status */
   readonly compliance: ComplianceClient;
 
   /** Graceful shutdown — flush all pending data */
@@ -297,73 +297,73 @@ export declare class AgentOS {
 
 // ── Memory Client ──
 
-export interface RecallResult {
-  mode: 'quick' | 'standard' | 'deep';
-  query: string;
-  temporal_window: string | null;
-  working: any[];
-  episodic: any[];
-  semantic: any[];
-  total: number;
+export interface MemoryStats {
+  working: number;
+  episodic: number;
+  semantic: number;
 }
 
-export interface MemoryStats {
-  working_memory: { count: number };
-  episodic_memory: { count: number };
-  semantic_memory: { count: number };
-  total: number;
+export interface TimelineDay {
+  date: string;
+  memories: any[];
+  count: number;
+}
+
+export interface TimelineResult {
+  days: TimelineDay[];
 }
 
 export declare class MemoryClient {
   /** Store/update a working memory entry */
-  setWorking(sessionId: string, key: string, value: any, options?: { agentId?: string; expiresInSeconds?: number }): Promise<any>;
-  /** Retrieve working memory for a session */
-  getWorking(sessionId: string, options?: { agentId?: string; key?: string }): Promise<any[] | null>;
-  /** Clear all working memory for a session */
-  clearWorking(sessionId: string, options?: { agentId?: string }): Promise<any>;
-  /** Record a timestamped episode with auto-embedding */
+  setWorking(sessionId: string, key: string, value: any, options?: { agentId?: string; ttlSeconds?: number }): Promise<any>;
+  /** Retrieve working memory entries */
+  getWorking(options?: { agentId?: string; sessionId?: string }): Promise<any[] | null>;
+  /** Delete a working memory entry by ID */
+  deleteWorking(id: string): Promise<any>;
+  /** Record a timestamped episode */
   recordEpisode(content: string, options?: { eventType?: string; importance?: number; agentId?: string; metadata?: Record<string, unknown> }): Promise<any>;
   /** List episodes with filters */
-  listEpisodes(options?: { agentId?: string; eventType?: string; limit?: number; since?: string; until?: string }): Promise<any[] | null>;
-  /** Mark an episode as no longer valid */
-  invalidateEpisode(episodeId: string): Promise<any>;
-  /** Store or strengthen a knowledge triple */
+  listEpisodes(options?: { agentId?: string; eventType?: string; minImportance?: number }): Promise<any[] | null>;
+  /** Get episodic memory as a timeline grouped by day */
+  timeline(): Promise<TimelineResult | null>;
+  /** Store a knowledge triple */
   storeTriple(subject: string, relation: string, object: string, options?: { confidence?: number; sourceType?: string }): Promise<any>;
   /** Query knowledge triples */
-  queryTriples(options?: { subject?: string; relation?: string; object?: string; minConfidence?: number; limit?: number }): Promise<any[] | null>;
+  queryTriples(options?: { subject?: string; relation?: string }): Promise<any[] | null>;
   /** Delete a semantic triple */
   deleteTriple(tripleId: string): Promise<any>;
-  /** Fused retrieval across all three memory tiers */
-  recall(query: string, options?: { mode?: 'quick' | 'standard' | 'deep'; agentId?: string; sessionId?: string; temporalWindow?: string; maxResults?: number }): Promise<RecallResult | null>;
   /** Get memory statistics across all tiers */
   stats(): Promise<MemoryStats | null>;
 }
 
 // ── Compliance Client ──
 
-export interface ComplianceStats {
-  total_events: number;
-  last_24h: number;
-  last_7d: number;
-  halts: number;
-  escalations: number;
-  circuit_breaker_available: boolean;
-  siem_export_available: boolean;
+export interface AuditLogStats {
+  total: number;
+  by_type: Record<string, number>;
+  by_verdict: Record<string, number>;
+  by_day: Record<string, number>;
+}
+
+export interface CircuitBreakerStatus {
+  agent_id: string;
+  agent_name: string;
+  agent_status: string;
+  circuit_status: 'open' | 'half-open' | 'closed';
+  blocks_last_hour: number;
 }
 
 export declare class ComplianceClient {
   /** Log an immutable audit event */
-  logEvent(eventType: string, action: string, options?: { agentId?: string; reasoning?: string; context?: any; policyVersion?: string; verdict?: string; metadata?: Record<string, unknown> }): Promise<any>;
-  /** Batch-log up to 100 audit events */
-  logBatch(events: Array<{ event_type: string; action: string; [key: string]: any }>): Promise<any>;
+  logEvent(eventType: string, action: string, options?: { agentId?: string; reasoning?: string; verdict?: string; metadata?: Record<string, unknown>; policyVersion?: string; contextHash?: string }): Promise<any>;
   /** Query audit log with filters */
-  getEvents(options?: { agentId?: string; eventType?: string; verdict?: string; from?: string; to?: string; limit?: number }): Promise<any[] | null>;
-  /** Export audit trail for compliance (Team+ plans) */
-  export(from: string, to: string, options?: { format?: 'json' | 'ndjson'; agentId?: string; eventType?: string }): Promise<any>;
-  /** Fleet-wide circuit breaker (EU AI Act Article 14) */
-  circuitBreaker(action: 'HALT_ALL' | 'RESUME_ALL', reason?: string): Promise<any>;
-  /** Get compliance dashboard stats */
-  stats(): Promise<ComplianceStats | null>;
+  getEvents(options?: { agentId?: string; eventType?: string; verdict?: string; from?: string; to?: string }): Promise<any[] | null>;
+  /** Export audit trail as downloadable JSON */
+  export(options?: { from?: string; to?: string }): Promise<any>;
+  /** Get circuit breaker status for all agents (read-only) */
+  circuitBreaker(): Promise<CircuitBreakerStatus[]>;
+  /** Get audit log statistics */
+  stats(): Promise<AuditLogStats | null>;
 }
 
 /** Create an AgentOS instance (convenience function) */
