@@ -30,6 +30,9 @@ export const CMD_ITEMS = [
   { id: 'commandcenter', icon: '🎛️', name: 'Command Center', desc: 'Full ecosystem command center',  tab: 'commandcenter' },
   { id: 'traces',    icon: '📈', name: 'Go to Traces',       desc: 'LLM call tracing and costs',     tab: 'traces' },
   { id: 'workflows', icon: '🔗', name: 'Go to Workflows',    desc: 'Agent execution workflows',      tab: 'workflows' },
+  { id: 'memory',    icon: '🧠', name: 'Go to Memory',       desc: 'Three-tier memory system',        tab: 'memory' },
+  { id: 'compliance',icon: '🛡️', name: 'Go to Compliance',   desc: 'Audit log and circuit breakers',  tab: 'compliance' },
+  { id: 'teamhq',   icon: '🏢', name: 'Go to Team HQ',      desc: 'Team management and collaboration', tab: 'teamhq' },
 ];
 
 export const TAB_TITLES = {
@@ -40,6 +43,9 @@ export const TAB_TITLES = {
   graph:      'Knowledge Graph',
   traces:     'Agent Traces',
   workflows:  'Workflows',
+  memory:     'Memory',
+  compliance: 'Compliance',
+  teamhq:     'Team HQ',
   settings:   'Settings',
   commandcenter: 'Command Center',
 };

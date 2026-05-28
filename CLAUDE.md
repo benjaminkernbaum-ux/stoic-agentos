@@ -147,6 +147,27 @@ stoic-agentos/
 | GET | `/chat/suggestions` | Suggested prompts for empty state |
 | **Webhooks** |||
 | POST | `/webhooks/git` | Git commit capture (uses api_key in body) |
+| **Memory (Three-Tier)** |||
+| GET | `/memory/stats` | Counts per tier {working, episodic, semantic} |
+| GET | `/memory/working` | List working memory (?agent_id, ?session_id) |
+| POST | `/memory/working` | Upsert working memory {session_id, key, value, ttl_seconds?} |
+| DELETE | `/memory/working/:id` | Delete working memory entry |
+| GET | `/memory/episodic` | List episodic memories (?agent_id, ?event_type, ?min_importance) |
+| POST | `/memory/episodic` | Create episodic memory {content, event_type, importance} |
+| GET | `/memory/episodic/timeline` | Episodic memories grouped by day |
+| GET | `/memory/semantic` | List semantic triplets (?subject, ?relation) |
+| POST | `/memory/semantic` | Create triplet {subject, relation, object, confidence?} |
+| DELETE | `/memory/semantic/:id` | Delete semantic triplet |
+| **Compliance** |||
+| GET | `/compliance/audit-log` | List audit entries (?event_type, ?verdict, ?from, ?to) |
+| POST | `/compliance/audit-log` | Create audit entry {event_type, action, verdict?} |
+| GET | `/compliance/audit-log/stats` | Aggregate stats by type, verdict, day |
+| GET | `/compliance/audit-log/export` | SIEM-compatible JSON export (?from, ?to) |
+| GET | `/compliance/circuit-breaker` | Circuit breaker status per agent |
+| **Reflection** |||
+| POST | `/reflection/run` | AI-powered episodic→semantic extraction (Claude Haiku) |
+| POST | `/reflection/decay` | Time-based memory decay across all tiers |
+| GET | `/reflection/status` | Last reflection and decay timestamps |
 
 ### Plan Limits
 
@@ -198,8 +219,12 @@ The API caches decrypted keys in-process for 5 min to avoid an RPC per Claude ca
 2. `api/supabase/migration_002_anthropic_keys.sql` — adds `anthropic_key_last4`, `anthropic_usage` table
 3. `api/supabase/migration_003_vault_anthropic_keys.sql` — moves keys into Supabase Vault, drops plaintext column, adds `set/get/clear_org_anthropic_key()` RPCs
 4. `api/migrations/005_hot_cache.sql` — adds `hot_cache`, `hot_cache_updated_at`, `hot_cache_stale` columns to organizations + `mark_hot_cache_stale()` trigger on observations
+5. `api/migrations/006_performance_indexes.sql` — indexes for common query patterns across all route tables
+6. `api/migrations/007_relax_module_constraint.sql` — relaxes module constraint for flexible observation types
+7. `api/migrations/008_three_tier_memory.sql` — working_memory, episodic_memory, semantic_memory tables + immutable audit_log with RLS
+8. `api/migrations/009_vault_anthropic_keys.sql` — BYOK vault RPC functions (get/set/delete org Anthropic key)
 
-**Deploy order is not load-bearing.** If the API is deployed before migration_003 runs, BYOK gracefully degrades: read paths silently fall back to the platform `ANTHROPIC_API_KEY`, write paths (`POST/DELETE /api-keys/anthropic`) return `503` with a clear "migration pending" message, and the API logs `⚠️  Vault BYOK PENDING — run migration_003_vault_anthropic_keys.sql` at boot. Once the migration runs, the next call detects it and BYOK activates automatically.
+**Deploy order is not load-bearing.** If the API is deployed before migrations run, all new features gracefully degrade: memory/compliance/reflection routes return empty arrays, BYOK falls back to the platform `ANTHROPIC_API_KEY`, and the API logs warnings at boot. Once migrations run, features activate automatically.
 
 ### Hot Cache (LLM Wiki pattern)
 
