@@ -16,4 +16,4 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 });
 
 // API base URL for the backend
-export const API_BASE = import.meta.env.VITE_API_URL || 'https://stoic-agentos-api-production.up.railway.app';
+export const API_BASE = import.meta.env.VITE_API_URL || 'https://agent-ops-production.up.railway.app';

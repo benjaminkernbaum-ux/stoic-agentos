@@ -67,6 +67,7 @@ app.use(cors({
     'https://stoicagentos.com',
     'https://stoic-agentos.vercel.app',
     'https://stoic-agentos-benjaminkernbaum-uxs-projects.vercel.app',
+    'https://agent-ops-production.up.railway.app',
     process.env.NODE_ENV === 'development' && 'http://localhost:5173',
   ].filter(Boolean) as string[],
   credentials: true,

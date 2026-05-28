@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './DocsPage.css';
 
-const API_BASE = 'https://stoic-agentos-api-production.up.railway.app';
+const API_BASE = 'https://agent-ops-production.up.railway.app';
 
 const SECTIONS = [
   { id: 'getting-started', icon: '🚀', label: 'Getting Started', group: 'Overview' },

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../../lib/supabase';
 
-const API = import.meta.env.VITE_API_URL || 'https://stoic-agentos-api-production.up.railway.app';
+const API = import.meta.env.VITE_API_URL || 'https://agent-ops-production.up.railway.app';
 
 function importanceBadge(imp) {
   if (imp >= 9) return { color: '#ef4444', label: 'Critical' };
