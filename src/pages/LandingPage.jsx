@@ -253,26 +253,6 @@ function LiveDashboardPreview() {
 }
 
 /* ═══════════════════════════════════════════
-   TESTIMONIAL CARD
-   ═══════════════════════════════════════════ */
-function TestimonialCard({ testimonial }) {
-  return (
-    <div className="testimonial-card">
-      <div className="testimonial-quote">&ldquo;{testimonial.quote}&rdquo;</div>
-      <div className="testimonial-author">
-        <div className="testimonial-avatar" style={{ background: testimonial.color }}>
-          {testimonial.avatar}
-        </div>
-        <div>
-          <div className="testimonial-name">{testimonial.name}</div>
-          <div className="testimonial-role">{testimonial.role}, {testimonial.company}</div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ═══════════════════════════════════════════
    LANDING PAGE
    ═══════════════════════════════════════════ */
 export default function LandingPage() {

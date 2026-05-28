@@ -20,7 +20,7 @@ from stoicos.memory import Memory
 from stoicos.compliance import Compliance
 from stoicos.reflection import Reflection
 
-DEFAULT_API_URL = "https://stoic-agentos-api-production.up.railway.app/api/v1"
+DEFAULT_API_URL = "https://api.stoicagentos.com/api/v1"
 
 VALID_TYPES = [
     "note", "decision", "architecture", "deployment", "discovery",
@@ -117,6 +117,117 @@ class StoicOS:
             "module": module,
             "status": "idle",
         })
+
+    async def agent_heartbeat(
+        self,
+        name: str,
+        status: str,
+        description: str = "",
+        module: str = "standalone",
+    ) -> dict[str, Any] | None:
+        """Send a heartbeat to update agent status and run/error counters."""
+        return await self._post("/agents/heartbeat", {
+            "name": name,
+            "status": status,
+            "description": description,
+            "module": module,
+        })
+
+    def wrap_agent(self, name: str):
+        """
+        Decorator to wrap an agent function.
+        Automatically logs: agent_run (start), agent_run (success/error), creates a trace,
+        and updates heartbeats.
+        Supports both async and sync functions.
+        """
+        import functools
+        import time
+
+        def decorator(func):
+            if asyncio.iscoroutinefunction(func):
+                @functools.wraps(func)
+                async def async_wrapper(*args, **kwargs):
+                    start_time = time.time()
+                    await self.capture(
+                        type="agent_run",
+                        title=f"[{name}] Started",
+                        agent=name,
+                        metadata={"event": "start", "args_count": len(args)},
+                    )
+                    await self.agent_heartbeat(name=name, status="running")
+                    try:
+                        result = await func(*args, **kwargs)
+                        duration_ms = int((time.time() - start_time) * 1000)
+                        await self.capture(
+                            type="agent_run",
+                            title=f"[{name}] ✅ Success ({duration_ms}ms)",
+                            agent=name,
+                            metadata={"event": "success", "duration_ms": duration_ms},
+                        )
+                        await self.agent_heartbeat(name=name, status="success")
+                        return result
+                    except Exception as e:
+                        duration_ms = int((time.time() - start_time) * 1000)
+                        import traceback
+                        await self.capture(
+                            type="error",
+                            title=f"[{name}] ❌ Error: {str(e)}",
+                            content=traceback.format_exc(),
+                            agent=name,
+                            metadata={"event": "error", "duration_ms": duration_ms, "error_name": type(e).__name__},
+                        )
+                        await self.agent_heartbeat(name=name, status="error")
+                        raise e
+                return async_wrapper
+            else:
+                @functools.wraps(func)
+                def sync_wrapper(*args, **kwargs):
+                    start_time = time.time()
+
+                    def run_async(coro):
+                        try:
+                            loop = asyncio.get_event_loop()
+                        except RuntimeError:
+                            loop = asyncio.new_event_loop()
+                            asyncio.set_event_loop(loop)
+                        if loop.is_running():
+                            return asyncio.ensure_future(coro)
+                        else:
+                            return loop.run_until_complete(coro)
+
+                    run_async(self.capture(
+                        type="agent_run",
+                        title=f"[{name}] Started",
+                        agent=name,
+                        metadata={"event": "start", "args_count": len(args)},
+                    ))
+                    run_async(self.agent_heartbeat(name=name, status="running"))
+
+                    try:
+                        result = func(*args, **kwargs)
+                        duration_ms = int((time.time() - start_time) * 1000)
+                        run_async(self.capture(
+                            type="agent_run",
+                            title=f"[{name}] ✅ Success ({duration_ms}ms)",
+                            agent=name,
+                            metadata={"event": "success", "duration_ms": duration_ms},
+                        ))
+                        run_async(self.agent_heartbeat(name=name, status="success"))
+                        return result
+                    except Exception as e:
+                        duration_ms = int((time.time() - start_time) * 1000)
+                        import traceback
+                        run_async(self.capture(
+                            type="error",
+                            title=f"[{name}] ❌ Error: {str(e)}",
+                            content=traceback.format_exc(),
+                            agent=name,
+                            metadata={"event": "error", "duration_ms": duration_ms, "error_name": type(e).__name__},
+                        ))
+                        run_async(self.agent_heartbeat(name=name, status="error"))
+                        raise e
+                return sync_wrapper
+        return decorator
 
     # ═══════════════════════════════════
     # STATS & TRACES
