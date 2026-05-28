@@ -248,36 +248,51 @@ export function ChangelogPage() {
 /* ═══════════════════════════════════════ */
 export function PrivacyPage() {
   return (
-    <PageShell title="Privacy Policy" subtitle="Last updated: May 15, 2026">
+    <PageShell title="Privacy Policy" subtitle="Last updated: May 28, 2026">
       <section className="sp-section sp-legal">
         <h2>1. Information We Collect</h2>
-        <p>When you create an account, we collect your email address, name, and authentication credentials. When you use our API, we collect observation data, agent metadata, and workspace configurations that you explicitly send to our endpoints.</p>
-
-        <h2>2. How We Use Your Data</h2>
-        <p>We use your data to provide, maintain, and improve the AgentOS platform. Specifically:</p>
+        <p>We collect information you provide directly when you create an account or use the Service:</p>
         <ul>
-          <li>Authenticate your identity and manage your account</li>
-          <li>Store and display your agent observations, knowledge items, and workspace data</li>
-          <li>Process billing through Stripe (we never store credit card numbers)</li>
-          <li>Send transactional emails related to your account</li>
+          <li><strong>Account information:</strong> Email address, full name, and organization name, collected via Supabase Auth (email/password and Google OAuth).</li>
+          <li><strong>Billing information:</strong> Payment method details (credit/debit card) are collected and processed exclusively by Stripe. Stoic AgentOS never stores your full card number, CVV, or expiration date on our servers.</li>
+          <li><strong>Usage data:</strong> Agent observation payloads, metadata, knowledge items, and workspace configurations you send to our API endpoints.</li>
+          <li><strong>AI interaction data:</strong> Prompts and content you submit through AI-powered features (e.g., agent analysis, knowledge summarization) are processed by Anthropic Claude. We transmit only the minimum data necessary to provide the feature.</li>
+          <li><strong>Technical data:</strong> IP address, browser type, device information, and access timestamps collected automatically when you visit our site.</li>
         </ul>
 
-        <h2>3. Data Storage & Security</h2>
-        <p>Your data is stored in Supabase (PostgreSQL) with Row Level Security (RLS) policies ensuring tenant isolation. All data is encrypted in transit (TLS 1.3) and at rest. API keys are hashed before storage.</p>
-
-        <h2>4. Third-Party Services</h2>
+        <h2>2. How We Use Your Data</h2>
+        <p>We use your data to provide, maintain, and improve the Stoic AgentOS platform. Specifically:</p>
         <ul>
-          <li><strong>Supabase</strong> — Authentication and database hosting</li>
-          <li><strong>Stripe</strong> — Payment processing</li>
+          <li>Authenticate your identity and manage your account via Supabase Auth</li>
+          <li>Store and display your agent observations, knowledge items, and workspace data</li>
+          <li>Process subscription billing and invoicing through Stripe</li>
+          <li>Power AI features using Anthropic Claude (e.g., agent analysis, anomaly detection, natural-language queries)</li>
+          <li>Send transactional emails related to your account (e.g., password resets, billing receipts)</li>
+          <li>Monitor service performance, detect abuse, and improve platform reliability</li>
+        </ul>
+
+        <h2>3. Cookies &amp; Session Management</h2>
+        <p>Stoic AgentOS uses cookies strictly for authentication and session management. When you sign in, a secure, HTTP-only session cookie is set to maintain your authenticated state. We do <strong>not</strong> use advertising cookies, tracking pixels, or third-party analytics cookies. By using the Service, you consent to the use of these essential cookies.</p>
+
+        <h2>4. Data Storage &amp; Security</h2>
+        <p>Your data is stored in Supabase (PostgreSQL), hosted on Amazon Web Services (AWS) infrastructure. We employ the following security measures:</p>
+        <ul>
+          <li>Row Level Security (RLS) policies on every table ensuring complete tenant isolation</li>
+          <li>Encryption in transit via TLS 1.3 for all connections</li>
+          <li>Encryption at rest via AES-256 for all stored data</li>
+          <li>API keys hashed with SHA-256 before storage — we cannot recover your raw key</li>
+          <li>Regular automated backups with point-in-time recovery</li>
+        </ul>
+
+        <h2>5. Third-Party Services</h2>
+        <p>We share data with the following third-party processors only as necessary to operate the Service:</p>
+        <ul>
+          <li><strong>Supabase</strong> (hosted on AWS) — Authentication, database, and file storage</li>
+          <li><strong>Stripe</strong> — Payment processing and subscription management. Stripe's privacy policy: <a href="https://stripe.com/privacy" target="_blank" rel="noreferrer">stripe.com/privacy</a></li>
+          <li><strong>Anthropic</strong> — AI model provider (Claude) for intelligent features. Data sent to Anthropic is not used to train their models. Anthropic's privacy policy: <a href="https://www.anthropic.com/privacy" target="_blank" rel="noreferrer">anthropic.com/privacy</a></li>
           <li><strong>Vercel</strong> — Frontend hosting and CDN</li>
           <li><strong>Railway</strong> — API server hosting</li>
         </ul>
-
-        <h2>5. Data Retention</h2>
-        <p>We retain your data for as long as your account is active. You may request deletion of your account and all associated data at any time by contacting support@stoicagentos.com.</p>
-
-        <h2>6. Your Rights</h2>
-        <p>You have the right to access, correct, export, or delete your personal data. For GDPR, CCPA, or LGPD requests, contact privacy@stoicagentos.com.</p>
 
         <h2>7. Contact</h2>
         <p>For privacy-related inquiries: <strong>privacy@stoicagentos.com</strong></p>

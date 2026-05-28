@@ -25,27 +25,27 @@ const PRICING = [
 ];
 
 const COMPARE = [
-  { feature: 'Agent Fleet Monitoring', us: '✅', crewai: '✅', langfuse: '❌', agentops: '🟡' },
-  { feature: 'Knowledge Brain + Memory', us: '✅', crewai: '❌', langfuse: '🟡', agentops: '🟡' },
-  { feature: 'Knowledge Graph', us: '✅', crewai: '❌', langfuse: '❌', agentops: '❌' },
-  { feature: 'Multi-Repo Workspace', us: '✅', crewai: '❌', langfuse: '❌', agentops: '❌' },
-  { feature: 'Auto-Capture (Git Hooks)', us: '✅', crewai: '❌', langfuse: '🟡', agentops: '🟡' },
-  { feature: 'Brand/Voice Vault', us: '✅', crewai: '❌', langfuse: '❌', agentops: '❌' },
-  { feature: 'Financial AI Agents', us: '🔜', crewai: '❌', langfuse: '❌', agentops: '❌' },
-  { feature: 'Visual Dashboard', us: '✅', crewai: '🟡', langfuse: '✅', agentops: '🟡' },
-  { feature: 'Open-Source Core', us: '✅', crewai: '✅', langfuse: '✅', agentops: '✅' },
+  { feature: 'Agent Fleet Monitoring', us: '✅', langsmith: '✅', langfuse: '✅', agentops: '🟡' },
+  { feature: 'Three-Tier Memory System', us: '✅', langsmith: '❌', langfuse: '❌', agentops: '❌' },
+  { feature: 'Knowledge Graph', us: '✅', langsmith: '❌', langfuse: '❌', agentops: '❌' },
+  { feature: 'Multi-Repo Workspace', us: '✅', langsmith: '❌', langfuse: '❌', agentops: '❌' },
+  { feature: 'Auto-Capture (Git Hooks)', us: '✅', langsmith: '❌', langfuse: '🟡', agentops: '🟡' },
+  { feature: 'Compliance & Audit Log', us: '✅', langsmith: '❌', langfuse: '❌', agentops: '❌' },
+  { feature: 'AI Chat (Claude-Powered)', us: '✅', langsmith: '❌', langfuse: '❌', agentops: '❌' },
+  { feature: 'Visual Dashboard', us: '✅', langsmith: '🟡', langfuse: '✅', agentops: '🟡' },
+  { feature: 'Open-Source Core', us: '✅', langsmith: '❌', langfuse: '✅', agentops: '✅' },
 ];
 
 const ECOSYSTEM = [
   {
     icon: '📊', name: 'StoicCRM Growth', tagline: 'AI-Powered Sales Command Center',
-    desc: '12 autonomous sales agents running lead scoring, outreach sequences, and pipeline analytics. The first fleet built on AgentOS.',
+    desc: 'Autonomous sales agents running lead scoring, outreach sequences, and pipeline analytics. The first fleet built on AgentOS.',
     url: 'https://stoicagentos.com/dashboard', badge: 'Live',
     gradient: 'linear-gradient(135deg, rgba(155,89,255,0.15), rgba(77,124,255,0.08))', border: 'rgba(155,89,255,0.25)',
   },
   {
     icon: '🧠', name: 'Command Center', tagline: 'Second Brain for Agent Fleets',
-    desc: '23 agents, 14 workspaces, knowledge graph, persistent memory engine. The orchestration hub that connects everything.',
+    desc: '26 agents, 5 workspaces, knowledge graph, three-tier memory engine, compliance audit. The orchestration hub that connects everything.',
     url: 'https://stoicagentos.com/dashboard', badge: 'Live',
     gradient: 'linear-gradient(135deg, rgba(0,212,255,0.15), rgba(0,230,138,0.08))', border: 'rgba(0,212,255,0.25)',
   },
@@ -79,50 +79,46 @@ os.<span class="fn">capture</span>({
   agent: <span class="str">'content-writer'</span>,
 });`;
 
-/* ─── TESTIMONIALS DATA ─── */
-const TESTIMONIALS = [
+/* ─── WHY I BUILT THIS ─── */
+const FOUNDER_STORY = [
   {
-    name: 'Benjamin K.',
-    role: 'Founder & Lead Developer',
-    company: 'Stoic AgentOS',
-    avatar: 'BK',
+    icon: '🚀',
     color: '#9b59ff',
-    quote: 'I built AgentOS because I was managing 23 AI agents across 14 workspaces with zero visibility. Now every decision, error, and deployment is captured automatically. This is the tool I wished existed.',
+    title: 'The Origin',
+    text: 'I was managing 26 AI agents across 5 workspaces — content writers, code reviewers, data pipelines — with zero visibility into what they were doing, deciding, or breaking.',
   },
   {
-    name: 'Early Adopter',
-    role: 'Beta Program',
-    company: 'Invite Only',
-    avatar: '🚀',
+    icon: '🧠',
     color: '#4d7cff',
-    quote: 'We\'re onboarding our first cohort of teams building with AI agents. Join the beta to get lifetime Pro access and shape the product roadmap.',
+    title: 'The Problem',
+    text: 'Every time an agent made a decision, that context was lost. Every error was a surprise. Switching between dashboards, logs, and Slack alerts was killing my productivity.',
   },
   {
-    name: 'Open Source',
-    role: 'Community',
-    company: 'GitHub',
-    avatar: '⭐',
-    color: '#00d4ff',
-    quote: 'AgentOS is MIT-licensed and open source. Star us on GitHub, contribute, or fork it for your own agent fleet. Built in public, for the community.',
+    icon: '⚡',
+    color: '#00e68a',
+    title: 'The Solution',
+    text: 'So I built AgentOS — one command center for the entire fleet. Three-tier memory, compliance audit logs, Claude-powered AI chat, and a real-time dashboard. Now shipping it for every team that runs AI agents.',
   },
 ];
 
 const LOGOS = [
-  { name: 'OpenAI', width: 'auto' },
-  { name: 'Anthropic', width: 'auto' },
-  { name: 'Vercel', width: 'auto' },
-  { name: 'Supabase', width: 'auto' },
-  { name: 'Railway', width: 'auto' },
-  { name: 'Stripe', width: 'auto' },
+  { name: 'Anthropic', icon: '◆' },
+  { name: 'Claude AI', icon: '🧠' },
+  { name: 'Vercel', icon: '▲' },
+  { name: 'Supabase', icon: '⚡' },
+  { name: 'Railway', icon: '🚂' },
+  { name: 'Stripe', icon: '💳' },
+  { name: 'React 19', icon: '⚛️' },
+  { name: 'TypeScript', icon: '📘' },
 ];
 
-/* ─── SIMULATED DASHBOARD AGENTS ─── */
+/* ─── REAL PRODUCTION AGENTS ─── */
 const DEMO_AGENTS = [
-  { name: 'data-processor', status: 'running', module: 'pipeline', runs: 1243 },
+  { name: 'production-monitor', status: 'running', module: 'infra', runs: 1243 },
   { name: 'content-writer', status: 'running', module: 'content', runs: 892 },
-  { name: 'code-reviewer', status: 'idle', module: 'devtools', runs: 567 },
-  { name: 'invoice-agent', status: 'running', module: 'finance', runs: 334 },
-  { name: 'deploy-watcher', status: 'success', module: 'infra', runs: 201 },
+  { name: 'code-reviewer', status: 'running', module: 'devtools', runs: 567 },
+  { name: 'data-pipeline', status: 'running', module: 'pipeline', runs: 334 },
+  { name: 'customer-support', status: 'running', module: 'support', runs: 201 },
   { name: 'lead-scorer', status: 'running', module: 'sales', runs: 1087 },
 ];
 
@@ -189,7 +185,7 @@ function LiveDashboardPreview() {
         <div className="preview-dot red" />
         <div className="preview-dot yellow" />
         <div className="preview-dot green" />
-        <div className="preview-url">stoic-agentos.vercel.app/dashboard</div>
+        <div className="preview-url">stoicagentos.com/dashboard</div>
       </div>
       <div className="dashboard-preview">
         <div className="dp-sidebar">
@@ -204,17 +200,17 @@ function LiveDashboardPreview() {
           <div className="dp-header">
             <div className="dp-title">Fleet Overview</div>
             <div className="dp-badges">
-              <span className="dp-badge green">4 running</span>
-              <span className="dp-badge purple">6 agents</span>
-              <span className="dp-badge orange">1.2K obs</span>
+              <span className="dp-badge green">5 running</span>
+              <span className="dp-badge purple">26 agents</span>
+              <span className="dp-badge orange">40+ APIs</span>
             </div>
           </div>
           <div className="dp-stats">
             {[
-              { val: '23', label: 'Agents' },
-              { val: '14', label: 'Workspaces' },
-              { val: '1,247', label: 'Observations' },
-              { val: '98.7%', label: 'Uptime' },
+              { val: '26', label: 'Agents' },
+              { val: '5', label: 'Workspaces' },
+              { val: '40+', label: 'API Endpoints' },
+              { val: '12', label: 'Dashboard Tabs' },
             ].map(s => (
               <div key={s.label} className="dp-stat">
                 <div className="dp-stat-val">{s.val}</div>
@@ -384,20 +380,20 @@ export default function LandingPage() {
           </div>
           <div className="hero-metrics animate-in delay-4">
             <div className="hero-metric">
-              <div className="hero-metric-value" style={{ color: 'var(--accent-purple)' }}>Open</div>
-              <div className="hero-metric-label">MIT Licensed</div>
-            </div>
-            <div className="hero-metric">
-              <div className="hero-metric-value" style={{ color: 'var(--accent-cyan)' }}>28,600+</div>
+              <div className="hero-metric-value" style={{ color: 'var(--accent-purple)' }}>21,683</div>
               <div className="hero-metric-label">Lines of Code</div>
             </div>
             <div className="hero-metric">
-              <div className="hero-metric-value" style={{ color: 'var(--accent-green)' }}>18</div>
+              <div className="hero-metric-value" style={{ color: 'var(--accent-cyan)' }}>40+</div>
               <div className="hero-metric-label">API Endpoints</div>
             </div>
             <div className="hero-metric">
-              <div className="hero-metric-value" style={{ color: 'var(--accent-orange)' }}>&lt;65ms</div>
-              <div className="hero-metric-label">p50 Latency</div>
+              <div className="hero-metric-value" style={{ color: 'var(--accent-green)' }}>12</div>
+              <div className="hero-metric-label">Dashboard Tabs</div>
+            </div>
+            <div className="hero-metric">
+              <div className="hero-metric-value" style={{ color: 'var(--accent-orange)' }}>MIT</div>
+              <div className="hero-metric-label">Open Source</div>
             </div>
           </div>
         </div>
@@ -413,10 +409,11 @@ export default function LandingPage() {
          ══════════════════════════════════ */}
       <section className="section social-proof-section" ref={socialRef} style={{ paddingTop: 40, paddingBottom: 40 }}>
         <div className="container section-center">
-          <div className="social-proof-label section-reveal">Powered by</div>
+          <div className="social-proof-label section-reveal">Built With</div>
           <div className="logo-bar section-reveal" style={{ transitionDelay: '0.1s' }}>
             {LOGOS.map(logo => (
               <div key={logo.name} className="logo-item">
+                <span className="logo-icon">{logo.icon}</span>
                 <span className="logo-text">{logo.name}</span>
               </div>
             ))}
@@ -445,10 +442,10 @@ export default function LandingPage() {
             <p className="section-sub">Numbers that speak for themselves.</p>
           </div>
           <div className="metrics-grid section-reveal" style={{ transitionDelay: '0.2s' }}>
-            <AnimatedCounter end={12} prefix="< " suffix="ms" color="#00f0ff" label="Response Latency" />
-            <AnimatedCounter end={99} suffix=".99%" color="#00ff88" label="Uptime" />
-            <AnimatedCounter end={10} suffix="M+" color="#ff00aa" label="Agents Orchestrated" />
-            <AnimatedCounter end="∞" color="#ffaa00" label="Scalability" />
+            <AnimatedCounter end={26} suffix="" color="#00f0ff" label="Production Agents" />
+            <AnimatedCounter end={40} prefix="" suffix="+" color="#00ff88" label="API Endpoints" />
+            <AnimatedCounter end={21683} suffix="" color="#ff00aa" label="Lines of Code" />
+            <AnimatedCounter end={12} suffix="" color="#ffaa00" label="Dashboard Tabs" />
           </div>
         </div>
       </section>
@@ -496,6 +493,45 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ══════════════════════════════════
+           HOW IT WORKS — 3 Steps
+         ══════════════════════════════════ */}
+      <section className="section" style={{ background: 'var(--bg-deep)' }}>
+        <div className="container section-center">
+          <div className="section-label section-reveal">🛠️ GET STARTED</div>
+          <h2 className="section-title section-reveal">Up and running in 3 minutes</h2>
+          <p className="section-sub section-reveal">No complex setup. No infrastructure to manage.</p>
+          <div className="how-it-works-grid section-reveal" style={{ transitionDelay: '0.2s' }}>
+            <div className="how-step">
+              <div className="how-step-number">1</div>
+              <div className="how-step-icon">📦</div>
+              <h3>Install the SDK</h3>
+              <code style={{ fontSize: '0.8rem', padding: '6px 12px', borderRadius: 6, background: 'rgba(155,89,255,0.1)', border: '1px solid rgba(155,89,255,0.2)', color: '#d4a5ff' }}>npm install @stoic/agentos-sdk</code>
+              <p>One dependency. Works with any JavaScript/TypeScript agent framework.</p>
+            </div>
+            <div className="how-step-arrow section-reveal" style={{ transitionDelay: '0.3s' }}>→</div>
+            <div className="how-step">
+              <div className="how-step-number">2</div>
+              <div className="how-step-icon">🔌</div>
+              <h3>Wrap Your Agents</h3>
+              <code style={{ fontSize: '0.8rem', padding: '6px 12px', borderRadius: 6, background: 'rgba(0,212,255,0.1)', border: '1px solid rgba(0,212,255,0.2)', color: '#80e8ff' }}>os.wrapAgent('my-agent', fn)</code>
+              <p>3 lines of code. Auto-captures runs, errors, decisions, and heartbeats.</p>
+            </div>
+            <div className="how-step-arrow section-reveal" style={{ transitionDelay: '0.4s' }}>→</div>
+            <div className="how-step">
+              <div className="how-step-number">3</div>
+              <div className="how-step-icon">🎯</div>
+              <h3>See Everything</h3>
+              <code style={{ fontSize: '0.8rem', padding: '6px 12px', borderRadius: 6, background: 'rgba(0,230,138,0.1)', border: '1px solid rgba(0,230,138,0.2)', color: '#80ffbb' }}>stoicagentos.com/dashboard</code>
+              <p>Real-time fleet monitoring, AI-powered insights, and knowledge persistence — live.</p>
+            </div>
+          </div>
+          <div className="section-reveal" style={{ transitionDelay: '0.5s', marginTop: 40, textAlign: 'center' }}>
+            <button className="btn btn-primary btn-lg" onClick={() => navigate('/signup')}>🚀 Start Free — No Credit Card</button>
+          </div>
+        </div>
+      </section>
+
       {/* ── SDK ── */}
       <section className="section" id="sdk" style={{ background: 'var(--bg-deep)' }} ref={sdkRef}>
         <div className="container">
@@ -532,7 +568,7 @@ export default function LandingPage() {
                 <tr>
                   <th>Feature</th>
                   <th className="us">⚡ AgentOS</th>
-                  <th>CrewAI</th>
+                  <th>LangSmith</th>
                   <th>Langfuse</th>
                   <th>AgentOps</th>
                 </tr>
@@ -542,7 +578,7 @@ export default function LandingPage() {
                   <tr key={i}>
                     <td>{row.feature}</td>
                     <td className="us">{row.us}</td>
-                    <td>{row.crewai}</td>
+                    <td>{row.langsmith}</td>
                     <td>{row.langfuse}</td>
                     <td>{row.agentops}</td>
                   </tr>
@@ -558,15 +594,29 @@ export default function LandingPage() {
          ══════════════════════════════════ */}
       <section className="section" style={{ background: 'var(--bg-deep)' }} ref={testimonialsRef}>
         <div className="container section-center">
-          <div className="section-label section-reveal">💬 FROM THE BUILDER</div>
-          <h2 className="section-title section-reveal">Built by an AI operator, for AI operators</h2>
+          <div className="section-label section-reveal">🧭 WHY I BUILT THIS</div>
+          <h2 className="section-title section-reveal">From 26 agents with zero visibility to a command center</h2>
           <p className="section-sub section-reveal">
-            From the founder who manages 23 AI agents daily — and the community building with us.
+            Built by a founder who runs AI agents in production every day.
           </p>
           <div className="testimonials-grid section-reveal" style={{ transitionDelay: '0.2s' }}>
-            {TESTIMONIALS.map((t, i) => (
-              <TestimonialCard key={i} testimonial={t} />
+            {FOUNDER_STORY.map((s, i) => (
+              <div key={i} className="testimonial-card" style={{ borderTop: `3px solid ${s.color}` }}>
+                <div style={{ fontSize: '2rem', marginBottom: 12 }}>{s.icon}</div>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#fff', marginBottom: 8 }}>{s.title}</h3>
+                <p style={{ fontSize: '0.9rem', lineHeight: 1.7, opacity: 0.8 }}>{s.text}</p>
+              </div>
             ))}
+          </div>
+          {/* Beta CTA */}
+          <div className="section-reveal" style={{ transitionDelay: '0.4s', marginTop: 40, textAlign: 'center' }}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 12, padding: '14px 28px', borderRadius: 12, background: 'rgba(155,89,255,0.1)', border: '1px solid rgba(155,89,255,0.3)' }}>
+              <span style={{ fontSize: '1.4rem' }}>🎯</span>
+              <span style={{ fontSize: '0.95rem', color: 'rgba(255,255,255,0.9)' }}>
+                <strong>Early access open</strong> — Join the beta and get lifetime Pro access
+              </span>
+              <button className="btn btn-primary btn-sm" onClick={() => navigate('/signup')} style={{ marginLeft: 8 }}>Join Beta</button>
+            </div>
           </div>
         </div>
       </section>
