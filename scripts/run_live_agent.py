@@ -40,6 +40,22 @@ async def main():
     agent_name = "STOICBOT"
     print(f"\n[StoicOS] Wiring up agent telemetry for: {agent_name}...")
 
+    # Dynamically resolve agent UUID from platform
+    print("[StoicOS] Resolving agent UUID dynamically...")
+    agents = await client._get("/agents")
+    agent_id = None
+    if agents:
+        for a in agents:
+            if a.get("name") == agent_name:
+                agent_id = a.get("id")
+                break
+    
+    if agent_id:
+        print(f"  - Resolved '{agent_name}' to UUID: {agent_id}")
+    else:
+        print(f"  - Warning: Could not find registered UUID for '{agent_name}' in database. Using name fallback.")
+        agent_id = agent_name
+
     # Decorate sync and async functions to simulate real-world operations
     @client.wrap_agent(name=agent_name)
     async def audit_pull_request(pr_id: int, files_changed: list[str]):
@@ -51,7 +67,7 @@ async def main():
             session_id=session_id,
             key="audit_state",
             value="in_progress",
-            agent_id=agent_name,
+            agent_id=agent_id,
             ttl_seconds=300
         )
         
@@ -62,7 +78,7 @@ async def main():
         await client.compliance.log_event(
             event_type="security_check",
             action="git.scan_dependencies",
-            agent_id=agent_name,
+            agent_id=agent_id,
             reasoning=f"Verifying third-party dependencies in PR #{pr_id} package.json.",
             verdict="PROCEED",
             metadata={"files_count": len(files_changed)}
@@ -73,7 +89,7 @@ async def main():
                 content=f"Scanned {filename} in PR #{pr_id} for critical patterns.",
                 event_type="audit",
                 importance=4,
-                agent_id=agent_name
+                agent_id=agent_id
             )
 
         # 2. Record episodic achievement in Tier 2
@@ -81,7 +97,7 @@ async def main():
             content=f"Successfully completed vulnerability scan for PR #{pr_id}.",
             event_type="achievement",
             importance=8,
-            agent_id=agent_name,
+            agent_id=agent_id,
             metadata={"vulnerabilities_found": 0}
         )
 
@@ -99,7 +115,7 @@ async def main():
             session_id=session_id,
             key="audit_state",
             value="completed",
-            agent_id=agent_name,
+            agent_id=agent_id,
             ttl_seconds=60
         )
         
