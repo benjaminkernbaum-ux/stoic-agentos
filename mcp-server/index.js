@@ -19,6 +19,12 @@
  *   agentos_memory_timeline — Episodic memory timeline by day
  *   agentos_memory_store_triple — Store semantic knowledge triple
  *   agentos_memory_query_triples — Query knowledge graph
+ *   agentos_memory_get_working — Get working memory entries
+ *   agentos_memory_set_working — Store/update working memory
+ *   agentos_memory_delete_working — Delete working memory entry
+ *   agentos_reflection_run  — Claude-powered knowledge extraction
+ *   agentos_reflection_decay — Memory cleanup/decay
+ *   agentos_reflection_status — Last reflection/decay timestamps
  *   agentos_audit_log       — Log audit event
  *   agentos_circuit_breaker — Circuit breaker status (read-only)
  *   agentos_compliance_stats — Audit log statistics
@@ -531,6 +537,91 @@ server.tool(
 );
 
 // ════════════════════════════════════════
+// TOOLS: Working Memory
+// ════════════════════════════════════════
+
+server.tool(
+  'agentos_memory_get_working',
+  'Get working memory entries — ephemeral session-scoped key-value state',
+  {
+    session_id: z.string().optional().describe('Filter by session ID'),
+    agent_id: z.string().optional().describe('Filter by agent UUID'),
+  },
+  async ({ session_id, agent_id }) => {
+    const params = new URLSearchParams();
+    if (session_id) params.set('session_id', session_id);
+    if (agent_id) params.set('agent_id', agent_id);
+    const qs = params.toString();
+    const { status, data } = await apiCall('GET', `/memory/working${qs ? `?${qs}` : ''}`);
+    return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+  }
+);
+
+server.tool(
+  'agentos_memory_set_working',
+  'Store or update a working memory entry — ephemeral key-value for a session',
+  {
+    session_id: z.string().describe('Session ID to scope the memory to'),
+    key: z.string().describe('Key name (e.g. "current_task", "user_context")'),
+    value: z.any().describe('Value to store (any JSON)'),
+    agent_id: z.string().optional().describe('Agent UUID'),
+    ttl_seconds: z.number().optional().describe('Time-to-live in seconds (auto-expires)'),
+  },
+  async ({ session_id, key, value, agent_id, ttl_seconds }) => {
+    const { status, data } = await apiCall('POST', '/memory/working', {
+      session_id, key, value, agent_id, ttl_seconds,
+    });
+    return { content: [{ type: 'text', text: JSON.stringify({ http_status: status, ...data }, null, 2) }] };
+  }
+);
+
+server.tool(
+  'agentos_memory_delete_working',
+  'Delete a working memory entry by ID',
+  {
+    id: z.string().describe('Working memory entry UUID to delete'),
+  },
+  async ({ id }) => {
+    const { status, data } = await apiCall('DELETE', `/memory/working/${id}`);
+    return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+  }
+);
+
+// ════════════════════════════════════════
+// TOOLS: Reflection
+// ════════════════════════════════════════
+
+server.tool(
+  'agentos_reflection_run',
+  'Trigger Claude-powered reflection — extract knowledge triples from recent episodic memories into semantic memory',
+  {},
+  async () => {
+    const { status, data } = await apiCall('POST', '/reflection/run', {});
+    return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+  }
+);
+
+server.tool(
+  'agentos_reflection_decay',
+  'Trigger memory decay — clean up expired working memory, reduce importance of old episodes, reduce confidence of stale triples',
+  {},
+  async () => {
+    const { status, data } = await apiCall('POST', '/reflection/decay', {});
+    return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+  }
+);
+
+server.tool(
+  'agentos_reflection_status',
+  'Get last reflection and decay timestamps',
+  {},
+  async () => {
+    const { status, data } = await apiCall('GET', '/reflection/status');
+    return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+  }
+);
+
+// ════════════════════════════════════════
 // TOOLS: Compliance & Audit
 // ════════════════════════════════════════
 
@@ -592,23 +683,24 @@ server.resource(
 - **API**: Express.js → Railway (stoic-agentos-api-production.up.railway.app)
 - **Database**: Supabase (viiagdhtzbvkfhcjqrlz)
 - **Billing**: Stripe (Pro $29/mo, Team $79/mo)
-- **SDK**: npm @stoic/agentos-sdk (CLI + JS client)
+- **SDK**: npm @stoic/agentos-sdk (CLI + JS client) + Python SDK (stoicos)
 
 ## Key Tables
 organizations, org_members, agents, observations, workspaces, knowledge_items, api_keys,
-working_memory, episodic_memory (pgvector), semantic_memory, audit_log (immutable)
+working_memory, episodic_memory, semantic_memory, audit_log (immutable)
 
 ## Memory System (Three-Tier)
-- Tier 1: Working Memory — per-session mutable JSONB state
-- Tier 2: Episodic Memory — time-series events with pgvector(384) embeddings
-- Tier 3: Semantic Memory — knowledge triples (subject → relation → object)
-- Hybrid Recall: quick/standard/deep modes across all tiers
-- Reflection: Claude Haiku auto-extracts knowledge from episodes
+- Tier 1: Working Memory — ephemeral, session-scoped key-value store with TTL
+- Tier 2: Episodic Memory — time-series events with importance scoring
+- Tier 3: Semantic Memory — persistent knowledge triples (subject → relation → object)
+- Timeline: episodic memories grouped by day for review
+- Reflection: Claude-powered episodic→semantic extraction (POST /reflection/run)
+- Decay: time-based cleanup of expired/stale memories (POST /reflection/decay)
 
-## Compliance (EU AI Act Ready)
-- Immutable audit log with SHA-256 context hashing
-- Circuit breaker (HALT_ALL / RESUME_ALL)
-- SIEM export (JSON + NDJSON for Splunk/Datadog)
+## Compliance
+- Immutable audit log (event_type, action, verdict, reasoning)
+- Circuit breaker — read-only agent health status from BLOCK verdicts
+- Export — downloadable JSON audit trail
 
 ## Observation Types
 file_edit, command, decision, error, discovery, architecture, dependency, config, deployment, note, git_commit

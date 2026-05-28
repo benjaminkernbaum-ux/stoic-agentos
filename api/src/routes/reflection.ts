@@ -12,14 +12,11 @@ import { authenticate } from '../middleware/auth.js';
 import { supabase } from '../middleware/db.js';
 import { complete, hasAnthropic } from '../lib/anthropic.js';
 import type { AuthenticatedRequest } from '../types.js';
+import { isTableMissing } from '../lib/utils.js';
 
 const router = Router();
 const V = 'v1';
 
-function isTableMissing(error: { message?: string; code?: string }): boolean {
-  const msg = (error.message || '').toLowerCase();
-  return msg.includes('does not exist') || error.code === '42P01';
-}
 
 // ── Reflection: episodic -> semantic extraction via Claude ──
 router.post(`/api/${V}/reflection/run`, authenticate, async (req: AuthenticatedRequest, res: Response) => {

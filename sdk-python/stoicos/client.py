@@ -18,6 +18,7 @@ import httpx
 from stoicos.errors import AgentOSError, AuthError, RateLimitError
 from stoicos.memory import Memory
 from stoicos.compliance import Compliance
+from stoicos.reflection import Reflection
 
 DEFAULT_API_URL = "https://stoic-agentos-api-production.up.railway.app/api/v1"
 
@@ -55,6 +56,7 @@ class StoicOS:
         )
         self._memory: Memory | None = None
         self._compliance: Compliance | None = None
+        self._reflection: Reflection | None = None
 
     async def __aenter__(self) -> StoicOS:
         return self
@@ -159,6 +161,17 @@ class StoicOS:
         if not self._compliance:
             self._compliance = Compliance(self)
         return self._compliance
+
+    # ═══════════════════════════════════
+    # REFLECTION
+    # ═══════════════════════════════════
+
+    @property
+    def reflection(self) -> Reflection:
+        """Access the reflection and memory decay system."""
+        if not self._reflection:
+            self._reflection = Reflection(self)
+        return self._reflection
 
     # ═══════════════════════════════════
     # LIFECYCLE

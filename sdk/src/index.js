@@ -432,6 +432,16 @@ export class AgentOS {
     return this._compliance;
   }
 
+  // ═══════════════════════════════════
+  // REFLECTION (v3.0)
+  // ═══════════════════════════════════
+
+  /** @type {ReflectionClient} */
+  get reflection() {
+    if (!this._reflection) this._reflection = new ReflectionClient(this);
+    return this._reflection;
+  }
+
   /**
    * Graceful shutdown — flush all pending data
    */
@@ -663,6 +673,35 @@ class ComplianceClient {
 
   /** Get audit log statistics — by type, verdict, and day */
   async stats() { return this._sdk._fetch('/compliance/audit-log/stats'); }
+}
+
+// ═══════════════════════════════════════════════
+// REFLECTION CLIENT — AI Knowledge Extraction
+// ═══════════════════════════════════════════════
+
+class ReflectionClient {
+  constructor(sdk) { this._sdk = sdk; }
+
+  /**
+   * Run Claude-powered reflection — extract semantic triples from recent episodes.
+   * Requires Anthropic API key configured on the org.
+   */
+  async run() {
+    return this._sdk._send('/reflection/run', {});
+  }
+
+  /**
+   * Trigger memory decay cycle:
+   * - Delete expired working memory (TTL)
+   * - Reduce importance of episodes older than 30 days
+   * - Reduce confidence of semantic triples older than 60 days
+   */
+  async decay() {
+    return this._sdk._send('/reflection/decay', {});
+  }
+
+  /** Get timestamps of last reflection run and last decay cycle */
+  async status() { return this._sdk._fetch('/reflection/status'); }
 }
 
 // ── Convenience exports ──

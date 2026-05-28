@@ -291,6 +291,9 @@ export declare class AgentOS {
   /** Compliance & Audit: audit log, circuit breaker status */
   readonly compliance: ComplianceClient;
 
+  /** Reflection: AI knowledge extraction + memory decay */
+  readonly reflection: ReflectionClient;
+
   /** Graceful shutdown — flush all pending data */
   shutdown(): Promise<void>;
 }
@@ -390,6 +393,35 @@ export declare class Trace {
   constructor(sdk: AgentOS, name: string, options?: { agent?: string; metadata?: Record<string, unknown> });
   addSpan(span: Partial<Span>): void;
   end(status?: 'success' | 'error'): Promise<any>;
+}
+
+// ── Reflection Client ──
+
+export interface ReflectionRunResult {
+  triplets_extracted: number;
+  episodes_processed: number;
+  model?: string;
+  hint?: string;
+}
+
+export interface ReflectionDecayResult {
+  working_expired: number;
+  episodic_decayed: number;
+  semantic_decayed: number;
+}
+
+export interface ReflectionStatus {
+  last_reflection: { created_at: string; metadata: Record<string, unknown> } | null;
+  last_decay: { created_at: string; metadata: Record<string, unknown> } | null;
+}
+
+export declare class ReflectionClient {
+  /** Run Claude-powered reflection — extract semantic triples from recent episodes */
+  run(): Promise<ReflectionRunResult | null>;
+  /** Trigger memory decay cycle */
+  decay(): Promise<ReflectionDecayResult | null>;
+  /** Get timestamps of last reflection and decay */
+  status(): Promise<ReflectionStatus | null>;
 }
 
 export default AgentOS;

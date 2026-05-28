@@ -102,7 +102,7 @@ app.use(graphRoutes);
 app.use(insightRoutes);
 app.use(chatRoutes);       // AI Chat Assistant
 app.use(memoryRoutes);     // Three-Tier Memory (Working/Episodic/Semantic)
-app.use(complianceRoutes); // Audit Log + Circuit Breaker + SIEM Export
+app.use(complianceRoutes); // Audit Log + Circuit Breaker
 app.use(reflectionRoutes); // Reflection Worker + Memory Decay
 
 // ── 404 handler ──

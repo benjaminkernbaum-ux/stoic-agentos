@@ -1,13 +1,16 @@
 /**
- * Stoic AgentOS — Cron Worker
+ * Stoic AgentOS — Cron Worker (v3 — API-Delegated)
  * Scheduled tasks for memory maintenance and knowledge extraction.
+ *
+ * Instead of duplicating logic, this worker calls the API endpoints:
+ *   POST /api/v1/reflection/decay  — memory cleanup
+ *   POST /api/v1/reflection/run    — Claude-powered knowledge extraction
  *
  * Runs as a separate process or triggered via Railway's cron service.
  *
  * Jobs:
- *   1. Memory Decay — clean up expired working memory (every 6h)
+ *   1. Memory Decay — clean up expired/stale working memory (every 6h)
  *   2. Reflection   — extract semantic triples from recent episodes (daily)
- *   3. Stats Sync   — refresh materialized metrics (every 15m)
  *
  * Usage:
  *   node --import=tsx api/src/cron/worker.ts             # Run all due jobs
@@ -15,23 +18,17 @@
  *   node --import=tsx api/src/cron/worker.ts --job=reflect
  *
  * Environment:
- *   CRON_MODE=true      — Enable cron logging
- *   ANTHROPIC_API_KEY   — Required for reflection job
+ *   CRON_API_KEY       — API key with org access (required)
+ *   AGENTOS_API_URL    — API base URL (default: production)
+ *   ANTHROPIC_API_KEY  — Required for reflection job (set on the org)
  */
 
 import { createClient } from '@supabase/supabase-js';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || '';
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY || '';
-const API_URL = process.env.AGENTOS_API_URL || 'https://stoic-agentos-api-production.up.railway.app';
-
-if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
-  console.error('❌ SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required');
-  process.exit(1);
-}
-
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+const CRON_API_KEY = process.env.CRON_API_KEY || '';
+const API_URL = (process.env.AGENTOS_API_URL || 'https://stoic-agentos-api-production.up.railway.app').replace(/\/$/, '');
 
 function log(job: string, ...args: unknown[]) {
   const ts = new Date().toISOString().slice(11, 19);
@@ -39,11 +36,62 @@ function log(job: string, ...args: unknown[]) {
 }
 
 // ═══════════════════════════════════════════
+// API-Delegated Calls
+// ═══════════════════════════════════════════
+
+/**
+ * Call the API's reflection endpoints.
+ * If CRON_API_KEY is set, we use the API layer (preferred — single source of truth).
+ * If not, we fall back to raw Supabase for the decay job only.
+ */
+async function callApi(endpoint: string, method = 'POST'): Promise<Record<string, unknown> | null> {
+  if (!CRON_API_KEY) {
+    log('api', `⚠️ No CRON_API_KEY — falling back to raw Supabase for decay only`);
+    return null;
+  }
+
+  try {
+    const res = await fetch(`${API_URL}/api/v1${endpoint}`, {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${CRON_API_KEY}`,
+      },
+    });
+
+    if (!res.ok) {
+      log('api', `❌ ${method} ${endpoint} returned ${res.status}: ${await res.text()}`);
+      return null;
+    }
+
+    return await res.json() as Record<string, unknown>;
+  } catch (err) {
+    log('api', `❌ ${method} ${endpoint} error:`, (err as Error).message);
+    return null;
+  }
+}
+
+// ═══════════════════════════════════════════
 // JOB 1: Memory Decay
 // ═══════════════════════════════════════════
 
-async function runDecay(): Promise<number> {
+async function runDecay(): Promise<Record<string, unknown>> {
   log('decay', 'Starting memory decay...');
+
+  // Prefer API delegation
+  const apiResult = await callApi('/reflection/decay');
+  if (apiResult) {
+    log('decay', `✅ API decay: W:${apiResult.working_expired} E:${apiResult.episodic_decayed} S:${apiResult.semantic_decayed}`);
+    return apiResult;
+  }
+
+  // Fallback: raw Supabase (only if no API key)
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
+    log('decay', '❌ No CRON_API_KEY and no SUPABASE credentials — skipping');
+    return { working_expired: 0, error: 'no credentials' };
+  }
+
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
   // 1. Delete expired working memory (past TTL)
   const { data: expired, error: expErr } = await supabase
@@ -53,9 +101,7 @@ async function runDecay(): Promise<number> {
     .lt('expires_at', new Date().toISOString())
     .select('id');
 
-  if (expErr) {
-    log('decay', '❌ Error deleting expired:', expErr.message);
-  }
+  if (expErr) log('decay', '❌ Error deleting expired:', expErr.message);
 
   // 2. Delete stale working memory (>72h without TTL)
   const cutoff = new Date(Date.now() - 72 * 3600000).toISOString();
@@ -66,154 +112,40 @@ async function runDecay(): Promise<number> {
     .lt('created_at', cutoff)
     .select('id');
 
-  if (staleErr) {
-    log('decay', '❌ Error deleting stale:', staleErr.message);
-  }
+  if (staleErr) log('decay', '❌ Error deleting stale:', staleErr.message);
 
-  const totalRemoved = (expired?.length || 0) + (stale?.length || 0);
-  log('decay', `✅ Removed ${expired?.length || 0} expired, ${stale?.length || 0} stale (${totalRemoved} total)`);
-  return totalRemoved;
+  const result = {
+    working_expired: (expired?.length || 0) + (stale?.length || 0),
+    episodic_decayed: 0,
+    semantic_decayed: 0,
+  };
+
+  log('decay', `✅ Fallback decay: ${result.working_expired} entries cleaned`);
+  return result;
 }
 
 // ═══════════════════════════════════════════
-// JOB 2: Reflection (per-org)
+// JOB 2: Reflection (API-Delegated)
 // ═══════════════════════════════════════════
 
-async function runReflection(): Promise<number> {
+async function runReflection(): Promise<Record<string, unknown>> {
   log('reflect', 'Starting reflection pass...');
 
-  if (!ANTHROPIC_KEY) {
-    log('reflect', '⚠️ ANTHROPIC_API_KEY not set — skipping reflection');
-    return 0;
+  if (!CRON_API_KEY) {
+    log('reflect', '⚠️ No CRON_API_KEY — reflection requires API delegation, skipping');
+    log('reflect', '   Set CRON_API_KEY to an API key with org access');
+    return { triplets_extracted: 0, error: 'no api key' };
   }
 
-  // Get all orgs with recent episodic memories
-  const since = new Date(Date.now() - 24 * 3600000).toISOString();
-  const { data: orgs } = await supabase
-    .from('episodic_memory')
-    .select('org_id')
-    .gte('created_at', since)
-    .limit(100);
-
-  if (!orgs || orgs.length === 0) {
-    log('reflect', 'No orgs with recent episodes — skipping');
-    return 0;
+  // Note: The API's /reflection/run endpoint handles per-org scoping via the
+  // API key's org_id. For multi-org reflection, run with each org's key.
+  const result = await callApi('/reflection/run');
+  if (result) {
+    log('reflect', `✅ Reflection: ${result.triplets_extracted} triples from ${result.episodes_processed} episodes`);
+    return result;
   }
 
-  // Deduplicate org_ids
-  const uniqueOrgIds = [...new Set(orgs.map(o => o.org_id))];
-  log('reflect', `Found ${uniqueOrgIds.length} orgs with recent episodes`);
-
-  let totalTriples = 0;
-
-  for (const orgId of uniqueOrgIds) {
-    try {
-      // Get recent episodes for this org
-      const { data: episodes } = await supabase
-        .from('episodic_memory')
-        .select('id, content, event_type, importance, metadata')
-        .eq('org_id', orgId)
-        .or('valid_to.is.null,valid_to.gt.' + new Date().toISOString())
-        .gte('created_at', since)
-        .order('importance', { ascending: false })
-        .limit(30);
-
-      if (!episodes || episodes.length < 3) continue; // Need minimum data
-
-      // Get existing triples for dedup
-      const { data: existing } = await supabase
-        .from('semantic_memory')
-        .select('subject, relation, object')
-        .eq('org_id', orgId)
-        .order('confidence', { ascending: false })
-        .limit(30);
-
-      const existingContext = (existing || [])
-        .map(t => `${t.subject} → ${t.relation} → ${t.object}`)
-        .join('\n');
-
-      const episodeText = episodes
-        .map((e, i) => `[${i + 1}] (${e.event_type}, imp:${e.importance}) ${e.content}`)
-        .join('\n');
-
-      // Call Claude Haiku
-      const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'x-api-key': ANTHROPIC_KEY,
-          'content-type': 'application/json',
-          'anthropic-version': '2023-06-01',
-        },
-        body: JSON.stringify({
-          model: 'claude-haiku-4-5',
-          max_tokens: 1024,
-          messages: [{
-            role: 'user',
-            content: `Extract knowledge triples from these agent events. Return only a JSON array.
-Existing knowledge:\n${existingContext || '(none)'}
-Episodes:\n${episodeText}
-Return: [{"subject":"...","relation":"uses|depends_on|deployed_to|configured_with|prefers","object":"...","confidence":0.0-1.0,"source_type":"reflection"}]
-Max 10 triples. Only durable facts, not transient events. JSON only.`,
-          }],
-        }),
-      });
-
-      if (!claudeRes.ok) {
-        log('reflect', `⚠️ Claude error for org ${orgId.slice(0, 8)}: ${claudeRes.status}`);
-        continue;
-      }
-
-      const claudeData = await claudeRes.json() as { content: Array<{ text: string }> };
-      const responseText = claudeData.content?.[0]?.text || '[]';
-
-      let triples: Array<{ subject: string; relation: string; object: string; confidence: number; source_type: string }> = [];
-      try {
-        const jsonMatch = responseText.match(/\[[\s\S]*\]/);
-        if (jsonMatch) triples = JSON.parse(jsonMatch[0]);
-      } catch {
-        log('reflect', `⚠️ Parse error for org ${orgId.slice(0, 8)}`);
-        continue;
-      }
-
-      // Store triples
-      for (const t of triples.slice(0, 10)) {
-        if (!t.subject || !t.relation || !t.object) continue;
-
-        const { data: ex } = await supabase
-          .from('semantic_memory')
-          .select('id, confidence')
-          .eq('org_id', orgId)
-          .eq('subject', t.subject)
-          .eq('relation', t.relation)
-          .eq('object', t.object)
-          .single();
-
-        if (ex) {
-          await supabase.from('semantic_memory')
-            .update({ confidence: Math.min(1.0, Math.max(ex.confidence, t.confidence || 0.7)), updated_at: new Date().toISOString() })
-            .eq('id', ex.id);
-        } else {
-          await supabase.from('semantic_memory').insert({
-            org_id: orgId,
-            subject: t.subject,
-            relation: t.relation,
-            object: t.object,
-            confidence: t.confidence || 0.7,
-            source_type: 'reflection',
-            source_episodes: episodes.map(e => e.id),
-          });
-          totalTriples++;
-        }
-      }
-
-      log('reflect', `✅ Org ${orgId.slice(0, 8)}: ${triples.length} triples processed`);
-    } catch (err) {
-      log('reflect', `❌ Org ${orgId.slice(0, 8)} error:`, (err as Error).message);
-    }
-  }
-
-  log('reflect', `✅ Reflection complete: ${totalTriples} new triples across ${uniqueOrgIds.length} orgs`);
-  return totalTriples;
+  return { triplets_extracted: 0, error: 'api call failed' };
 }
 
 // ═══════════════════════════════════════════
@@ -225,8 +157,9 @@ async function main() {
   const specificJob = jobArg ? jobArg.split('=')[1] : null;
 
   console.log('═══════════════════════════════════════');
-  console.log('  Stoic AgentOS — Cron Worker');
+  console.log('  Stoic AgentOS — Cron Worker (v3)');
   console.log(`  ${new Date().toISOString()}`);
+  console.log(`  Mode: ${CRON_API_KEY ? 'API-delegated ✅' : 'Supabase fallback ⚠️'}`);
   console.log('═══════════════════════════════════════');
 
   const results: Record<string, unknown> = {};

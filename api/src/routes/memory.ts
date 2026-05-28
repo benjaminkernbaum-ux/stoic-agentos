@@ -11,14 +11,11 @@ import type { Response } from 'express';
 import { authenticate } from '../middleware/auth.js';
 import { supabase } from '../middleware/db.js';
 import type { AuthenticatedRequest } from '../types.js';
+import { isTableMissing } from '../lib/utils.js';
 
 const router = Router();
 const V = 'v1';
 
-function isTableMissing(error: { message?: string; code?: string }): boolean {
-  const msg = (error.message || '').toLowerCase();
-  return msg.includes('does not exist') || error.code === '42P01';
-}
 
 // ── MEMORY STATS ──
 router.get(`/api/${V}/memory/stats`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
