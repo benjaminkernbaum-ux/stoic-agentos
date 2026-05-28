@@ -1,5 +1,5 @@
 {
-  "name": "@stoic/agentos-sdk",
+  "name": "stoic-agentos-sdk",
   "version": "3.0.0",
   "description": "Official SDK for Stoic AgentOS — AI Agent Operations Platform. Auto-instrument OpenAI & Anthropic calls. Monitor, orchestrate, and persist knowledge across your AI agent fleet.",
   "main": "src/index.js",

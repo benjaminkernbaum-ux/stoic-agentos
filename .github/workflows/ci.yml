@@ -128,6 +128,7 @@ jobs:
           PGPASSWORD: postgres
         run: |
           echo "══ Validating SQL migration files ══"
+          psql -h localhost -U postgres -d test_migrations -c "CREATE ROLE service_role; CREATE ROLE authenticated; CREATE ROLE anon;" || true
           ERRORS=0
           for f in api/supabase/*.sql api/migrations/*.sql; do
             if [ -f "$f" ]; then

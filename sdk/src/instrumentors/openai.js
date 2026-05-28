@@ -191,12 +191,8 @@ function findCreateMethod(OpenAI) {
 }
 
 function _tryRequireOpenAI() {
-  try {
-    // Dynamic import for ESM
-    return null; // Will be called via dynamic import in the main instrument() method
-  } catch {
-    return null;
-  }
+  // Dynamic import for ESM
+  return null; // Will be called via dynamic import in the main instrument() method
 }
 
 /**
