@@ -1,0 +1,1 @@
+"""Ferramentas utilitarias do StoicSentinel."""

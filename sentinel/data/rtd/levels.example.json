@@ -1,0 +1,8 @@
+{
+  "symbol": "WIN",
+  "pdh": 139000,
+  "pdl": 137500,
+  "pdc": 138200,
+  "bias": "unknown",
+  "_comment": "Leia PDH/PDL/PDC do indicador StoicSweep_Levels no Profit e cole aqui. bias = long | short | neutral | unknown (do cruzamento EMA9/EMA21 D1). Copie para levels.json para ativar."
+}

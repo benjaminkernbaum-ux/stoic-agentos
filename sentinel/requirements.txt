@@ -1,0 +1,4 @@
+# StoicSentinel (Python) — sem dependencias obrigatorias (usa apenas a stdlib).
+#
+# Opcional: necessario somente para `python tools/update_m5.py --clipboard`.
+# pyperclip>=1.8

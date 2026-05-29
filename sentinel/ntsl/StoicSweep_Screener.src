@@ -1,0 +1,165 @@
+//==================================================================
+//  StoicSweep_Screener  —  Sweep scanner para o modulo de Screening
+//------------------------------------------------------------------
+//  Versao do detector pensada para o modulo de Screening do Profit.
+//  Avalia a estrutura do sweep (varredura do PDH/PDL com rejeicao) e
+//  atribui uma CONVICCAO (0..100) somando o peso de cada filtro:
+//
+//    estrutura do sweep ... 40   (obrigatorio)
+//    vies diario alinhado . 15
+//    spike de volume ...... 20
+//    pavio dominante ...... 15
+//    RSI no extremo ....... 10
+//
+//  Colunas de resultado (cada Plot vira uma coluna no Screening):
+//    Plot  (1) Direcao    -> +1 compra / -1 venda / 0 nenhum
+//    Plot2 (2) Nivel      -> PDL (compra) ou PDH (venda)
+//    Plot3 (3) Preco      -> fechamento atual
+//    Plot4 (4) Conviccao  -> 0..100
+//
+//  Emite Alert() (som/popup) quando a conviccao >= ConviccaoMinima.
+//
+//  Configurar no Screening: ativo WINFUT, periodicidade M5.
+//  Linguagem: NTSL (Nelogica ProfitChart) - Manual v4.3
+//==================================================================
+
+input
+    ConviccaoMinima(60);    // limiar para disparar Alert()
+    BiasEMACurta(9);
+    BiasEMALonga(21);
+    PeriodoVolume(20);
+    FatorVolume(1.5);
+    PeriodoRSI(9);
+    RSISobrevendido(30.0);
+    RSISobrecomprado(70.0);
+    RazaoPavio(0.5);
+
+var
+    PDH, PDL          : Float;
+    rangeBar          : Float;
+    corpoTopo         : Float;
+    corpoBase         : Float;
+    razaoSup, razaoInf: Float;
+    rsiAtual          : Float;
+    volMedia          : Float;
+    spikeVol          : Boolean;
+
+    kCurta, kLonga    : Float;
+    emaCurtaD1        : Float;
+    emaLongaD1        : Float;
+    biasAlta          : Boolean;
+    biasBaixa         : Boolean;
+    i                 : Integer;
+
+    estruturaVenda    : Boolean;
+    estruturaCompra   : Boolean;
+
+    direcao           : Float;
+    nivel             : Float;
+    conviccao         : Float;
+
+begin
+    //-------------------------------------------------------------
+    // 1) Niveis D-1 e geometria do candle
+    //-------------------------------------------------------------
+    PDH := HighD(1);
+    PDL := LowD(1);
+
+    rangeBar  := High - Low;
+    corpoTopo := Max(Open, Close);
+    corpoBase := Min(Open, Close);
+
+    if (rangeBar > 0) then
+    begin
+        razaoSup := (High - corpoTopo) / rangeBar;
+        razaoInf := (corpoBase - Low)  / rangeBar;
+    end
+    else
+    begin
+        razaoSup := 0;
+        razaoInf := 0;
+    end;
+
+    //-------------------------------------------------------------
+    // 2) Filtros auxiliares
+    //-------------------------------------------------------------
+    volMedia := Media(PeriodoVolume, Volume);
+    spikeVol := Volume > volMedia * FatorVolume;
+    rsiAtual := RSI(PeriodoRSI, 0);
+
+    // Vies diario por EMA sobre fechamentos diarios
+    kCurta := 2.0 / (BiasEMACurta + 1);
+    kLonga := 2.0 / (BiasEMALonga + 1);
+
+    emaCurtaD1 := CloseD(BiasEMACurta);
+    for i := 1 to BiasEMACurta - 1 do
+        emaCurtaD1 := CloseD(BiasEMACurta - i) * kCurta + emaCurtaD1 * (1 - kCurta);
+
+    emaLongaD1 := CloseD(BiasEMALonga);
+    for i := 1 to BiasEMALonga - 1 do
+        emaLongaD1 := CloseD(BiasEMALonga - i) * kLonga + emaLongaD1 * (1 - kLonga);
+
+    biasAlta  := emaCurtaD1 > emaLongaD1;
+    biasBaixa := emaCurtaD1 < emaLongaD1;
+
+    //-------------------------------------------------------------
+    // 3) Estrutura do sweep (obrigatorio)
+    //-------------------------------------------------------------
+    estruturaVenda  := (High > PDH) and (Close < PDH);
+    estruturaCompra := (Low  < PDL) and (Close > PDL);
+
+    //-------------------------------------------------------------
+    // 4) Direcao, nivel e conviccao
+    //-------------------------------------------------------------
+    direcao   := 0;
+    nivel     := 0;
+    conviccao := 0;
+
+    if (estruturaVenda) then
+    begin
+        direcao   := -1;
+        nivel     := PDH;
+        conviccao := 40;
+        if (biasBaixa)                 then conviccao := conviccao + 15;
+        if (spikeVol)                  then conviccao := conviccao + 20;
+        if (razaoSup > RazaoPavio)     then conviccao := conviccao + 15;
+        if (rsiAtual > RSISobrecomprado) then conviccao := conviccao + 10;
+    end
+    else if (estruturaCompra) then
+    begin
+        direcao   := 1;
+        nivel     := PDL;
+        conviccao := 40;
+        if (biasAlta)                  then conviccao := conviccao + 15;
+        if (spikeVol)                  then conviccao := conviccao + 20;
+        if (razaoInf > RazaoPavio)     then conviccao := conviccao + 15;
+        if (rsiAtual < RSISobrevendido) then conviccao := conviccao + 10;
+    end;
+
+    //-------------------------------------------------------------
+    // 5) Colunas de resultado
+    //-------------------------------------------------------------
+    Plot(direcao);      // 1 Direcao
+    Plot2(nivel);       // 2 Nivel
+    Plot3(Close);       // 3 Preco
+    Plot4(conviccao);   // 4 Conviccao
+
+    //-------------------------------------------------------------
+    // 6) Alerta sonoro de alta conviccao
+    //-------------------------------------------------------------
+    if (conviccao >= ConviccaoMinima) then
+    begin
+        if (direcao < 0) then
+        begin
+            Alert(clRed);
+            ConsoleLog("SCREEN SWEEP VENDA conv=" + FloatToString(conviccao, 0) +
+                       " nivel=" + FloatToString(nivel, 0));
+        end
+        else if (direcao > 0) then
+        begin
+            Alert(clLime);
+            ConsoleLog("SCREEN SWEEP COMPRA conv=" + FloatToString(conviccao, 0) +
+                       " nivel=" + FloatToString(nivel, 0));
+        end;
+    end;
+end;

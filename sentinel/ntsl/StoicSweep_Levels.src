@@ -1,0 +1,136 @@
+//==================================================================
+//  StoicSweep_Levels  —  Niveis institucionais para liquidity sweeps
+//------------------------------------------------------------------
+//  Plota no grafico de preco (M5/M15) os niveis que o mercado usa
+//  como pontos de liquidez:
+//    - PDH / PDL / PDC  (maxima / minima / fechamento do dia anterior)
+//    - VWAP diario
+//    - EMA 9 / 21 / 200
+//    - Maxima / Minima da semana (varredura das ultimas N sessoes)
+//
+//  Convencao de cores:
+//    Resistencias .......... vermelho
+//    Suportes .............. verde
+//    VWAP .................. azul
+//    Pivot (PDC) ........... cinza tracejado
+//
+//  Linguagem: NTSL (Nelogica ProfitChart) - Manual v4.3
+//  Carregar como INDICADOR sobre o grafico de preco.
+//==================================================================
+
+input
+    EMACurta(9);          // periodo da EMA curta
+    EMAMedia(21);         // periodo da EMA media
+    EMALonga(200);        // periodo da EMA longa
+    SessoesSemana(5);     // sessoes para a maxima/minima semanal
+    MostrarMedias(true);  // exibir EMAs
+    MostrarVWAP(true);    // exibir VWAP diario
+    MostrarSemanal(true); // exibir maxima/minima da semana
+    MostrarRotulos(true); // exibir rotulos no ultimo candle
+
+var
+    PDH      : Float;     // Previous Day High
+    PDL      : Float;     // Previous Day Low
+    PDC      : Float;     // Previous Day Close
+    vwapD    : Float;
+    ema9     : Float;
+    ema21    : Float;
+    ema200   : Float;
+    WeekHigh : Float;
+    WeekLow  : Float;
+    i        : Integer;
+
+begin
+    //-------------------------------------------------------------
+    // 1) Niveis do dia anterior (D-1)
+    //    HighD(1)/LowD(1)/CloseD(1) = dado de 1 sessao atras.
+    //-------------------------------------------------------------
+    PDH := HighD(1);
+    PDL := LowD(1);
+    PDC := CloseD(1);
+
+    //-------------------------------------------------------------
+    // 2) VWAP diario (periodo 1 = diario) e EMAs do candle atual
+    //-------------------------------------------------------------
+    vwapD  := VWAP(1);
+    ema9   := MediaExp(EMACurta, Close);
+    ema21  := MediaExp(EMAMedia, Close);
+    ema200 := MediaExp(EMALonga, Close);
+
+    //-------------------------------------------------------------
+    // 3) Maxima / minima da semana
+    //    Varre as ultimas SessoesSemana sessoes diarias (D-1..D-N).
+    //-------------------------------------------------------------
+    WeekHigh := HighD(1);
+    WeekLow  := LowD(1);
+    for i := 2 to SessoesSemana do
+    begin
+        WeekHigh := Max(WeekHigh, HighD(i));
+        WeekLow  := Min(WeekLow,  LowD(i));
+    end;
+
+    //-------------------------------------------------------------
+    // 4) Plotagem dos niveis fixos (D-1)
+    //    Plot=1, Plot2=2, Plot3=3 ... (numero usado em SetPlot*)
+    //-------------------------------------------------------------
+    Plot(PDH);                       // 1  resistencia
+    Plot2(PDL);                      // 2  suporte
+    Plot3(PDC);                      // 3  pivot
+
+    SetPlotColor(1, clRed);
+    SetPlotColor(2, clLime);
+    SetPlotColor(3, RGB(170, 170, 170));
+    SetPlotWidth(1, 2);
+    SetPlotWidth(2, 2);
+    SetPlotWidth(3, 1);
+    SetPlotStyle(3, 2);              // pivot tracejado (traco curto)
+
+    //-------------------------------------------------------------
+    // 5) VWAP diario (azul)
+    //-------------------------------------------------------------
+    if (MostrarVWAP) then
+    begin
+        Plot4(vwapD);                // 4
+        SetPlotColor(4, RGB(30, 144, 255));
+        SetPlotWidth(4, 2);
+    end;
+
+    //-------------------------------------------------------------
+    // 6) EMAs
+    //-------------------------------------------------------------
+    if (MostrarMedias) then
+    begin
+        Plot5(ema9);                 // 5
+        Plot6(ema21);                // 6
+        Plot7(ema200);               // 7
+        SetPlotColor(5, clYellow);
+        SetPlotColor(6, RGB(255, 140, 0));   // laranja
+        SetPlotColor(7, clWhite);
+        SetPlotWidth(7, 2);
+    end;
+
+    //-------------------------------------------------------------
+    // 7) Maxima / minima da semana (tracejado)
+    //-------------------------------------------------------------
+    if (MostrarSemanal) then
+    begin
+        Plot8(WeekHigh);             // 8
+        Plot9(WeekLow);              // 9
+        SetPlotColor(8, RGB(150, 0, 0));     // resistencia semanal
+        SetPlotColor(9, RGB(0, 110, 0));     // suporte semanal
+        SetPlotStyle(8, 1);
+        SetPlotStyle(9, 1);
+    end;
+
+    //-------------------------------------------------------------
+    // 8) Rotulos no ultimo candle (Position=3 => no preco indicado)
+    //-------------------------------------------------------------
+    if (MostrarRotulos and LastBarOnChart) then
+    begin
+        PlotText("PDH " + FloatToString(PDH, 0), clRed,  3, 9, PDH);
+        PlotText("PDL " + FloatToString(PDL, 0), clLime, 3, 9, PDL);
+        PlotText("PDC " + FloatToString(PDC, 0), RGB(170, 170, 170), 3, 9, PDC);
+        if (MostrarVWAP) then
+            PlotText("VWAP " + FloatToString(vwapD, 0), RGB(30, 144, 255), 3, 9, vwapD);
+    end;
+end;

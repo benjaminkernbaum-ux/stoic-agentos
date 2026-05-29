@@ -1,0 +1,174 @@
+//==================================================================
+//  StoicSweep_Detector  —  Detector de liquidity sweeps (D-1)
+//------------------------------------------------------------------
+//  Roda tick a tick sobre o grafico de preco e marca os candles que
+//  varrem a liquidez acima da maxima (PDH) ou abaixo da minima (PDL)
+//  do dia anterior e fecham de volta (rejeicao):
+//
+//    SWEEP DE VENDA : pavio ACIMA do PDH e fechamento ABAIXO do PDH
+//    SWEEP DE COMPRA: pavio ABAIXO do PDL e fechamento ACIMA do PDL
+//
+//  Filtros opcionais (todos ligados = sinal de alta conviccao):
+//    - Vies diario (D1) : so alerta a favor do cruzamento EMA9/EMA21
+//                         calculado sobre os fechamentos diarios.
+//    - Volume spike     : Volume > Media(N) * Fator
+//    - RSI              : RSI sobrevendido p/ compra, sobrecomprado p/ venda
+//    - Razao de pavio   : pavio dominante em relacao ao range do candle
+//
+//  Saida: PaintBar + seta (PlotText) + ConsoleLog + Alert opcional.
+//
+//  NOTA SOBRE REPINTAGEM: o candle ao vivo (ultimo) e reavaliado a
+//  cada trade, entao o sinal so e definitivo apos o fechamento da
+//  barra. Barras passadas nao repintam.
+//
+//  Linguagem: NTSL (Nelogica ProfitChart) - Manual v4.3
+//  Carregar como INDICADOR sobre o grafico de preco (M5/M15).
+//==================================================================
+
+input
+    UsarViesD1(true);       // exigir alinhamento com o vies diario
+    BiasEMACurta(9);        // EMA curta sobre fechamentos diarios
+    BiasEMALonga(21);       // EMA longa sobre fechamentos diarios
+
+    UsarVolume(true);       // exigir spike de volume
+    PeriodoVolume(20);      // periodo da media de volume
+    FatorVolume(1.5);       // multiplicador do spike
+
+    UsarRSI(false);         // exigir RSI nos extremos
+    PeriodoRSI(9);
+    RSISobrevendido(30.0);  // gatilho de compra
+    RSISobrecomprado(70.0); // gatilho de venda
+
+    UsarPavio(true);        // exigir pavio dominante
+    RazaoPavio(0.5);        // (pavio / range) minimo
+
+    AlertaSonoro(false);    // emitir Alert() no momento do sweep
+
+var
+    PDH, PDL          : Float;
+    rangeBar          : Float;
+    corpoTopo         : Float;   // Max(Open, Close)
+    corpoBase         : Float;   // Min(Open, Close)
+    pavioSup, pavioInf: Float;
+    razaoSup, razaoInf: Float;
+    rsiAtual          : Float;
+    volMedia          : Float;
+    volOk             : Boolean;
+
+    // vies diario
+    kCurta, kLonga    : Float;
+    emaCurtaD1        : Float;
+    emaLongaD1        : Float;
+    biasAlta          : Boolean;
+    biasBaixa         : Boolean;
+    i                 : Integer;
+
+    // condicoes
+    sweepVenda        : Boolean;
+    sweepCompra       : Boolean;
+
+begin
+    //-------------------------------------------------------------
+    // 1) Niveis do dia anterior
+    //-------------------------------------------------------------
+    PDH := HighD(1);
+    PDL := LowD(1);
+
+    //-------------------------------------------------------------
+    // 2) Geometria do candle
+    //-------------------------------------------------------------
+    rangeBar  := High - Low;
+    corpoTopo := Max(Open, Close);
+    corpoBase := Min(Open, Close);
+    pavioSup  := High - corpoTopo;     // pavio superior
+    pavioInf  := corpoBase - Low;      // pavio inferior
+
+    if (rangeBar > 0) then
+    begin
+        razaoSup := pavioSup / rangeBar;
+        razaoInf := pavioInf / rangeBar;
+    end
+    else
+    begin
+        razaoSup := 0;
+        razaoInf := 0;
+    end;
+
+    //-------------------------------------------------------------
+    // 3) Vies diario (D1): EMA sobre os fechamentos diarios D-1..D-N
+    //    Calculado por recorrencia para nao depender de grafico diario.
+    //-------------------------------------------------------------
+    kCurta := 2.0 / (BiasEMACurta + 1);
+    kLonga := 2.0 / (BiasEMALonga + 1);
+
+    emaCurtaD1 := CloseD(BiasEMACurta);                 // semente (mais antigo)
+    for i := 1 to BiasEMACurta - 1 do
+        emaCurtaD1 := CloseD(BiasEMACurta - i) * kCurta + emaCurtaD1 * (1 - kCurta);
+
+    emaLongaD1 := CloseD(BiasEMALonga);
+    for i := 1 to BiasEMALonga - 1 do
+        emaLongaD1 := CloseD(BiasEMALonga - i) * kLonga + emaLongaD1 * (1 - kLonga);
+
+    biasAlta  := emaCurtaD1 > emaLongaD1;
+    biasBaixa := emaCurtaD1 < emaLongaD1;
+
+    //-------------------------------------------------------------
+    // 4) Filtro de volume
+    //-------------------------------------------------------------
+    volMedia := Media(PeriodoVolume, Volume);
+    volOk    := (not UsarVolume) or (Volume > volMedia * FatorVolume);
+
+    //-------------------------------------------------------------
+    // 5) RSI
+    //-------------------------------------------------------------
+    rsiAtual := RSI(PeriodoRSI, 0);
+
+    //-------------------------------------------------------------
+    // 6) Condicoes de sweep
+    //-------------------------------------------------------------
+    // SWEEP VENDA: varreu o PDH e fechou abaixo
+    sweepVenda := (High > PDH) and (Close < PDH)
+                  and ((not UsarViesD1) or biasBaixa)
+                  and volOk
+                  and ((not UsarPavio) or (razaoSup > RazaoPavio))
+                  and ((not UsarRSI)   or (rsiAtual > RSISobrecomprado));
+
+    // SWEEP COMPRA: varreu o PDL e fechou acima
+    sweepCompra := (Low < PDL) and (Close > PDL)
+                   and ((not UsarViesD1) or biasAlta)
+                   and volOk
+                   and ((not UsarPavio) or (razaoInf > RazaoPavio))
+                   and ((not UsarRSI)   or (rsiAtual < RSISobrevendido));
+
+    //-------------------------------------------------------------
+    // 7) Saida visual + logs
+    //-------------------------------------------------------------
+    if (sweepVenda) then
+    begin
+        PaintBar(clRed);
+        PlotText("v SWEEP VENDA " + FloatToString(PDH, 0), clRed, 2, 10, 0);
+        ConsoleLog("SWEEP VENDA @ PDH=" + FloatToString(PDH, 0) +
+                   " close=" + FloatToString(Close, 0));
+        if (AlertaSonoro) then
+            Alert(clRed);
+    end
+    else if (sweepCompra) then
+    begin
+        PaintBar(clLime);
+        PlotText("^ SWEEP COMPRA " + FloatToString(PDL, 0), clLime, 0, 10, 0);
+        ConsoleLog("SWEEP COMPRA @ PDL=" + FloatToString(PDL, 0) +
+                   " close=" + FloatToString(Close, 0));
+        if (AlertaSonoro) then
+            Alert(clLime);
+    end;
+
+    //-------------------------------------------------------------
+    // 8) Referencia visual dos niveis varridos
+    //-------------------------------------------------------------
+    Plot(PDH);     // 1
+    Plot2(PDL);    // 2
+    SetPlotColor(1, clRed);
+    SetPlotColor(2, clLime);
+    SetPlotStyle(1, 2);
+    SetPlotStyle(2, 2);
+end;
