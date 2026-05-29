@@ -182,8 +182,57 @@ export default function ChatAssistant() {
   const [conversationId, setConversationId] = useState(null);
   const [hasError, setHasError] = useState(null);
   const [activeMode, setActiveMode] = useState('stoic');
+  const [showHistory, setShowHistory] = useState(false);
+  const [chatHistory, setChatHistory] = useState([]);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
+
+  // Load conversation history list
+  const loadHistory = useCallback(async () => {
+    try {
+      const token = await getToken();
+      const res = await fetch(`${API_BASE}/api/v1/chat/history`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setChatHistory(data.conversations || []);
+      }
+    } catch {}
+  }, []);
+
+  // Load a specific conversation
+  const loadConversation = useCallback(async (convId, mode) => {
+    try {
+      const token = await getToken();
+      const res = await fetch(`${API_BASE}/api/v1/chat/${convId}`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setMessages((data.messages || []).map((m, i) => ({
+          ...m,
+          timestamp: Date.now() - (data.messages.length - i) * 60000,
+        })));
+        setConversationId(convId);
+        if (mode) setActiveMode(mode);
+        setShowHistory(false);
+      }
+    } catch {}
+  }, []);
+
+  // Delete a conversation
+  const deleteConversation = useCallback(async (convId) => {
+    try {
+      const token = await getToken();
+      await fetch(`${API_BASE}/api/v1/chat/${convId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      setChatHistory(prev => prev.filter(c => c.conv_id !== convId));
+      if (conversationId === convId) handleNewChat();
+    } catch {}
+  }, [conversationId]);
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -345,6 +394,7 @@ export default function ChatAssistant() {
     setHasError(null);
     setInput('');
     setActiveMode('stoic');
+    setShowHistory(false);
   };
 
   return (
@@ -392,6 +442,16 @@ export default function ChatAssistant() {
               </div>
             </div>
             <div className="stoic-chat-header-actions">
+              <button
+                className={`stoic-chat-header-btn ${showHistory ? 'stoic-chat-header-btn-active' : ''}`}
+                onClick={() => { setShowHistory(v => !v); if (!showHistory) loadHistory(); }}
+                title="Conversation history"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="10" />
+                  <polyline points="12 6 12 12 16 14" />
+                </svg>
+              </button>
               {messages.length > 0 && (
                 <button className="stoic-chat-header-btn" onClick={handleNewChat} title="New conversation">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -406,6 +466,45 @@ export default function ChatAssistant() {
               </button>
             </div>
           </div>
+
+          {/* History Dropdown */}
+          {showHistory && (
+            <div className="stoic-chat-history">
+              <div className="stoic-chat-history-header">
+                <span>Recent Conversations</span>
+                <button className="stoic-chat-history-close" onClick={() => setShowHistory(false)}>×</button>
+              </div>
+              {chatHistory.length === 0 ? (
+                <div className="stoic-chat-history-empty">No conversations yet</div>
+              ) : (
+                chatHistory.map(conv => (
+                  <div key={conv.conv_id} className="stoic-chat-history-item">
+                    <button
+                      className="stoic-chat-history-load"
+                      onClick={() => loadConversation(conv.conv_id, conv.mode)}
+                    >
+                      <div className="stoic-chat-history-title">{conv.title || 'Untitled'}</div>
+                      <div className="stoic-chat-history-meta">
+                        <span className="stoic-chat-history-mode">{conv.mode}</span>
+                        <span>{conv.message_count} msgs</span>
+                        <span>{formatTime(new Date(conv.updated_at).getTime())}</span>
+                      </div>
+                    </button>
+                    <button
+                      className="stoic-chat-history-delete"
+                      onClick={(e) => { e.stopPropagation(); deleteConversation(conv.conv_id); }}
+                      title="Delete conversation"
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                      </svg>
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
 
           {/* Mode Selector */}
           <div className="stoic-chat-modes">
