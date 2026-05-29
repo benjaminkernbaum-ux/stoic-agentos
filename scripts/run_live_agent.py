@@ -122,7 +122,7 @@ async def main():
         return {"status": "clean", "audited_files": len(files_changed)}
 
     @client.wrap_agent(name=agent_name)
-    def deploy_release(version: str):
+    async def deploy_release(version: str):
         print(f"  - Deploying Release {version}...")
         if "beta" in version:
             # Let's trigger a failure to demonstrate error logging and heartbeats!
@@ -143,7 +143,7 @@ async def main():
         # Run 2: Failed agent execution (Error/Failure path)
         print("\n--- Executing Failure Scenario ---")
         try:
-            deploy_release(version="v2.1.0-beta3")
+            await deploy_release(version="v2.1.0-beta3")
         except RuntimeError as e:
             print(f"  - Handled Expected Simulation Error: {e}")
 

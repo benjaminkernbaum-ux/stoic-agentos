@@ -182,49 +182,63 @@ class StoicOS:
             else:
                 @functools.wraps(func)
                 def sync_wrapper(*args, **kwargs):
+                    import concurrent.futures
                     start_time = time.time()
 
-                    def run_async(coro):
+                    def _fire_async(coro):
+                        """Run an async coroutine from sync context, even inside a running loop."""
                         try:
-                            loop = asyncio.get_event_loop()
+                            loop = asyncio.get_running_loop()
                         except RuntimeError:
-                            loop = asyncio.new_event_loop()
-                            asyncio.set_event_loop(loop)
-                        if loop.is_running():
-                            return asyncio.ensure_future(coro)
-                        else:
-                            return loop.run_until_complete(coro)
+                            loop = None
 
-                    run_async(self.capture(
-                        type="agent_run",
-                        title=f"[{name}] Started",
-                        agent=name,
-                        metadata={"event": "start", "args_count": len(args)},
-                    ))
-                    run_async(self.agent_heartbeat(name=name, status="running"))
+                        if loop and loop.is_running():
+                            # Schedule on the existing running loop and wait for result
+                            future = asyncio.run_coroutine_threadsafe(coro, loop)
+                            # Don't block — the coro will run when the loop is free
+                            return None
+                        else:
+                            return asyncio.run(coro)
+
+                    try:
+                        _fire_async(self.capture(
+                            type="agent_run",
+                            title=f"[{name}] Started",
+                            agent=name,
+                            metadata={"event": "start", "args_count": len(args)},
+                        ))
+                        _fire_async(self.agent_heartbeat(name=name, status="running"))
+                    except Exception:
+                        pass  # Don't fail the function if telemetry fails
 
                     try:
                         result = func(*args, **kwargs)
                         duration_ms = int((time.time() - start_time) * 1000)
-                        run_async(self.capture(
-                            type="agent_run",
-                            title=f"[{name}] ✅ Success ({duration_ms}ms)",
-                            agent=name,
-                            metadata={"event": "success", "duration_ms": duration_ms},
-                        ))
-                        run_async(self.agent_heartbeat(name=name, status="success"))
+                        try:
+                            _fire_async(self.capture(
+                                type="agent_run",
+                                title=f"[{name}] ✅ Success ({duration_ms}ms)",
+                                agent=name,
+                                metadata={"event": "success", "duration_ms": duration_ms},
+                            ))
+                            _fire_async(self.agent_heartbeat(name=name, status="success"))
+                        except Exception:
+                            pass
                         return result
                     except Exception as e:
                         duration_ms = int((time.time() - start_time) * 1000)
                         import traceback
-                        run_async(self.capture(
-                            type="error",
-                            title=f"[{name}] ❌ Error: {str(e)}",
-                            content=traceback.format_exc(),
-                            agent=name,
-                            metadata={"event": "error", "duration_ms": duration_ms, "error_name": type(e).__name__},
-                        ))
-                        run_async(self.agent_heartbeat(name=name, status="error"))
+                        try:
+                            _fire_async(self.capture(
+                                type="error",
+                                title=f"[{name}] ❌ Error: {str(e)}",
+                                content=traceback.format_exc(),
+                                agent=name,
+                                metadata={"event": "error", "duration_ms": duration_ms, "error_name": type(e).__name__},
+                            ))
+                            _fire_async(self.agent_heartbeat(name=name, status="error"))
+                        except Exception:
+                            pass
                         raise e
                 return sync_wrapper
         return decorator
