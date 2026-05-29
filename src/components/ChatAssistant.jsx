@@ -4,6 +4,83 @@ import { supabase, API_BASE } from '../lib/supabase';
 // ── Markdown-lite renderer ──
 function renderMarkdown(text) {
   if (!text) return '';
+
+  // ── XML Pre-processing: convert semantic XML to styled HTML ──
+
+  // <interface_spec name="...">...</interface_spec>
+  text = text.replace(
+    /<interface_spec\s+name="([^"]+)">(\s*[\s\S]*?)\s*<\/interface_spec>/gi,
+    (_, name, content) => {
+      const inner = content.trim()
+        .replace(/\n/g, '<br/>')
+        .replace(/```(\w*)\n([\s\S]*?)```/g, '<pre class="stoic-chat-code"><code>$2</code></pre>')
+        .replace(/`([^`]+)`/g, '<code class="stoic-chat-inline-code">$1</code>')
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+      return `<div class="stoic-xml-card stoic-interface-spec"><div class="stoic-xml-card-header"><span class="stoic-xml-card-icon">📐</span><span class="stoic-xml-card-title">${name}</span><span class="stoic-xml-card-badge">Interface Spec</span></div><div class="stoic-xml-card-body">${inner}</div></div>`;
+    }
+  );
+
+  // <metric_grid>...</metric_grid> containing <metric name="..." value="..." trend="..." />
+  text = text.replace(
+    /<metric_grid>([\s\S]*?)<\/metric_grid>/gi,
+    (_, content) => {
+      const metrics = [];
+      content.replace(
+        /<metric\s+name="([^"]+)"\s+value="([^"]+)"\s+trend="([^"]+)"\s*\/>/gi,
+        (__, name, value, trend) => {
+          const isPositive = trend.includes('+') || trend.toLowerCase().includes('growth') || trend.toLowerCase().includes('reduction');
+          const trendClass = isPositive ? 'stoic-metric-trend-up' : 'stoic-metric-trend-neutral';
+          metrics.push(`<div class="stoic-metric-card"><div class="stoic-metric-value">${value}</div><div class="stoic-metric-name">${name}</div><div class="stoic-metric-trend ${trendClass}">${trend}</div></div>`);
+          return '';
+        }
+      );
+      if (metrics.length === 0) return content;
+      return `<div class="stoic-xml-card stoic-metric-grid-card"><div class="stoic-xml-card-header"><span class="stoic-xml-card-icon">📊</span><span class="stoic-xml-card-title">Metrics Dashboard</span></div><div class="stoic-metric-grid">${metrics.join('')}</div></div>`;
+    }
+  );
+
+  // <roi_metrics>...</roi_metrics>
+  text = text.replace(
+    /<roi_metrics>([\s\S]*?)<\/roi_metrics>/gi,
+    (_, content) => {
+      const rows = content.trim().split('\n').filter(l => l.trim()).map(line => {
+        const parts = line.split(':').map(s => s.trim());
+        if (parts.length >= 2) {
+          return `<div class="stoic-roi-row"><span class="stoic-roi-label">${parts[0]}</span><span class="stoic-roi-value">${parts.slice(1).join(':')}</span></div>`;
+        }
+        return `<div class="stoic-roi-row"><span class="stoic-roi-label">${line.trim()}</span></div>`;
+      }).join('');
+      return `<div class="stoic-xml-card stoic-roi-card"><div class="stoic-xml-card-header"><span class="stoic-xml-card-icon">🚀</span><span class="stoic-xml-card-title">ROI Analysis</span><span class="stoic-xml-card-badge">Growth</span></div><div class="stoic-xml-card-body">${rows}</div></div>`;
+    }
+  );
+
+  // <diagnostic_checklist>...</diagnostic_checklist>
+  text = text.replace(
+    /<diagnostic_checklist>([\s\S]*?)<\/diagnostic_checklist>/gi,
+    (_, content) => {
+      const items = content.trim().split('\n').filter(l => l.trim()).map((line, i) => {
+        const cleaned = line.replace(/^\d+\.\s*/, '').trim();
+        return `<div class="stoic-check-item"><span class="stoic-check-num">${i + 1}</span><span class="stoic-check-text">${cleaned}</span></div>`;
+      }).join('');
+      return `<div class="stoic-xml-card stoic-checklist-card"><div class="stoic-xml-card-header"><span class="stoic-xml-card-icon">🔧</span><span class="stoic-xml-card-title">Diagnostic Checklist</span><span class="stoic-xml-card-badge">Support</span></div><div class="stoic-xml-card-body">${items}</div></div>`;
+    }
+  );
+
+  // <prd_document feature="...">...</prd_document>
+  text = text.replace(
+    /<prd_document\s+feature="([^"]+)">(\s*[\s\S]*?)\s*<\/prd_document>/gi,
+    (_, feature, content) => {
+      const inner = content.trim()
+        .replace(/\n/g, '<br/>')
+        .replace(/```(\w*)\n([\s\S]*?)```/g, '<pre class="stoic-chat-code"><code>$2</code></pre>')
+        .replace(/`([^`]+)`/g, '<code class="stoic-chat-inline-code">$1</code>')
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+        .replace(/### (\d+\..*?)(<br\/>)/g, '<h4 class="stoic-chat-h4">$1</h4>');
+      return `<div class="stoic-xml-card stoic-prd-card"><div class="stoic-xml-card-header"><span class="stoic-xml-card-icon">📋</span><span class="stoic-xml-card-title">${feature}</span><span class="stoic-xml-card-badge">PRD</span></div><div class="stoic-xml-card-body">${inner}</div></div>`;
+    }
+  );
+
+  // ── Standard markdown processing (existing) ──
   return text
     // Code blocks
     .replace(/```(\w*)\n([\s\S]*?)```/g, '<pre class="stoic-chat-code"><code>$2</code></pre>')
@@ -38,6 +115,15 @@ const SUGGESTIONS = [
   { icon: '📈', text: 'Show performance insights' },
 ];
 
+const MODE_DEFINITIONS = [
+  { id: 'stoic', label: 'Stoic', icon: '🧘', desc: 'Calm SRE assistant' },
+  { id: 'architect', label: 'Architect', icon: '📐', desc: 'Systems design' },
+  { id: 'analyst', label: 'Analyst', icon: '📊', desc: 'Data analytics' },
+  { id: 'growth', label: 'Growth', icon: '🚀', desc: 'ROI strategy' },
+  { id: 'support', label: 'Support', icon: '🔧', desc: 'Troubleshooting' },
+  { id: 'prd', label: 'PRD', icon: '📋', desc: 'Product specs' },
+];
+
 async function getToken() {
   return (await supabase.auth.getSession()).data.session?.access_token;
 }
@@ -49,6 +135,7 @@ export default function ChatAssistant() {
   const [loading, setLoading] = useState(false);
   const [conversationId, setConversationId] = useState(null);
   const [hasError, setHasError] = useState(null);
+  const [activeMode, setActiveMode] = useState('stoic');
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -94,6 +181,7 @@ export default function ChatAssistant() {
         body: JSON.stringify({
           message: text.trim(),
           conversation_id: conversationId,
+          mode: activeMode,
         }),
       });
 
@@ -136,7 +224,7 @@ export default function ChatAssistant() {
       }]);
     }
     setLoading(false);
-  }, [loading, conversationId]);
+  }, [loading, conversationId, activeMode]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -152,6 +240,7 @@ export default function ChatAssistant() {
     setConversationId(null);
     setHasError(null);
     setInput('');
+    setActiveMode('stoic');
   };
 
   return (
@@ -212,6 +301,21 @@ export default function ChatAssistant() {
                 </svg>
               </button>
             </div>
+          </div>
+
+          {/* Mode Selector */}
+          <div className="stoic-chat-modes">
+            {MODE_DEFINITIONS.map(m => (
+              <button
+                key={m.id}
+                className={`stoic-chat-mode-btn ${activeMode === m.id ? 'stoic-chat-mode-active' : ''}`}
+                onClick={() => setActiveMode(m.id)}
+                title={m.desc}
+              >
+                <span className="stoic-chat-mode-icon">{m.icon}</span>
+                <span className="stoic-chat-mode-label">{m.label}</span>
+              </button>
+            ))}
           </div>
 
           {/* Messages area */}
