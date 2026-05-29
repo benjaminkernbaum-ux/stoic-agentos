@@ -9,7 +9,7 @@ function renderMarkdown(text) {
 
   // <interface_spec name="...">...</interface_spec>
   text = text.replace(
-    /<interface_spec\s+name="([^"]+)">(\s*[\s\S]*?)\s*<\/interface_spec>/gi,
+    /<interface_spec\s+name="([^"]+)">([\s\S]*?)\s*<\/interface_spec>/gi,
     (_, name, content) => {
       const inner = content.trim()
         .replace(/\n/g, '<br/>')
@@ -68,7 +68,7 @@ function renderMarkdown(text) {
 
   // <prd_document feature="...">...</prd_document>
   text = text.replace(
-    /<prd_document\s+feature="([^"]+)">(\s*[\s\S]*?)\s*<\/prd_document>/gi,
+    /<prd_document\s+feature="([^"]+)">([\s\S]*?)\s*<\/prd_document>/gi,
     (_, feature, content) => {
       const inner = content.trim()
         .replace(/\n/g, '<br/>')
@@ -93,6 +93,10 @@ function renderMarkdown(text) {
     // Headers
     .replace(/^### (.+)$/gm, '<h4 class="stoic-chat-h4">$1</h4>')
     .replace(/^## (.+)$/gm, '<h3 class="stoic-chat-h3">$1</h3>')
+    // Ordered lists
+    .replace(/^(\d+)\.\s(.+)$/gm, '<li class="stoic-chat-ol-item" value="$1">$2</li>')
+    // Blockquotes
+    .replace(/^> (.+)$/gm, '<blockquote class="stoic-chat-blockquote">$1</blockquote>')
     // Unordered lists
     .replace(/^- (.+)$/gm, '<li>$1</li>')
     .replace(/(<li>.*<\/li>\n?)+/g, '<ul class="stoic-chat-list">$&</ul>')
@@ -106,14 +110,56 @@ function renderMarkdown(text) {
     .replace(/\n/g, '<br/>');
 }
 
-const SUGGESTIONS = [
-  { icon: '🚀', text: 'How do I get started?' },
-  { icon: '🤖', text: 'Analyze my agent fleet' },
-  { icon: '📊', text: 'Summarize recent activity' },
-  { icon: '⚡', text: 'What should I optimize?' },
-  { icon: '🔧', text: 'Help me debug an issue' },
-  { icon: '📈', text: 'Show performance insights' },
-];
+function formatTime(ts) {
+  if (!ts) return '';
+  const diff = Math.floor((Date.now() - ts) / 1000);
+  if (diff < 10) return 'just now';
+  if (diff < 60) return `${diff}s ago`;
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  return new Date(ts).toLocaleDateString();
+}
+
+const MODE_SUGGESTIONS = {
+  stoic: [
+    { icon: '🚀', text: 'How do I get started with AgentOS?' },
+    { icon: '🤖', text: 'Analyze my agent fleet health' },
+    { icon: '📊', text: 'Summarize recent activity' },
+    { icon: '⚡', text: 'What should I optimize next?' },
+    { icon: '🔧', text: 'Help me debug an agent issue' },
+    { icon: '📈', text: 'Show fleet performance insights' },
+  ],
+  architect: [
+    { icon: '📐', text: 'Design a webhook for agent observations' },
+    { icon: '🏗️', text: 'Review my agent architecture' },
+    { icon: '📋', text: 'Draft an API contract for telemetry' },
+    { icon: '🔄', text: 'Design an event-driven agent topology' },
+  ],
+  analyst: [
+    { icon: '📊', text: 'Analyze fleet activity trends' },
+    { icon: '🔍', text: 'Find anomalies in agent error rates' },
+    { icon: '📉', text: 'Show latency distribution analysis' },
+    { icon: '📈', text: 'Quantify operational efficiency' },
+  ],
+  growth: [
+    { icon: '🚀', text: 'How do we optimize fleet resources?' },
+    { icon: '💰', text: 'Calculate agent ROI metrics' },
+    { icon: '⚡', text: 'Identify velocity bottlenecks' },
+    { icon: '📊', text: 'Audit compute overhead waste' },
+  ],
+  support: [
+    { icon: '🔧', text: 'My agent is failing to start up' },
+    { icon: '🔑', text: 'Help me fix a 401 authentication error' },
+    { icon: '💔', text: 'Agent heartbeat stopped responding' },
+    { icon: '🔌', text: 'Guide me through SDK installation' },
+  ],
+  prd: [
+    { icon: '📋', text: 'Draft a spec for agent error alerts' },
+    { icon: '📝', text: 'Write requirements for a workflow builder' },
+    { icon: '🎯', text: 'Scope a real-time monitoring feature' },
+    { icon: '📐', text: 'Define acceptance criteria for traces' },
+  ],
+};
 
 const MODE_DEFINITIONS = [
   { id: 'stoic', label: 'Stoic', icon: '🧘', desc: 'Calm SRE assistant' },
@@ -172,7 +218,7 @@ export default function ChatAssistant() {
 
     try {
       const token = await getToken();
-      const res = await fetch(`${API_BASE}/api/v1/chat`, {
+      const res = await fetch(`${API_BASE}/api/v1/chat/stream`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -207,14 +253,72 @@ export default function ChatAssistant() {
         return;
       }
 
-      const data = await res.json();
-      setConversationId(data.conversation_id);
+      // Stream the response
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let fullText = '';
+      let metadata = {};
+
+      // Add a placeholder assistant message
       setMessages(prev => [...prev, {
         role: 'assistant',
-        content: data.response,
+        content: '',
         timestamp: Date.now(),
-        model: data.model,
+        isStreaming: true,
       }]);
+
+      let buffer = '';
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || ''; // keep incomplete line in buffer
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const data = line.slice(6);
+          if (data === '[DONE]') continue;
+
+          try {
+            const parsed = JSON.parse(data);
+            if (parsed.type === 'text_delta') {
+              fullText += parsed.text;
+              setMessages(prev => {
+                const updated = [...prev];
+                const lastMsg = updated[updated.length - 1];
+                if (lastMsg && lastMsg.role === 'assistant') {
+                  updated[updated.length - 1] = { ...lastMsg, content: fullText };
+                }
+                return updated;
+              });
+            } else if (parsed.type === 'message_stop') {
+              metadata = parsed;
+            }
+          } catch {}
+        }
+      }
+
+      // Finalize the message with metadata
+      setConversationId(metadata.conversation_id || conversationId);
+      setMessages(prev => {
+        const updated = [...prev];
+        const lastMsg = updated[updated.length - 1];
+        if (lastMsg && lastMsg.role === 'assistant') {
+          updated[updated.length - 1] = {
+            ...lastMsg,
+            content: fullText,
+            isStreaming: false,
+            model: metadata.model,
+            mode: metadata.mode,
+            modeName: metadata.mode_name,
+            usage: metadata.usage,
+          };
+        }
+        return updated;
+      });
+
     } catch (err) {
       setMessages(prev => [...prev, {
         role: 'assistant',
@@ -224,7 +328,7 @@ export default function ChatAssistant() {
       }]);
     }
     setLoading(false);
-  }, [loading, conversationId, activeMode]);
+  }, [loading, conversationId, activeMode, messages]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -283,7 +387,7 @@ export default function ChatAssistant() {
               <div>
                 <div className="stoic-chat-title">Stoic AI</div>
                 <div className="stoic-chat-subtitle">
-                  {loading ? 'Thinking...' : 'Your AI command center'}
+                  {loading ? `Thinking as ${MODE_DEFINITIONS.find(m => m.id === activeMode)?.label || 'Stoic'}...` : MODE_DEFINITIONS.find(m => m.id === activeMode)?.desc || 'Your AI command center'}
                 </div>
               </div>
             </div>
@@ -339,7 +443,7 @@ export default function ChatAssistant() {
                   I have full context on your agents, observations, and knowledge base. Ask me anything.
                 </p>
                 <div className="stoic-chat-suggestions">
-                  {SUGGESTIONS.map((s, i) => (
+                  {(MODE_SUGGESTIONS[activeMode] || MODE_SUGGESTIONS.stoic).map((s, i) => (
                     <button
                       key={i}
                       className="stoic-chat-suggestion"
@@ -361,10 +465,44 @@ export default function ChatAssistant() {
                       </svg>
                     </div>
                   )}
-                  <div
-                    className="stoic-chat-msg-content"
-                    dangerouslySetInnerHTML={{ __html: msg.role === 'assistant' ? renderMarkdown(msg.content) : msg.content }}
-                  />
+                  <div className="stoic-chat-msg-bubble">
+                    <div
+                      className={`stoic-chat-msg-content ${msg.isStreaming ? 'stoic-chat-streaming' : ''}`}
+                      dangerouslySetInnerHTML={{ __html: msg.role === 'assistant' ? renderMarkdown(msg.content) : msg.content.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') }}
+                    />
+                    {msg.role === 'assistant' && !msg.isError && !msg.isStreaming && msg.content && (
+                      <div className="stoic-chat-msg-meta">
+                        <span className="stoic-chat-msg-time">{formatTime(msg.timestamp)}</span>
+                        {msg.modeName && <span className="stoic-chat-msg-mode-badge">{msg.modeName}</span>}
+                        {msg.usage && (
+                          <span className="stoic-chat-msg-tokens">
+                            {(msg.usage.input_tokens || 0) + (msg.usage.output_tokens || 0)} tok
+                          </span>
+                        )}
+                        <button
+                          className="stoic-chat-msg-copy"
+                          onClick={() => { navigator.clipboard.writeText(msg.content); }}
+                          title="Copy response"
+                        >
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <rect x="9" y="9" width="13" height="13" rx="2" />
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                          </svg>
+                        </button>
+                      </div>
+                    )}
+                    {msg.isError && msg.role === 'assistant' && (
+                      <button
+                        className="stoic-chat-msg-retry"
+                        onClick={() => {
+                          const lastUserMsg = messages.filter(m => m.role === 'user').pop();
+                          if (lastUserMsg) sendMessage(lastUserMsg.content);
+                        }}
+                      >
+                        ↻ Retry
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))
             )}
@@ -392,7 +530,7 @@ export default function ChatAssistant() {
               ref={inputRef}
               type="text"
               className="stoic-chat-input"
-              placeholder="Ask Stoic AI anything..."
+              placeholder={`Ask ${MODE_DEFINITIONS.find(m => m.id === activeMode)?.label || 'Stoic AI'} anything...`}
               value={input}
               onChange={e => setInput(e.target.value)}
               disabled={loading}

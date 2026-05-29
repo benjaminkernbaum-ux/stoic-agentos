@@ -1,0 +1,13 @@
+README.md
+pyproject.toml
+stoicos/__init__.py
+stoicos/client.py
+stoicos/compliance.py
+stoicos/errors.py
+stoicos/memory.py
+stoicos/reflection.py
+stoicos.egg-info/PKG-INFO
+stoicos.egg-info/SOURCES.txt
+stoicos.egg-info/dependency_links.txt
+stoicos.egg-info/requires.txt
+stoicos.egg-info/top_level.txt

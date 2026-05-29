@@ -1,0 +1,179 @@
+Metadata-Version: 2.4
+Name: stoicos
+Version: 1.0.0
+Summary: Official Python SDK for Stoic AgentOS — AI Agent Operations Platform
+Author-email: StoicOS Team <hello@stoicagentos.com>
+License: MIT
+Project-URL: Homepage, https://stoicagentos.com
+Project-URL: Repository, https://github.com/benjaminkernbaum-ux/stoic-agentos
+Project-URL: Documentation, https://docs.stoicagentos.com
+Keywords: agentos,agents,ai,llm,observability,memory,compliance
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Topic :: Software Development :: Libraries
+Requires-Python: >=3.9
+Description-Content-Type: text/markdown
+Requires-Dist: httpx>=0.27
+
+# StoicOS — Python SDK 🐍
+
+Official Python SDK for **Stoic AgentOS** — the AI Agent Operations Platform. Monitor, audit, and coordinate your AI agent fleet with real-time telemetry, immutable logs, and three-tier cognitive memory.
+
+[![PyPI Version](https://img.shields.io/pypi/v/stoicos.svg)](https://pypi.org/project/stoicos/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+---
+
+## Features
+
+* **⚡ Real-time Telemetry:** Capture agent decisions, errors, deployments, and command runs instantly.
+* **🤖 Zero-Config Decorator:** Simple `@os.wrap_agent` to trace and heartbeat your agent functions.
+* **🧠 Three-Tier Memory System:**
+  * **Tier 1 (Working):** Session-scoped, ephemeral key-value store with TTL.
+  * **Tier 2 (Episodic):** Time-series database of agent experiences.
+  * **Tier 3 (Semantic):** Persistent knowledge graph structured as subject-relation-object triplets.
+* **🛡️ Immutable Audit Trails:** Immutable compliance logging to monitor agent policies and prevent catastrophic tool use.
+* **✨ AI-Powered Reflection:** Triggers Claude-powered reflection to extract knowledge triplets from raw episodic experiences.
+
+---
+
+## Installation
+
+```bash
+pip install stoicos
+```
+
+---
+
+## Quick Start
+
+Initialize the `StoicOS` client and capture observations:
+
+```python
+import asyncio
+from stoicos import StoicOS
+
+async def main():
+    # Recommended: Set AGENTOS_API_KEY env variable
+    async with StoicOS() as os:
+        await os.capture(
+            type="decision",
+            title="Switched to Claude 3.5 Sonnet",
+            content="Determined code quality requires a stronger model.",
+            agent="coder-agent",
+            metadata={"latency_ms": 340}
+        )
+
+asyncio.run(main())
+```
+
+---
+
+## 🤖 Monitoring & Tracing with `@wrap_agent`
+
+The `@wrap_agent` decorator automatically captures traces, handles run counts, tracks errors with stack traces, and updates agent statuses in your dashboard:
+
+```python
+import asyncio
+from stoicos import StoicOS
+
+os = StoicOS(api_key="sk_live_your_key")
+
+# Works for both asynchronous and synchronous functions
+@os.wrap_agent(name="github-pr-reviewer")
+async def review_pull_request(pr_id: int):
+    # Simulated agent logic
+    await asyncio.sleep(1)
+    if pr_id == 404:
+        raise ValueError("PR not found!")
+    return "LGTM!"
+
+async def main():
+    # Will log start heartbeat, capture success observation, and duration
+    await review_pull_request(101)
+    
+    # Will log error observations and stack traces automatically
+    try:
+        await review_pull_request(404)
+    except ValueError:
+        pass
+    
+    await os.shutdown()
+
+asyncio.run(main())
+```
+
+---
+
+## 🧠 Three-Tier Memory Management
+
+Manage agent state across three specialized tiers:
+
+```python
+async with StoicOS() as os:
+    # 1. Working Memory (Ephemeral key-value with TTL)
+    await os.memory.set_working(
+        session_id="session_xyz",
+        key="user_name",
+        value="Benjamin Kernbaum",
+        ttl_seconds=3600
+    )
+    
+    # 2. Episodic Memory (Time-series log of events)
+    await os.memory.record_episode(
+        content="User requested upgrade to Pro Plan.",
+        event_type="interaction",
+        importance=8,
+        agent_id="sales-assistant"
+    )
+    
+    # 3. Semantic Memory (Subject -> Relation -> Object knowledge graph)
+    await os.memory.store_triple(
+        subject="User",
+        relation="wants_to_upgrade_to",
+        object_="Pro Plan",
+        confidence=0.95
+    )
+```
+
+---
+
+## 🛡️ Compliance & Safety Auditing
+
+Enforce guardrails and maintain an immutable audit trail for mission-critical operations:
+
+```python
+async with StoicOS() as os:
+    await os.compliance.log_event(
+        event_type="tool_execution",
+        action="stripe.charge_customer",
+        agent_id="billing-coordinator",
+        reasoning="Billing date reached for subscription sub_123.",
+        verdict="PROCEED", # or "BLOCK"
+        metadata={"amount_usd": 29.00}
+    )
+```
+
+---
+
+## ✨ Reflection & Self-Decay
+
+Automate agent cognitive cleanup and knowledge aggregation:
+
+```python
+async with StoicOS() as os:
+    # Extract knowledge triplets from episodic memories with Claude
+    reflection_results = await os.reflection.run()
+    print(f"Extracted {reflection_results['triplets_extracted']} new facts.")
+    
+    # Decay stale memories and expire TTL items
+    decay_stats = await os.reflection.decay()
+```
+
+---
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.

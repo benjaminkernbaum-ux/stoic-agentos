@@ -3023,3 +3023,125 @@
     font-size: 10px;
   }
 }
+
+/* ══════════════════════════════════════════════════════════
+   STREAMING + MESSAGE METADATA
+   ══════════════════════════════════════════════════════════ */
+
+/* Streaming cursor */
+.stoic-chat-streaming::after {
+  content: '▊';
+  animation: cursor-blink 0.8s ease-in-out infinite;
+  color: var(--accent-bright);
+  font-weight: 400;
+}
+@keyframes cursor-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+/* Message bubble wrapper */
+.stoic-chat-msg-bubble {
+  max-width: 85%;
+  min-width: 0;
+}
+.stoic-chat-msg-user .stoic-chat-msg-bubble {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+/* Message metadata line */
+.stoic-chat-msg-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  padding-top: 4px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.stoic-chat-msg:hover .stoic-chat-msg-meta {
+  opacity: 1;
+}
+.stoic-chat-msg-time {
+  font-size: 10px;
+  color: var(--gray-4);
+}
+.stoic-chat-msg-mode-badge {
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: rgba(124, 58, 237, 0.12);
+  color: var(--accent-bright);
+  border: 1px solid rgba(167, 139, 250, 0.15);
+}
+.stoic-chat-msg-tokens {
+  font-size: 10px;
+  color: var(--gray-4);
+  font-family: 'SF Mono', 'JetBrains Mono', monospace;
+}
+.stoic-chat-msg-copy {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  background: none;
+  border: 1px solid transparent;
+  color: var(--gray-4);
+  cursor: pointer;
+  transition: all 0.12s;
+  padding: 0;
+}
+.stoic-chat-msg-copy:hover {
+  background: var(--surface-3);
+  border-color: var(--line-mid);
+  color: var(--white);
+}
+
+/* Retry button */
+.stoic-chat-msg-retry {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 6px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  color: rgba(239, 68, 68, 0.8);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.12s;
+  font-family: inherit;
+}
+.stoic-chat-msg-retry:hover {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.35);
+  color: #ef4444;
+}
+
+/* Ordered lists */
+.stoic-chat-msg-content .stoic-chat-ol-item {
+  margin: 3px 0;
+  padding-left: 4px;
+  list-style-position: inside;
+}
+
+/* Blockquotes */
+.stoic-chat-msg-content .stoic-chat-blockquote {
+  border-left: 3px solid rgba(167, 139, 250, 0.4);
+  padding: 6px 12px;
+  margin: 8px 0;
+  background: rgba(124, 58, 237, 0.05);
+  border-radius: 0 6px 6px 0;
+  color: var(--gray-2);
+  font-size: 12px;
+  font-style: italic;
+}

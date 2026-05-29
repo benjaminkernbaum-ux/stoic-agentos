@@ -14,16 +14,63 @@ import { Router } from 'express';
 import type { Response } from 'express';
 import { authenticate } from '../middleware/auth.js';
 import { supabase } from '../middleware/db.js';
-import { complete, hasAnthropic } from '../lib/anthropic.js';
+import { complete, hasAnthropic, getAnthropic, MODELS } from '../lib/anthropic.js';
 import type { AuthenticatedRequest } from '../types.js';
 
 const router = Router();
 const API_VERSION = 'v1';
 
-// ── In-memory conversation store (swap for DB in production scale) ──
-const conversations = new Map<string, Array<{ role: string; content: string }>>();
+// ── Conversation config ──
+const conversationsFallback = new Map<string, Array<{ role: string; content: string }>>();
 const CONV_TTL_MS = 30 * 60 * 1000; // 30 min
 const MAX_HISTORY = 20; // keep last 20 messages for context
+
+// ── Supabase conversation helpers ──
+async function loadConversation(orgId: string, convId: string): Promise<Array<{ role: string; content: string }>> {
+  if (!supabase) return conversationsFallback.get(convId) || [];
+  try {
+    const { data } = await supabase
+      .from('chat_conversations')
+      .select('messages')
+      .eq('org_id', orgId)
+      .eq('conv_id', convId)
+      .single();
+    return (data?.messages as Array<{ role: string; content: string }>) || [];
+  } catch {
+    return conversationsFallback.get(convId) || [];
+  }
+}
+
+async function saveConversation(orgId: string, convId: string, messages: Array<{ role: string; content: string }>, mode: string, model?: string): Promise<void> {
+  // Generate title from first user message
+  const firstUser = messages.find(m => m.role === 'user');
+  const title = firstUser ? firstUser.content.slice(0, 80) : 'New conversation';
+  const totalTokens = 0; // updated in endpoint
+
+  if (!supabase) {
+    conversationsFallback.set(convId, messages);
+    setTimeout(() => conversationsFallback.delete(convId), CONV_TTL_MS);
+    return;
+  }
+  try {
+    await supabase
+      .from('chat_conversations')
+      .upsert({
+        org_id: orgId,
+        conv_id: convId,
+        mode,
+        title,
+        messages: messages as unknown as Record<string, unknown>,
+        message_count: messages.length,
+        last_model: model || null,
+        total_tokens: totalTokens,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'org_id,conv_id' });
+  } catch {
+    // Fall back to in-memory
+    conversationsFallback.set(convId, messages);
+  }
+}
 
 function generateConvId(): string {
   return `conv_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
@@ -159,6 +206,49 @@ async function gatherOrgContext(orgId: string): Promise<string> {
     }
   } catch {
     // alert_rules table may not exist yet
+  }
+
+  // 8. Org stats summary
+  try {
+    const [agentCount, obsCount, traceCount] = await Promise.all([
+      supabase!.from('agents').select('id', { count: 'exact', head: true }).eq('org_id', orgId).then(r => r.count || 0),
+      supabase!.from('observations').select('id', { count: 'exact', head: true }).eq('org_id', orgId).then(r => r.count || 0),
+      supabase!.from('traces').select('id', { count: 'exact', head: true }).eq('org_id', orgId).then(r => r.count || 0),
+    ]);
+    sections.push(`## ORG STATS\n- Total agents: ${agentCount}\n- Total observations: ${obsCount}\n- Total traces: ${traceCount}`);
+  } catch {
+    // stats queries may fail
+  }
+
+  // 9. Memory tier counts
+  try {
+    const [working, episodic, semantic] = await Promise.all([
+      supabase!.from('working_memory').select('id', { count: 'exact', head: true }).eq('org_id', orgId).then(r => r.count || 0),
+      supabase!.from('episodic_memory').select('id', { count: 'exact', head: true }).eq('org_id', orgId).then(r => r.count || 0),
+      supabase!.from('semantic_memory').select('id', { count: 'exact', head: true }).eq('org_id', orgId).then(r => r.count || 0),
+    ]);
+    sections.push(`## MEMORY TIERS\n- Working memory entries: ${working}\n- Episodic memories: ${episodic}\n- Semantic triplets: ${semantic}`);
+  } catch {
+    // memory tables may not exist
+  }
+
+  // 10. Compliance snapshot (last 24h)
+  try {
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const { data: auditLogs } = await supabase!
+      .from('audit_log')
+      .select('verdict')
+      .eq('org_id', orgId)
+      .gte('created_at', since);
+
+    if (auditLogs?.length) {
+      const verdicts: Record<string, number> = {};
+      auditLogs.forEach(l => { verdicts[l.verdict || 'unknown'] = (verdicts[l.verdict || 'unknown'] || 0) + 1; });
+      const summary = Object.entries(verdicts).map(([v, c]) => `${v}: ${c}`).join(', ');
+      sections.push(`## COMPLIANCE (last 24h)\n${auditLogs.length} audit entries — ${summary}`);
+    }
+  } catch {
+    // audit_log may not exist
   }
 
   return sections.join('\n\n');
@@ -765,7 +855,7 @@ router.post(`/api/${API_VERSION}/chat`, authenticate, async (req: AuthenticatedR
 
     // Get or create conversation
     const convId = conversation_id || generateConvId();
-    let history = conversations.get(convId) || [];
+    let history = await loadConversation(req.org.id, convId);
 
     // Add user message to history
     history.push({ role: 'user', content: message.trim() });
@@ -778,8 +868,11 @@ router.post(`/api/${API_VERSION}/chat`, authenticate, async (req: AuthenticatedR
     const orgName = req.org.name || 'My Organization';
     const planName = (req.org.plan || 'free').toUpperCase();
 
+    const activeMode = MODE_CONFIGS[mode] ? mode : 'stoic';
+    const config = MODE_CONFIGS[activeMode];
+
     // Build system prompt with full context
-    const systemPrompt = buildSystemPrompt(orgContext, orgName, planName, mode);
+    const systemPrompt = buildSystemPrompt(orgContext, orgName, planName, activeMode);
 
     // Keep history manageable
     const messages = history.slice(-MAX_HISTORY).map(m => ({
@@ -789,34 +882,29 @@ router.post(`/api/${API_VERSION}/chat`, authenticate, async (req: AuthenticatedR
 
     // Call Claude
     const result = await complete(req.org, {
-      model: 'smart', // Use Sonnet for the chat — this is the premium feature
+      model: 'smart',
       system: systemPrompt,
       messages,
       maxTokens: 4096,
-      thinking: true, // Enable extended thinking for complex questions
+      thinking: true,
       endpoint: 'chat',
     });
 
     // Add assistant response to history
     history.push({ role: 'assistant', content: result.text });
 
-    // Trim and store history
+    // Trim and persist
     if (history.length > MAX_HISTORY * 2) {
       history = history.slice(-MAX_HISTORY);
     }
-    conversations.set(convId, history);
-
-    // Auto-expire old conversations
-    setTimeout(() => {
-      if (conversations.has(convId)) {
-        conversations.delete(convId);
-      }
-    }, CONV_TTL_MS);
+    await saveConversation(req.org.id, convId, history, activeMode, result.model);
 
     res.json({
       response: result.text,
       conversation_id: convId,
       model: result.model,
+      mode: activeMode,
+      mode_name: config.name,
       usage: result.usage,
       message_count: history.length,
     });
@@ -836,26 +924,195 @@ router.post(`/api/${API_VERSION}/chat`, authenticate, async (req: AuthenticatedR
   }
 });
 
-// ── Suggested prompts for empty state (MUST be before :conversationId) ──
-router.get(`/api/${API_VERSION}/chat/suggestions`, authenticate, async (_req: AuthenticatedRequest, res: Response) => {
-  res.json({
-    suggestions: [
-      { icon: '🚀', text: 'How do I get started with AgentOS?', category: 'onboarding' },
-      { icon: '🤖', text: 'Analyze my agent fleet performance', category: 'analysis' },
-      { icon: '📊', text: 'Summarize recent activity', category: 'insights' },
-      { icon: '⚡', text: 'How do I set up real-time monitoring?', category: 'guidance' },
-      { icon: '🔧', text: 'Help me debug my agent integration', category: 'troubleshooting' },
-      { icon: '📈', text: 'What should I optimize next?', category: 'recommendations' },
-    ],
-  });
+// ── Mode-adaptive suggestions ──
+const MODE_SUGGESTIONS: Record<string, Array<{ icon: string; text: string; category: string }>> = {
+  stoic: [
+    { icon: '🚀', text: 'How do I get started with AgentOS?', category: 'onboarding' },
+    { icon: '🤖', text: 'Analyze my agent fleet health', category: 'analysis' },
+    { icon: '📊', text: 'Summarize recent activity', category: 'insights' },
+    { icon: '⚡', text: 'What should I optimize next?', category: 'recommendations' },
+    { icon: '🔧', text: 'Help me debug an agent issue', category: 'troubleshooting' },
+    { icon: '📈', text: 'Show fleet performance insights', category: 'analysis' },
+  ],
+  architect: [
+    { icon: '📐', text: 'Design a webhook contract for observations', category: 'design' },
+    { icon: '🏗️', text: 'Review my agent fleet architecture', category: 'review' },
+    { icon: '📋', text: 'Draft an API contract for telemetry', category: 'spec' },
+    { icon: '🔄', text: 'Design an event-driven agent topology', category: 'design' },
+  ],
+  analyst: [
+    { icon: '📊', text: 'Analyze fleet activity trends', category: 'analytics' },
+    { icon: '🔍', text: 'Find anomalies in agent error rates', category: 'detection' },
+    { icon: '📉', text: 'Show latency distribution analysis', category: 'analytics' },
+    { icon: '📈', text: 'Quantify operational efficiency', category: 'metrics' },
+  ],
+  growth: [
+    { icon: '🚀', text: 'How do we optimize fleet resources?', category: 'optimization' },
+    { icon: '💰', text: 'Calculate agent ROI metrics', category: 'roi' },
+    { icon: '⚡', text: 'Identify velocity bottlenecks', category: 'performance' },
+    { icon: '📊', text: 'Audit compute overhead waste', category: 'cost' },
+  ],
+  support: [
+    { icon: '🔧', text: 'My agent is failing to start up', category: 'debug' },
+    { icon: '🔑', text: 'Help me fix a 401 authentication error', category: 'auth' },
+    { icon: '💔', text: 'Agent heartbeat stopped responding', category: 'heartbeat' },
+    { icon: '🔌', text: 'Guide me through SDK installation', category: 'setup' },
+  ],
+  prd: [
+    { icon: '📋', text: 'Draft a spec for agent error alerts', category: 'spec' },
+    { icon: '📝', text: 'Write requirements for a workflow builder', category: 'prd' },
+    { icon: '🎯', text: 'Scope a real-time monitoring feature', category: 'scope' },
+    { icon: '📐', text: 'Define acceptance criteria for traces', category: 'criteria' },
+  ],
+};
+
+router.get(`/api/${API_VERSION}/chat/suggestions`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
+  const mode = (req.query.mode as string) || 'stoic';
+  const suggestions = MODE_SUGGESTIONS[mode] || MODE_SUGGESTIONS.stoic;
+  res.json({ suggestions, mode });
 });
 
-// ── Get conversation history ──
+// ── Conversation history (list recent) ──
+router.get(`/api/${API_VERSION}/chat/history`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
+  if (!supabase) return res.json({ conversations: [] });
+  try {
+    const { data } = await supabase
+      .from('chat_conversations')
+      .select('conv_id, mode, title, message_count, last_model, updated_at')
+      .eq('org_id', req.org.id)
+      .order('updated_at', { ascending: false })
+      .limit(20);
+    res.json({ conversations: data || [] });
+  } catch {
+    res.json({ conversations: [] });
+  }
+});
+
+// ── Get single conversation ──
 router.get(`/api/${API_VERSION}/chat/:conversationId`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
   const convId = String(req.params.conversationId);
-  const history = conversations.get(convId);
-  if (!history) return res.status(404).json({ error: 'Conversation not found or expired' });
+  const history = await loadConversation(req.org.id, convId);
+  if (!history.length) return res.status(404).json({ error: 'Conversation not found or expired' });
   res.json({ conversation_id: convId, messages: history, count: history.length });
+});
+
+// ── Delete conversation ──
+router.delete(`/api/${API_VERSION}/chat/:conversationId`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
+  const convId = String(req.params.conversationId);
+  if (supabase) {
+    await supabase
+      .from('chat_conversations')
+      .delete()
+      .eq('org_id', req.org.id)
+      .eq('conv_id', convId);
+  }
+  conversationsFallback.delete(convId);
+  res.json({ deleted: true });
+});
+
+// ── Streaming chat endpoint ──
+router.post(`/api/${API_VERSION}/chat/stream`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    if (!hasAnthropic(req.org)) {
+      return res.status(402).json({
+        error: 'AI chat requires an Anthropic API key',
+        hint: 'Set ANTHROPIC_API_KEY on the platform or configure your own key in Settings → AI Configuration',
+      });
+    }
+
+    const { message, conversation_id, mode = 'stoic' } = req.body;
+    if (!message || typeof message !== 'string' || !message.trim()) {
+      return res.status(400).json({ error: 'message required' });
+    }
+
+    const convId = conversation_id || generateConvId();
+    let history = await loadConversation(req.org.id, convId);
+    history.push({ role: 'user', content: message.trim() });
+
+    const orgContext = await gatherOrgContext(req.org.id);
+    const orgName = req.org.name || 'My Organization';
+    const planName = (req.org.plan || 'free').toUpperCase();
+    const systemPrompt = buildSystemPrompt(orgContext, orgName, planName, mode);
+
+    const activeMode = MODE_CONFIGS[mode] ? mode : 'stoic';
+    const config = MODE_CONFIGS[activeMode];
+
+    const messages = history.slice(-MAX_HISTORY).map(m => ({
+      role: m.role as 'user' | 'assistant',
+      content: m.content,
+    }));
+
+    // Set up SSE headers
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+      'X-Accel-Buffering': 'no',
+    });
+
+    const client = await getAnthropic(req.org);
+    const modelId = MODELS['smart'] || 'claude-sonnet-4-6';
+
+    // Use streaming API
+    const stream = client.messages.stream({
+      model: modelId,
+      max_tokens: 4096,
+      system: systemPrompt,
+      messages,
+    } as any);
+
+    let fullText = '';
+
+    stream.on('text', (text: string) => {
+      fullText += text;
+      res.write(`data: ${JSON.stringify({ type: 'text_delta', text })}\n\n`);
+    });
+
+    stream.on('error', (error: Error) => {
+      res.write(`data: ${JSON.stringify({ type: 'error', error: error.message })}\n\n`);
+      res.write('data: [DONE]\n\n');
+      res.end();
+    });
+
+    stream.on('finalMessage', async (response: any) => {
+      // Save conversation
+      history.push({ role: 'assistant', content: fullText });
+      if (history.length > MAX_HISTORY * 2) history = history.slice(-MAX_HISTORY);
+      await saveConversation(req.org.id, convId, history, activeMode, response.model);
+
+      // Send final metadata
+      res.write(`data: ${JSON.stringify({
+        type: 'message_stop',
+        conversation_id: convId,
+        model: response.model,
+        mode: activeMode,
+        mode_name: config.name,
+        usage: response.usage,
+        message_count: history.length,
+      })}\n\n`);
+      res.write('data: [DONE]\n\n');
+      res.end();
+    });
+
+    // Handle client disconnect
+    req.on('close', () => {
+      stream.abort();
+    });
+
+  } catch (err: unknown) {
+    const error = err as Error & { code?: string; status?: number; headers?: Record<string, string> };
+    if (!res.headersSent) {
+      if (error.code === 'NO_ANTHROPIC_KEY') {
+        return res.status(402).json({ error: 'Anthropic API key not configured' });
+      }
+      if (error.status === 429) return res.status(429).json({ error: 'Rate limit — try again shortly' });
+      return res.status(500).json({ error: error.message });
+    }
+    // If headers already sent (mid-stream error), send error event
+    res.write(`data: ${JSON.stringify({ type: 'error', error: error.message })}\n\n`);
+    res.write('data: [DONE]\n\n');
+    res.end();
+  }
 });
 
 export default router;
