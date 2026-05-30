@@ -196,7 +196,13 @@ export default function Dashboard() {
         )}
 
         {activeTab === 'workspaces' && (
-          <WorkspacesTab workspaces={data.workspaces} setShowWsModal={setShowWsModal} />
+          <WorkspacesTab
+            workspaces={data.workspaces}
+            observations={data.observations}
+            agents={data.agents}
+            setShowWsModal={setShowWsModal}
+            toast={toast}
+          />
         )}
 
         {activeTab === 'brain' && (
@@ -214,9 +220,11 @@ export default function Dashboard() {
 
         {activeTab === 'graph' && (
           <GraphTab
-            observations={data.observations} agents={data.agents}
+            observations={data.observations}
+            agents={data.agents}
             handleUpgrade={(plan) => actions.handleUpgrade(plan, setUpgradeLoading)}
-            upgradeLoading={upgradeLoading} toast={toast}
+            upgradeLoading={upgradeLoading}
+            toast={toast}
           />
         )}
 
