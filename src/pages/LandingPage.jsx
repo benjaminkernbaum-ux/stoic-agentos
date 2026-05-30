@@ -79,6 +79,13 @@ os.<span class="fn">capture</span>({
   agent: <span class="str">'content-writer'</span>,
 });`;
 
+/* ─── TECHNICAL FEATURE GRID (ENTERPRISE) ─── */
+const TECH_FEATURES = [
+  { icon: '🧠', title: 'RC-TCF Cognitive Architecture', desc: 'Proprietary context window management preventing hallucination cascades. Deterministic routing for complex agentic workflows.' },
+  { icon: '🗄️', title: 'Three-Tier Memory System', desc: 'Working, Episodic, and Semantic memory persistence. Agents retrieve past learnings seamlessly across independent sessions.' },
+  { icon: '🛡️', title: 'Enterprise Compliance Module', desc: 'Immutable audit logs, token circuit breakers, and RBAC governance. SOC 2 Type II and HIPAA ready architecture.' },
+];
+
 /* ─── WHY I BUILT THIS ─── */
 const FOUNDER_STORY = [
   {
@@ -253,6 +260,87 @@ function LiveDashboardPreview() {
 }
 
 /* ═══════════════════════════════════════════
+   INTERACTIVE CODE PLAYGROUND
+   ═══════════════════════════════════════════ */
+function InteractiveCodePlayground() {
+  const [lang, setLang] = useState('python');
+  const [logs, setLogs] = useState([]);
+
+  useEffect(() => {
+    const sequence = [
+      { t: 500, log: '{"level":"info","msg":"Initializing AgentOS client...","timestamp":"2026-05-30T10:00:00Z"}' },
+      { t: 1200, log: '{"level":"info","msg":"Connected to workspace: my-saas-backend","workspace_id":"ws_7x9q"}' },
+      { t: 2500, log: '{"level":"debug","msg":"Agent run wrapped","agent":"invoice-processor","run_id":"run_abc123"}' },
+      { t: 3800, log: '{"level":"info","msg":"Telemetry synced to dashboard. Latency: 12ms.","status":"success"}' },
+    ];
+    let timeouts = [];
+    const runSequence = () => {
+      setLogs([]);
+      sequence.forEach((item) => {
+        timeouts.push(setTimeout(() => {
+          setLogs(prev => [...prev, item.log]);
+        }, item.t));
+      });
+    };
+    runSequence();
+    const interval = setInterval(runSequence, 6000);
+    return () => {
+      timeouts.forEach(clearTimeout);
+      clearInterval(interval);
+    };
+  }, []);
+
+  const pythonCode = `import stoicos
+
+os = stoicos.Client(
+    api_key="sk_live_xxx",
+    workspace="my-saas-backend"
+)
+
+@os.wrap_agent(name="invoice-processor")
+def process_invoice(file_path):
+    result = extract_data(file_path)
+    return result
+
+# Telemetry is auto-captured in background`;
+
+  const nodeCode = `import { AgentOS } from '@stoic/agentos-sdk';
+
+const os = new AgentOS({
+  apiKey: 'sk_live_xxx',
+  workspace: 'my-saas-backend',
+});
+
+const invoiceAgent = os.wrapAgent(
+  'invoice-processor', 
+  async (input) => {
+    return await processInvoice(input);
+  }
+);`;
+
+  return (
+    <div className="playground-container">
+      <div className="playground-tabs">
+        <button className={lang === 'python' ? 'active' : ''} onClick={() => setLang('python')}>Python SDK</button>
+        <button className={lang === 'node' ? 'active' : ''} onClick={() => setLang('node')}>Node.js SDK</button>
+      </div>
+      <div className="playground-split">
+        <div className="playground-editor">
+          <pre><code>{lang === 'python' ? pythonCode : nodeCode}</code></pre>
+        </div>
+        <div className="playground-terminal">
+          <div className="term-header">Terminal — Live Traces</div>
+          <div className="term-body">
+            {logs.map((l, i) => <div key={i} className="term-line" dangerouslySetInnerHTML={{__html: l.replace(/"(.*?)"/g, '<span class="str">"$1"</span>')}}></div>)}
+            <div className="term-cursor"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════
    LANDING PAGE
    ═══════════════════════════════════════════ */
 export default function LandingPage() {
@@ -343,8 +431,8 @@ export default function LandingPage() {
             $11.6B market · Backed by real production use
           </div>
           <h1 className="animate-in delay-1">
-            Your AI Agents Need<br />
-            a <span className="gradient-text">Command Center</span>
+            Deploy Autonomous Agent Workflows<br />
+            in <span className="gradient-text">Under 5 Minutes</span>
           </h1>
           <p className="hero-sub animate-in delay-2">
             Monitor, orchestrate, and scale your AI agent fleet from a single premium dashboard. 
@@ -470,6 +558,18 @@ export default function LandingPage() {
               </div>
             ))}
           </div>
+
+          <div className="section-label section-reveal" style={{ marginTop: 80 }}>🛡️ ENTERPRISE GOVERNANCE</div>
+          <h2 className="section-title section-reveal">Built for Mission-Critical Scale</h2>
+          <div className="features-grid tech-grid section-reveal" style={{ transitionDelay: '0.2s', marginTop: 32 }}>
+            {TECH_FEATURES.map((f, i) => (
+              <div key={i} className="feature-card tech-card">
+                <div className="feature-icon" style={{ background: 'rgba(255,255,255,0.05)', color: '#fff' }}>{f.icon}</div>
+                <h3>{f.title}</h3>
+                <p>{f.desc}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -512,26 +612,22 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── SDK ── */}
+      {/* ── INTERACTIVE PLAYGROUND ── */}
       <section className="section" id="sdk" style={{ background: 'var(--bg-deep)' }} ref={sdkRef}>
         <div className="container">
-          <div className="section-center section-reveal" style={{ marginBottom: 0 }}>
-            <div className="section-label">🔧 DEVELOPER SDK</div>
-            <h2 className="section-title">3 lines of code to instrument any agent</h2>
+          <div className="section-center section-reveal" style={{ marginBottom: 40 }}>
+            <div className="section-label">🔧 DEVELOPER EXPERIENCE</div>
+            <h2 className="section-title">One SDK. Zero Configuration.</h2>
             <p className="section-sub">
-              npm install, import, wrap. Your agents start reporting to the Command Center immediately.
+              Drop the SDK into your codebase. Telemetry, latency, and agent decisions are instantly routed to your Command Center.
             </p>
           </div>
-          <div className="code-block section-reveal" style={{ transitionDelay: '0.2s' }}>
-            <div className="code-header">
-              <span className="code-lang">JavaScript / TypeScript</span>
-              <button className="code-copy" onClick={() => navigator.clipboard?.writeText('npm install @stoic/agentos-sdk')}>📋 Copy</button>
-            </div>
-            <div className="code-body" dangerouslySetInnerHTML={{ __html: SDK_CODE }} />
+          <div className="section-reveal" style={{ transitionDelay: '0.2s' }}>
+            <InteractiveCodePlayground />
           </div>
           <div className="section-reveal" style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 32, transitionDelay: '0.3s' }}>
-            <div className="social-badge">📦 npm install @stoic/agentos-sdk</div>
-            <div className="social-badge">🐍 pip install agentos-sdk</div>
+            <div className="social-badge" onClick={() => navigator.clipboard?.writeText('npm install @stoic/agentos-sdk')} style={{ cursor: 'pointer' }}>📦 npm install @stoic/agentos-sdk</div>
+            <div className="social-badge" onClick={() => navigator.clipboard?.writeText('pip install stoicos')} style={{ cursor: 'pointer' }}>🐍 pip install stoicos</div>
           </div>
         </div>
       </section>
