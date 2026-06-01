@@ -4,6 +4,7 @@ import express from 'express';
 import { authenticate } from '../middleware/auth.js';
 import { requireMinRole } from '../middleware/rbac.js';
 import { supabase } from '../middleware/db.js';
+import { safeError } from '../lib/safeError.js';
 import type { AuthenticatedRequest } from '../types.js';
 
 const router = Router();
@@ -51,7 +52,7 @@ router.post(`/api/${API_VERSION}/billing/checkout`, authenticate, requireMinRole
     res.json({ url: session.url, sessionId: session.id });
   } catch (err: unknown) {
     console.error('Stripe checkout error:', (err as Error).message);
-    res.status(500).json({ error: 'Failed to create checkout session', detail: (err as Error).message });
+    safeError(res, err);
   }
 });
 
@@ -72,7 +73,7 @@ router.post(`/api/${API_VERSION}/billing/portal`, authenticate, requireMinRole('
 
     res.json({ url: portal.url });
   } catch (err: unknown) {
-    res.status(500).json({ error: 'Failed to create portal session' });
+    safeError(res, err);
   }
 });
 
@@ -172,7 +173,7 @@ router.post('/webhooks/stripe', express.raw({ type: 'application/json' }), async
     res.json({ received: true });
   } catch (err: unknown) {
     console.error('Webhook error:', (err as Error).message);
-    res.status(400).json({ error: (err as Error).message });
+    safeError(res, err);
   }
 });
 

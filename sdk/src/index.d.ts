@@ -1,5 +1,5 @@
 /**
- * @stoic/agentos-sdk — TypeScript Definitions v3.0.0
+ * stoic-agentos-sdk — TypeScript Definitions v3.0.0
  * Complete type-safe interface for the Stoic AgentOS SDK
  */
 

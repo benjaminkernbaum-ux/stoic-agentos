@@ -1,14 +1,17 @@
 import { Router } from 'express';
 import type { Response } from 'express';
 import { authenticate } from '../middleware/auth.js';
+import { requireMinRole } from '../middleware/rbac.js';
 import { supabase, checkLimit, PLAN_LIMITS } from '../middleware/db.js';
 import type { AuthenticatedRequest } from '../types.js';
+import { safeError } from '../lib/safeError.js';
+import { validate, agentCreateSchema } from '../middleware/validate.js';
 
 const router = Router();
 const API_VERSION = 'v1';
 
 // ── Create Agent ──
-router.post(`/api/${API_VERSION}/agents`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
+router.post(`/api/${API_VERSION}/agents`, authenticate, validate(agentCreateSchema), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { name, description, module, status, config } = req.body;
     if (!name) return res.status(400).json({ error: 'name required' });
@@ -52,7 +55,7 @@ router.post(`/api/${API_VERSION}/agents`, authenticate, async (req: Authenticate
     if (error) throw error;
     res.status(201).json(data);
   } catch (err: unknown) {
-    res.status(500).json({ error: (err as Error).message });
+    safeError(res, err);
   }
 });
 
@@ -67,7 +70,7 @@ router.get(`/api/${API_VERSION}/agents`, authenticate, async (req: Authenticated
     if (error) throw error;
     res.json(data || []);
   } catch (err: unknown) {
-    res.status(500).json({ error: (err as Error).message });
+    safeError(res, err);
   }
 });
 
@@ -92,7 +95,7 @@ router.patch(`/api/${API_VERSION}/agents/:id`, authenticate, async (req: Authent
     if (error) throw error;
     res.json(data);
   } catch (err: unknown) {
-    res.status(500).json({ error: (err as Error).message });
+    safeError(res, err);
   }
 });
 
@@ -162,12 +165,12 @@ router.post(`/api/${API_VERSION}/agents/heartbeat`, authenticate, async (req: Au
     if (error) throw error;
     res.status(201).json(data);
   } catch (err: unknown) {
-    res.status(500).json({ error: (err as Error).message });
+    safeError(res, err);
   }
 });
 
 // ── Delete Agent ──
-router.delete(`/api/${API_VERSION}/agents/:id`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
+router.delete(`/api/${API_VERSION}/agents/:id`, authenticate, requireMinRole('admin'), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { data, error } = await supabase!
       .from('agents')
@@ -181,7 +184,7 @@ router.delete(`/api/${API_VERSION}/agents/:id`, authenticate, async (req: Authen
     if (!data) return res.status(404).json({ error: 'Agent not found' });
     res.json({ deleted: true, id: req.params.id });
   } catch (err: unknown) {
-    res.status(500).json({ error: (err as Error).message });
+    safeError(res, err);
   }
 });
 

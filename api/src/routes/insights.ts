@@ -15,6 +15,7 @@ import { authenticate } from '../middleware/auth.js';
 import { supabase } from '../middleware/db.js';
 import { complete, hasAnthropic, MODELS } from '../lib/anthropic.js';
 import { estimateCost } from '../lib/pricing.js';
+import { safeError } from '../lib/safeError.js';
 import type { AuthenticatedRequest } from '../types.js';
 
 interface AnthropicError extends Error {
@@ -260,7 +261,7 @@ router.get(`/api/${API_VERSION}/insights/hot-cache`, authenticate, async (req: A
       word_count: hasCache ? req.org.hot_cache!.split(/\s+/).length : 0,
     });
   } catch (err: unknown) {
-    res.status(500).json({ error: (err as Error).message });
+    safeError(res, err);
   }
 });
 
@@ -417,7 +418,7 @@ router.get(`/api/${API_VERSION}/insights/usage`, authenticate, async (req: Authe
       recent: (data || []).slice(0, 10),
     });
   } catch (err: unknown) {
-    res.status(500).json({ error: (err as Error).message });
+    safeError(res, err);
   }
 });
 

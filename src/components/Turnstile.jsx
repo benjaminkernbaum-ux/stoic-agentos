@@ -14,12 +14,31 @@ import { useEffect, useRef, useState } from 'react';
  *    theme            — 'dark' | 'light' | 'auto' (default: 'dark')
  */
 
-const SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY || '1x00000000000000000000AA'; // Test key (always passes)
+const SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY;
+
+if (!SITE_KEY && typeof window !== 'undefined') {
+  console.error('[Turnstile] ⚠️ VITE_TURNSTILE_SITE_KEY is not set — bot protection is DISABLED in this environment.');
+}
 
 export default function Turnstile({ onVerify, onExpire, onError, theme = 'dark' }) {
   const containerRef = useRef(null);
   const widgetIdRef = useRef(null);
   const [scriptLoaded, setScriptLoaded] = useState(false);
+
+  // If no site key configured, auto-pass in dev (but warn)
+  useEffect(() => {
+    if (!SITE_KEY) {
+      onVerify?.('dev-bypass-no-site-key');
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (!SITE_KEY) {
+    return (
+      <div style={{ textAlign: 'center', padding: '8px', fontSize: '12px', color: '#f59e0b', opacity: 0.7 }}>
+        ⚠️ Turnstile not configured — bot protection disabled
+      </div>
+    );
+  }
 
   // Load the Turnstile script once
   useEffect(() => {

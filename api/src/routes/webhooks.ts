@@ -14,6 +14,7 @@ import type { Response } from 'express';
 import { authenticate, hashApiKey } from '../middleware/auth.js';
 import { supabase } from '../middleware/db.js';
 import type { AuthenticatedRequest } from '../types.js';
+import { safeError } from '../lib/safeError.js';
 import {
   logWebhookEvent,
   markDelivered,
@@ -134,11 +135,7 @@ router.post(`/api/${API_VERSION}/webhooks/git`, async (req, res) => {
       request_id: req.requestId,
     });
   } catch (err: unknown) {
-    res.status(500).json({
-      error: (err as Error).message,
-      code: 'INTERNAL_ERROR',
-      request_id: req.requestId,
-    });
+    safeError(res, err);
   }
 });
 
@@ -156,11 +153,7 @@ router.get(`/api/${API_VERSION}/webhooks/events`, authenticate, async (req: Auth
       count: events.length,
     });
   } catch (err: unknown) {
-    res.status(500).json({
-      error: (err as Error).message,
-      code: 'INTERNAL_ERROR',
-      request_id: req.requestId,
-    });
+    safeError(res, err);
   }
 });
 
@@ -170,11 +163,7 @@ router.get(`/api/${API_VERSION}/webhooks/stats`, authenticate, async (req: Authe
     const stats = getWebhookStats(req.org.id);
     res.json(stats);
   } catch (err: unknown) {
-    res.status(500).json({
-      error: (err as Error).message,
-      code: 'INTERNAL_ERROR',
-      request_id: req.requestId,
-    });
+    safeError(res, err);
   }
 });
 

@@ -13,6 +13,7 @@ import { supabase } from '../middleware/db.js';
 import { complete, hasAnthropic } from '../lib/anthropic.js';
 import type { AuthenticatedRequest } from '../types.js';
 import { isTableMissing } from '../lib/utils.js';
+import { safeError } from '../lib/safeError.js';
 
 const router = Router();
 const V = 'v1';
@@ -103,7 +104,7 @@ router.post(`/api/${V}/reflection/run`, authenticate, async (req: AuthenticatedR
     const error = err as Error & { code?: string; status?: number };
     if (error.code === 'NO_ANTHROPIC_KEY') return res.status(402).json({ error: 'Anthropic API key not configured' });
     if (error.status === 401) return res.status(402).json({ error: 'Invalid Anthropic API key' });
-    res.status(500).json({ error: error.message });
+    safeError(res, err);
   }
 });
 
@@ -162,7 +163,7 @@ router.post(`/api/${V}/reflection/decay`, authenticate, async (req: Authenticate
     } catch { /* audit_log may not exist */ }
 
     res.json(results);
-  } catch (err: unknown) { res.status(500).json({ error: (err as Error).message }); }
+  } catch (err: unknown) { safeError(res, err); }
 });
 
 // ── Reflection Status ──
@@ -182,7 +183,7 @@ router.get(`/api/${V}/reflection/status`, authenticate, async (req: Authenticate
       if (lastDecay) status.last_decay = lastDecay;
     } catch { /* no decay yet */ }
     res.json(status);
-  } catch (err: unknown) { res.status(500).json({ error: (err as Error).message }); }
+  } catch (err: unknown) { safeError(res, err); }
 });
 
 export default router;

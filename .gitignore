@@ -29,10 +29,9 @@ npm-debug.log*
 supabase/.temp/
 
 # Migration runner scripts (may contain DB credentials)
+run-migration-*.mjs
 _migrate.mjs
-run-migration-005.mjs
-run-migrations-api.mjs
-run-migrations-sb.mjs
+run-migrations-*.mjs
 
 # Python SDK build artifacts
 sdk-python/dist/

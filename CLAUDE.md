@@ -243,7 +243,7 @@ Ported from [claude-obsidian](https://github.com/AgriciDaniel/claude-obsidian). 
 
 ```bash
 # Install
-npm install @stoic/agentos-sdk
+npm install stoic-agentos-sdk
 
 # Initialize in a project
 npx stoic-agentos-sdk init <YOUR_API_KEY>
@@ -253,7 +253,7 @@ npx stoic-agentos-sdk test
 ```
 
 ```javascript
-import AgentOS from '@stoic/agentos-sdk';
+import AgentOS from 'stoic-agentos-sdk';
 
 const agentos = new AgentOS({ apiKey: 'sk_live_xxx' });
 

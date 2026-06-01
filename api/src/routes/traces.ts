@@ -22,6 +22,9 @@ import { v4 as uuidv4 } from 'uuid';
 import { authenticate } from '../middleware/auth.js';
 import { supabase, checkLimit, PLAN_LIMITS } from '../middleware/db.js';
 import { calculateCost } from '../middleware/cost.js';
+import { safeError } from '../lib/safeError.js';
+import { ingestLimiter } from '../middleware/rateLimiter.js';
+import { validate, traceCreateSchema, traceUpdateSchema, spanCreateSchema, traceIngestSchema } from '../middleware/validate.js';
 import type { AuthenticatedRequest } from '../types.js';
 
 const router = Router();
@@ -35,7 +38,7 @@ const API_VERSION = 'v1';
  * POST /api/v1/traces — Start a new trace
  * Body: { name, agent?, trace_id?, metadata? }
  */
-router.post(`/api/${API_VERSION}/traces`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
+router.post(`/api/${API_VERSION}/traces`, authenticate, validate(traceCreateSchema), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { name, agent, trace_id, metadata } = req.body;
     if (!name) return res.status(400).json({ error: 'name is required' });
@@ -77,7 +80,7 @@ router.post(`/api/${API_VERSION}/traces`, authenticate, async (req: Authenticate
     res.status(201).json(data);
   } catch (err: unknown) {
     console.error('Trace create error:', (err as Error).message);
-    res.status(500).json({ error: (err as Error).message });
+    safeError(res, err);
   }
 });
 
@@ -113,7 +116,7 @@ router.patch(`/api/${API_VERSION}/traces/:id`, authenticate, async (req: Authent
     res.json(data);
   } catch (err: unknown) {
     console.error('Trace update error:', (err as Error).message);
-    res.status(500).json({ error: (err as Error).message });
+    safeError(res, err);
   }
 });
 
@@ -141,7 +144,7 @@ router.get(`/api/${API_VERSION}/traces`, authenticate, async (req: Authenticated
     if (error) throw error;
     res.json(data || []);
   } catch (err: unknown) {
-    res.status(500).json({ error: (err as Error).message });
+    safeError(res, err);
   }
 });
 
@@ -245,7 +248,7 @@ router.get(`/api/${API_VERSION}/traces/analytics`, authenticate, async (req: Aut
     });
   } catch (err: unknown) {
     console.error('Analytics error:', (err as Error).message);
-    res.status(500).json({ error: (err as Error).message });
+    safeError(res, err);
   }
 });
 
@@ -317,7 +320,7 @@ router.get(`/api/${API_VERSION}/traces/stats`, authenticate, async (req: Authent
       models: modelBreakdown,
     });
   } catch (err: unknown) {
-    res.status(500).json({ error: (err as Error).message });
+    safeError(res, err);
   }
 });
 
@@ -366,7 +369,7 @@ router.get(`/api/${API_VERSION}/traces/:traceId`, authenticate, async (req: Auth
 
     res.json({ ...trace, spans: spans || [] });
   } catch (err: unknown) {
-    res.status(500).json({ error: (err as Error).message });
+    safeError(res, err);
   }
 });
 
@@ -382,7 +385,7 @@ router.get(`/api/${API_VERSION}/traces/:traceId`, authenticate, async (req: Auth
  *
  * Auto-calculates cost_usd and rolls up parent trace totals.
  */
-router.post(`/api/${API_VERSION}/traces/:id/spans`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
+router.post(`/api/${API_VERSION}/traces/:id/spans`, authenticate, validate(spanCreateSchema), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const traceId = req.params.id;
     const {
@@ -452,7 +455,7 @@ router.post(`/api/${API_VERSION}/traces/:id/spans`, authenticate, async (req: Au
     res.status(201).json(span);
   } catch (err: unknown) {
     console.error('Span create error:', (err as Error).message);
-    res.status(500).json({ error: (err as Error).message });
+    safeError(res, err);
   }
 });
 
@@ -471,7 +474,7 @@ router.post(`/api/${API_VERSION}/traces/:id/spans`, authenticate, async (req: Au
  * Server-side cost calculation: if span.cost_usd is missing or 0,
  * we compute it from provider/model/tokens automatically.
  */
-router.post(`/api/${API_VERSION}/traces/ingest`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
+router.post(`/api/${API_VERSION}/traces/ingest`, authenticate, ingestLimiter, validate(traceIngestSchema), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { trace, spans } = req.body;
     if (!trace || !trace.trace_id || !trace.name) {
@@ -577,7 +580,7 @@ router.post(`/api/${API_VERSION}/traces/ingest`, authenticate, async (req: Authe
     });
   } catch (err: unknown) {
     console.error('Trace ingest error:', (err as Error).message);
-    res.status(500).json({ error: (err as Error).message });
+    safeError(res, err);
   }
 });
 

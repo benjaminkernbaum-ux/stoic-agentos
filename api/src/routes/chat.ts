@@ -711,12 +711,12 @@ Do not hallucinate a substitute answer. Do not redirect to generic advice.
   const SDK_REFERENCE = `<sdk_reference>
 Installation:
 \`\`\`bash
-npm install @stoic/agentos-sdk
+npm install stoic-agentos-sdk
 \`\`\`
 
 Initialization:
 \`\`\`javascript
-import { StoicAgent } from '@stoic/agentos-sdk';
+import { StoicAgent } from 'stoic-agentos-sdk';
 
 const agent = new StoicAgent({
   apiKey: process.env.AGENTOS_API_KEY,  // sk_live_...
@@ -1029,13 +1029,14 @@ router.post(`/api/${API_VERSION}/chat/stream`, authenticate, async (req: Authent
     let history = await loadConversation(req.org.id, convId);
     history.push({ role: 'user', content: message.trim() });
 
+    // Validate mode BEFORE building system prompt
+    const activeMode = MODE_CONFIGS[mode] ? mode : 'stoic';
+    const config = MODE_CONFIGS[activeMode];
+
     const orgContext = await gatherOrgContext(req.org.id);
     const orgName = req.org.name || 'My Organization';
     const planName = (req.org.plan || 'free').toUpperCase();
-    const systemPrompt = buildSystemPrompt(orgContext, orgName, planName, mode);
-
-    const activeMode = MODE_CONFIGS[mode] ? mode : 'stoic';
-    const config = MODE_CONFIGS[activeMode];
+    const systemPrompt = buildSystemPrompt(orgContext, orgName, planName, activeMode);
 
     const messages = history.slice(-MAX_HISTORY).map(m => ({
       role: m.role as 'user' | 'assistant',
@@ -1051,7 +1052,7 @@ router.post(`/api/${API_VERSION}/chat/stream`, authenticate, async (req: Authent
     });
 
     const client = await getAnthropic(req.org);
-    const modelId = MODELS['smart'] || 'claude-sonnet-4-6';
+    const modelId = MODELS['smart'] || 'claude-sonnet-4-20250514';
 
     // Use streaming API
     const stream = client.messages.stream({

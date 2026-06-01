@@ -26,6 +26,11 @@
   <sub>If AgentOS saves you time debugging agents, a star is the best way to say thanks 🙏</sub>
 </p>
 
+<p align="center">
+  <!-- TODO: Replace with actual demo GIF recording of the dashboard -->
+  <img src="launch-assets/01_hero.png" alt="Stoic AgentOS Dashboard" width="800" />
+</p>
+
 ---
 
 ## The Problem
@@ -128,7 +133,7 @@ os.capture({
 
 ## Pricing
 
-| | Free | Pro — $49/mo | Team — $299/mo | Enterprise |
+| | Free | Pro — $29/mo | Team — $79/mo | Enterprise |
 |---|------|-------------|----------------|------------|
 | Workspaces | 2 | 10 | Unlimited | Unlimited |
 | Agents | 5 | 25 | 100 | Unlimited |
@@ -196,9 +201,8 @@ const os = new AgentOS({ apiKey: 'sk_live_xxx', workspace: 'my-app' });
 // Core methods
 os.capture({ type, title, content, metadata })     // Log observation
 os.wrapAgent(name, fn)                              // Auto-monitor function
-os.addKnowledge({ name, summary, content })         // Persist knowledge
-os.listAgents()                                     // Get all agents
-os.listObservations({ limit, type })                // Query observations
+os.getObservations({ limit, type })                 // Query observations
+os.getStats()                                       // Dashboard stats
 
 // Claude-powered insights (v2.1+)
 await os.summarize({ hours: 168 })                 // AI briefing of recent activity
@@ -210,7 +214,7 @@ await os.ask('Why did the email-agent fail?')      // Free-form Q&A
 
 AgentOS uses Anthropic Claude for AI-powered insights — summarizing observations, diagnosing agent failures, answering free-form questions about your fleet.
 
-**Models:** Haiku 4.5 for fast summaries, Sonnet 4.6 with adaptive thinking for deep diagnosis.
+**Models:** Haiku 4.5 for fast summaries, Sonnet 4 with adaptive thinking for deep diagnosis.
 
 **Three surfaces:**
 - **API**: `POST /insights/{summarize,analyze-agent,ask}` — see API Reference
@@ -245,11 +249,18 @@ MIT © 2026 [Benjamin Kernbaum](https://github.com/benjaminkernbaum-ux)
 
 ---
 
+## 📈 Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=benjaminkernbaum-ux/stoic-agentos&type=Date)](https://star-history.com/#benjaminkernbaum-ux/stoic-agentos)
+
+---
+
 ## 🌍 Community
 
 - 💬 [Discussions](https://github.com/benjaminkernbaum-ux/stoic-agentos/discussions) — Ask questions, share ideas
 - 🐛 [Issues](https://github.com/benjaminkernbaum-ux/stoic-agentos/issues) — Report bugs, request features
 - ⭐ [Star this repo](https://github.com/benjaminkernbaum-ux/stoic-agentos) — Help us reach more developers
+- 📋 [Contributing](CONTRIBUTING.md) — Help us build AgentOS
 
 ---
 

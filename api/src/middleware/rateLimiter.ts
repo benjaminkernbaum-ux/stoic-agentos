@@ -1,9 +1,23 @@
 /**
- * ═══════════════════════════════════════════════════════
- *  Stoic AgentOS — Plan-Aware Rate Limiting (TypeScript)
- * ═══════════════════════════════════════════════════════
- *  Tier-based rate limiting per subscription plan.
- *  Uses in-memory sliding window (swap to Redis for multi-instance).
+ * ═══════════════════════════════════════════════════════════════
+ *  Stoic AgentOS — Plan-Aware Rate Limiting (Dual-Mode)
+ * ═══════════════════════════════════════════════════════════════
+ *
+ *  DUAL-MODE RATE LIMITER
+ *  ──────────────────────
+ *  1. Upstash Redis (production / multi-instance)
+ *     Activated when UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN
+ *     environment variables are set.  Uses @upstash/ratelimit with a
+ *     sliding-window algorithm backed by Upstash Redis — fully serverless,
+ *     works in Railway, Vercel Edge, and any Node runtime.
+ *
+ *  2. In-memory Map (local development / fallback)
+ *     If the Upstash env vars are missing, the limiter falls back to the
+ *     original in-memory sliding window.  Zero external dependencies,
+ *     works out of the box — ideal for `npm run dev`.
+ *
+ *  Both modes expose the same Express middleware signature and return
+ *  identical 429 responses with X-RateLimit-* headers.
  *
  *  Plan limits (req/min):
  *    free:       100
@@ -39,10 +53,6 @@ interface RateLimitRequest extends Request {
   requestId?: string;
 }
 
-// ── In-memory rate limit store ──────────────────────
-// Swap this for Redis (ioredis) in production multi-instance
-const store = new Map<string, WindowEntry>();
-
 // ── Plan limits ────────────────────────────────────
 
 const TIER_LIMITS: Record<string, RateLimitConfig> = {
@@ -61,7 +71,70 @@ const INGEST_LIMITS: Record<string, RateLimitConfig> = {
 
 const AUTH_LIMIT: RateLimitConfig = { windowMs: 900_000, max: 15 }; // 15 attempts per 15 min
 
-// ── Store helpers ───────────────────────────────────
+// ═══════════════════════════════════════════════════════
+//  Upstash Redis Rate Limiter (production)
+// ═══════════════════════════════════════════════════════
+
+// We dynamically import @upstash/* so the app still boots even if the
+// packages aren't installed (e.g. in a minimal local-dev setup).
+
+let upstashReady = false;
+let Ratelimit: any = null;
+let upstashRedis: any = null;
+
+async function initUpstash(): Promise<boolean> {
+  const url = process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+
+  if (!url || !token) return false;
+
+  try {
+    const [{ Redis }, { Ratelimit: RL }] = await Promise.all([
+      import('@upstash/redis'),
+      import('@upstash/ratelimit'),
+    ]);
+
+    upstashRedis = new Redis({ url, token });
+    Ratelimit = RL;
+    console.log('✅ Rate limiter: Upstash Redis (sliding window)');
+    return true;
+  } catch (err) {
+    console.warn(
+      '⚠️  Upstash env vars set but packages not available — falling back to in-memory rate limiter.',
+      (err as Error).message,
+    );
+    return false;
+  }
+}
+
+// Boot-time initialization (non-blocking, sets `upstashReady` flag)
+const upstashInitPromise = initUpstash().then((ok) => {
+  upstashReady = ok;
+});
+
+// Cache of Upstash Ratelimit instances keyed by "prefix:plan"
+const upstashLimiters = new Map<string, InstanceType<any>>();
+
+function getUpstashLimiter(prefix: string, config: RateLimitConfig) {
+  const cacheKey = `${prefix}:${config.max}:${config.windowMs}`;
+  let limiter = upstashLimiters.get(cacheKey);
+  if (!limiter) {
+    const windowSec = `${Math.round(config.windowMs / 1000)} s` as any;
+    limiter = new Ratelimit({
+      redis: upstashRedis,
+      limiter: Ratelimit.slidingWindow(config.max, windowSec),
+      prefix: `stoic:${prefix}`,
+    });
+    upstashLimiters.set(cacheKey, limiter);
+  }
+  return limiter;
+}
+
+// ═══════════════════════════════════════════════════════
+//  In-Memory Rate Limiter (fallback for local dev)
+// ═══════════════════════════════════════════════════════
+
+const store = new Map<string, WindowEntry>();
 
 function getEntry(key: string, windowMs: number): WindowEntry {
   const now = Date.now();
@@ -86,12 +159,59 @@ setInterval(() => {
 // ── Rate limiter factory ────────────────────────────
 
 function createLimiter(getLimits: (plan: string) => RateLimitConfig, prefix: string) {
-  return (req: RateLimitRequest, res: Response, next: NextFunction): void => {
+  return async (req: RateLimitRequest, res: Response, next: NextFunction): Promise<void> => {
+    // Ensure Upstash init has settled before first request
+    await upstashInitPromise;
+
     const plan = req.org?.plan || 'free';
     const { windowMs, max } = getLimits(plan);
 
     // Key: org_id if authenticated, else IP
     const identifier = req.org?.id || req.ip || 'unknown';
+
+    // ── Upstash Redis path ──
+    if (upstashReady) {
+      try {
+        const limiter = getUpstashLimiter(prefix, { windowMs, max });
+        const result = await limiter.limit(`${identifier}`);
+
+        // Map Upstash response to our standard headers
+        const remaining = Math.max(0, result.remaining);
+        const resetMs = result.reset - Date.now();
+        const resetSec = Math.max(1, Math.ceil(resetMs / 1000));
+
+        res.set('X-RateLimit-Limit', String(result.limit));
+        res.set('X-RateLimit-Remaining', String(remaining));
+        res.set('X-RateLimit-Reset', String(resetSec));
+        res.set('X-RateLimit-Policy', `${result.limit};w=${Math.round(windowMs / 1000)}`);
+
+        if (!result.success) {
+          res.set('Retry-After', String(resetSec));
+          logRateLimit(req, identifier, plan, max, windowMs);
+
+          res.status(429).json({
+            error: 'Too Many Requests',
+            code: 'RATE_LIMIT_EXCEEDED',
+            message: `Rate limit exceeded. ${max} requests per ${windowMs / 1000}s allowed for "${plan}" plan.`,
+            request_id: req.requestId,
+            limit: max,
+            remaining: 0,
+            retry_after_seconds: resetSec,
+            upgrade_url: 'https://stoicagentos.com/#pricing',
+          });
+          return;
+        }
+
+        next();
+        return;
+      } catch (err) {
+        // If Redis fails mid-flight, fall through to in-memory so the
+        // request isn't dropped.  Log the error but don't crash.
+        console.error('⚠️  Upstash rate limiter error — falling back to in-memory:', (err as Error).message);
+      }
+    }
+
+    // ── In-memory fallback path ──
     const key = `${prefix}:${identifier}`;
     const entry = getEntry(key, windowMs);
 
@@ -109,26 +229,7 @@ function createLimiter(getLimits: (plan: string) => RateLimitConfig, prefix: str
 
     if (entry.count > max) {
       res.set('Retry-After', String(resetSec));
-
-      // Structured log for rate limit hits
-      const logEntry = {
-        level: 'warn',
-        time: new Date().toISOString(),
-        service: 'stoic-agentos-api',
-        event: 'rate_limit_exceeded',
-        requestId: req.requestId,
-        org_id: req.org?.id,
-        plan,
-        limit: max,
-        window_seconds: windowMs / 1000,
-        ip: req.ip,
-      };
-
-      if (process.env.NODE_ENV === 'production') {
-        process.stdout.write(JSON.stringify(logEntry) + '\n');
-      } else {
-        console.warn(`⚠️  Rate limit exceeded for ${identifier} (${plan} plan: ${max}/min)`);
-      }
+      logRateLimit(req, identifier, plan, max, windowMs);
 
       res.status(429).json({
         error: 'Too Many Requests',
@@ -145,6 +246,35 @@ function createLimiter(getLimits: (plan: string) => RateLimitConfig, prefix: str
 
     next();
   };
+}
+
+// ── Shared logging helper ──────────────────────────
+
+function logRateLimit(
+  req: RateLimitRequest,
+  identifier: string,
+  plan: string,
+  max: number,
+  windowMs: number,
+) {
+  const logEntry = {
+    level: 'warn',
+    time: new Date().toISOString(),
+    service: 'stoic-agentos-api',
+    event: 'rate_limit_exceeded',
+    requestId: req.requestId,
+    org_id: req.org?.id,
+    plan,
+    limit: max,
+    window_seconds: windowMs / 1000,
+    ip: req.ip,
+  };
+
+  if (process.env.NODE_ENV === 'production') {
+    process.stdout.write(JSON.stringify(logEntry) + '\n');
+  } else {
+    console.warn(`⚠️  Rate limit exceeded for ${identifier} (${plan} plan: ${max}/min)`);
+  }
 }
 
 // ── Exported Limiters ───────────────────────────────

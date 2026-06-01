@@ -84,7 +84,7 @@ function initGitHooks() {
 
   const hookScript = `#!/bin/sh
 # AgentOS — Auto-capture git commits
-# Installed by: npx @stoic/agentos-sdk init-hooks
+# Installed by: npx stoic-agentos-sdk init-hooks
 
 if [ -f .agentos.json ]; then
   API_KEY=$(node -e "console.log(JSON.parse(require('fs').readFileSync('.agentos.json','utf-8')).api_key || '')" 2>/dev/null)

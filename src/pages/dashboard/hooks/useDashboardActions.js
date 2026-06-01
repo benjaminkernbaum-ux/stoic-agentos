@@ -5,6 +5,15 @@ async function getToken() {
   return (await supabase.auth.getSession()).data.session?.access_token;
 }
 
+// Whitelist for safe redirect domains
+const SAFE_REDIRECT_DOMAINS = ['checkout.stripe.com', 'billing.stripe.com'];
+function isSafeRedirect(url) {
+  try {
+    const parsed = new URL(url);
+    return SAFE_REDIRECT_DOMAINS.some(d => parsed.hostname === d || parsed.hostname.endsWith('.' + d));
+  } catch { return false; }
+}
+
 export function useDashboardActions({ org, toast, fetchData, setAgents, setObservations, setStats, setUsage, setApiKeys, setKnowledgeItems, setWorkspaces }) {
 
   const handleCapture = async (e, captureForm, setCaptureForm, setCaptureLoading, onCaptureRef) => {
@@ -44,7 +53,8 @@ export function useDashboardActions({ org, toast, fetchData, setAgents, setObser
       });
       if (res.ok) {
         const { url } = await res.json();
-        if (url) window.location.href = url;
+        if (url && isSafeRedirect(url)) window.location.href = url;
+        else if (url) console.error('[Security] Blocked redirect to untrusted URL:', url);
       } else {
         const body = await res.json().catch(() => ({}));
         toast(body.error || 'Failed to start checkout', 'error');
@@ -64,7 +74,8 @@ export function useDashboardActions({ org, toast, fetchData, setAgents, setObser
       });
       if (res.ok) {
         const { url } = await res.json();
-        if (url) window.location.href = url;
+        if (url && isSafeRedirect(url)) window.location.href = url;
+        else if (url) console.error('[Security] Blocked redirect to untrusted URL:', url);
       } else {
         const body = await res.json().catch(() => ({}));
         toast(body.error || 'Failed to open billing portal', 'error');

@@ -17,6 +17,7 @@ import { supabase } from '../middleware/db.js';
 import { getMetricsSnapshot, getQuickStats } from '../lib/metrics.js';
 import { vaultStatus } from '../lib/anthropic.js';
 import type { AuthenticatedRequest } from '../types.js';
+import { safeError } from '../lib/safeError.js';
 
 const router = Router();
 const API_VERSION = 'v1';
@@ -66,7 +67,7 @@ router.get(`/api/${API_VERSION}/status`, async (_req, res: Response) => {
         name: 'Database',
         status: 'outage',
         latency_ms: Date.now() - start,
-        message: (err as Error).message,
+        message: 'Connection failed',
         last_checked: now,
       });
     }
@@ -97,15 +98,18 @@ router.get(`/api/${API_VERSION}/status`, async (_req, res: Response) => {
     last_checked: now,
   });
 
+  // Sanitize service checks for public response — strip internal details
+  const publicServices = checks.map(c => ({
+    name: c.name,
+    status: c.status,
+    last_checked: c.last_checked,
+    // Do NOT expose: latency_ms, message (may contain DB errors, config details)
+  }));
+
   // Overall status
   const hasOutage = checks.some(c => c.status === 'outage');
   const hasDegraded = checks.some(c => c.status === 'degraded');
   const overall: HealthLevel = hasOutage ? 'outage' : hasDegraded ? 'degraded' : 'operational';
-
-  // Error rate from metrics
-  const errorRate = stats.requests > 0
-    ? ((stats.errors / stats.requests) * 100).toFixed(2)
-    : '0.00';
 
   res.json({
     status: overall,
@@ -114,13 +118,11 @@ router.get(`/api/${API_VERSION}/status`, async (_req, res: Response) => {
       : overall === 'degraded'
         ? 'Some systems degraded'
         : 'Service disruption detected',
-    uptime_seconds: uptime,
     uptime_human: formatUptime(uptime),
-    error_rate: `${errorRate}%`,
-    total_requests: stats.requests,
-    services: checks,
+    services: publicServices,
     last_updated: now,
     version: API_VERSION,
+    // Removed: error_rate, total_requests, uptime_seconds (information disclosure)
   });
 });
 

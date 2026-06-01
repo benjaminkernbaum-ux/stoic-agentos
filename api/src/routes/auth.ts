@@ -3,6 +3,7 @@ import type { Request, Response } from 'express';
 import crypto from 'crypto';
 import { hashApiKey } from '../middleware/auth.js';
 import { supabase } from '../middleware/db.js';
+import { safeError } from '../lib/safeError.js';
 
 const router = Router();
 const API_VERSION = 'v1';
@@ -59,7 +60,7 @@ router.post(`/api/${API_VERSION}/auth/setup-org`, async (req: Request, res: Resp
     res.json({ ...org, api_key: apiKey });
   } catch (err: unknown) {
     console.error('Setup org error:', err);
-    res.status(500).json({ error: (err as Error).message });
+    safeError(res, err);
   }
 });
 
@@ -91,7 +92,7 @@ router.get(`/api/${API_VERSION}/auth/me`, async (req: Request, res: Response) =>
     });
   } catch (err: unknown) {
     console.error('Auth me error:', err);
-    res.status(500).json({ error: (err as Error).message });
+    safeError(res, err);
   }
 });
 

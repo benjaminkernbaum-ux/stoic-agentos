@@ -4,47 +4,19 @@
  * ═══════════════════════════════════════════════════════
  *  Production security headers without external deps.
  *  Covers OWASP top-10 header recommendations.
+ *
+ *  NOTE: CORS is handled exclusively by the cors() middleware
+ *  in server.ts. Do NOT duplicate CORS logic here.
  */
 
 import type { Request, Response, NextFunction } from 'express';
 
-// ── Allowed Origins ─────────────────────────────────
-const ALLOWED_ORIGINS = [
-  'https://stoic-saas-hub.vercel.app',
-  'https://stoic-agentos.vercel.app',
-  'https://stoicagentos.com',
-  'https://www.stoicagentos.com',
-];
-
-// Allow localhost in development
-const isDev = process.env.NODE_ENV !== 'production';
-if (isDev) {
-  ALLOWED_ORIGINS.push('http://localhost:5173');
-  ALLOWED_ORIGINS.push('http://localhost:3000');
-  ALLOWED_ORIGINS.push('http://localhost:4444');
-  ALLOWED_ORIGINS.push('http://localhost:8888');
-}
-
 /**
  * Security headers middleware
  * Sets all recommended production security headers.
+ * CORS is intentionally NOT handled here — see server.ts cors() config.
  */
-export function securityHeaders(req: Request, res: Response, next: NextFunction): Response | void {
-  // ── CORS ──
-  const origin = req.headers.origin;
-  if (origin && (ALLOWED_ORIGINS.includes(origin) || isDev)) {
-    res.set('Access-Control-Allow-Origin', origin);
-  }
-  res.set('Access-Control-Allow-Methods', 'GET, POST, PATCH, PUT, DELETE, OPTIONS');
-  res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Request-ID');
-  res.set('Access-Control-Allow-Credentials', 'true');
-  res.set('Access-Control-Max-Age', '86400'); // Cache preflight 24h
-
-  // Preflight
-  if (req.method === 'OPTIONS') {
-    return res.status(204).end();
-  }
-
+export function securityHeaders(req: Request, res: Response, next: NextFunction): void {
   // ── Security Headers ──
   // Prevent MIME type sniffing
   res.set('X-Content-Type-Options', 'nosniff');
@@ -67,9 +39,8 @@ export function securityHeaders(req: Request, res: Response, next: NextFunction)
   // Content Security Policy (API only — very strict)
   res.set('Content-Security-Policy', "default-src 'none'; frame-ancestors 'none'");
 
-  // Server identification (obscure)
-  res.set('X-Powered-By', 'Stoic AgentOS');
-  res.removeHeader('X-Powered-By'); // Actually remove it
+  // Remove server identification
+  res.removeHeader('X-Powered-By');
 
   next();
 }

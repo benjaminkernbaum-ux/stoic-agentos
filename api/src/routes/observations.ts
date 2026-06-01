@@ -1,14 +1,17 @@
 import { Router } from 'express';
 import type { Response } from 'express';
 import { authenticate } from '../middleware/auth.js';
+import { requireMinRole } from '../middleware/rbac.js';
 import { supabase, checkLimit, PLAN_LIMITS } from '../middleware/db.js';
 import type { AuthenticatedRequest } from '../types.js';
+import { safeError } from '../lib/safeError.js';
+import { validate, observationCreateSchema } from '../middleware/validate.js';
 
 const router = Router();
 const API_VERSION = 'v1';
 
 // ── Create Observation ──
-router.post(`/api/${API_VERSION}/observations`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
+router.post(`/api/${API_VERSION}/observations`, authenticate, validate(observationCreateSchema), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { workspace, agent, type, title, content, metadata } = req.body;
     if (!type || !title) return res.status(400).json({ error: 'type and title required' });
@@ -103,7 +106,7 @@ router.post(`/api/${API_VERSION}/observations`, authenticate, async (req: Authen
 
     res.status(201).json(data);
   } catch (err: unknown) {
-    res.status(500).json({ error: (err as Error).message });
+    safeError(res, err);
   }
 });
 
@@ -126,12 +129,12 @@ router.get(`/api/${API_VERSION}/observations`, authenticate, async (req: Authent
     if (error) throw error;
     res.json(data || []);
   } catch (err: unknown) {
-    res.status(500).json({ error: (err as Error).message });
+    safeError(res, err);
   }
 });
 
 // ── Delete Observation ──
-router.delete(`/api/${API_VERSION}/observations/:id`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
+router.delete(`/api/${API_VERSION}/observations/:id`, authenticate, requireMinRole('admin'), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { error } = await supabase!
       .from('observations')
@@ -141,7 +144,7 @@ router.delete(`/api/${API_VERSION}/observations/:id`, authenticate, async (req: 
     if (error) throw error;
     res.json({ success: true });
   } catch (err: unknown) {
-    res.status(500).json({ error: (err as Error).message });
+    safeError(res, err);
   }
 });
 

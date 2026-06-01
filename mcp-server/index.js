@@ -685,7 +685,7 @@ server.resource(
 - **API**: Express.js → Railway (api.stoicagentos.com)
 - **Database**: Supabase (viiagdhtzbvkfhcjqrlz)
 - **Billing**: Stripe (Pro $29/mo, Team $79/mo)
-- **SDK**: npm @stoic/agentos-sdk (CLI + JS client) + Python SDK (stoicos)
+- **SDK**: npm stoic-agentos-sdk (CLI + JS client) + Python SDK (stoicos)
 
 ## Key Tables
 organizations, org_members, agents, observations, workspaces, knowledge_items, api_keys,

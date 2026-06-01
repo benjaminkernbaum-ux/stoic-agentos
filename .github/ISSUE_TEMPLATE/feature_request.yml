@@ -1,0 +1,91 @@
+name: ✨ Feature Request
+description: Suggest a new feature or improvement for Stoic AgentOS
+title: "[Feature]: "
+labels: ["enhancement"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Thanks for your feature idea! ✨
+
+        We love hearing how Stoic AgentOS can be improved. Please describe your idea below.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Description
+      description: |
+        Is your feature request related to a problem? Describe the pain point.
+        A clear description helps us understand the "why" behind the request.
+      placeholder: "I'm always frustrated when..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed-solution
+    attributes:
+      label: Proposed Solution
+      description: Describe the solution you'd like to see implemented.
+      placeholder: "I would like..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Have you considered any alternative solutions or workarounds?
+      placeholder: "I also thought about..."
+    validations:
+      required: false
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Affected Component
+      description: Which part of Stoic AgentOS would this feature apply to?
+      options:
+        - Dashboard (Frontend)
+        - API
+        - TypeScript SDK (npm)
+        - Python SDK (PyPI)
+        - MCP Server
+        - Supabase / Database
+        - CI / GitHub Actions
+        - Documentation
+        - Other / Multiple
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      description: How important is this feature to you?
+      options:
+        - Nice to have
+        - Important — affects my workflow
+        - Critical — blocking my use case
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: |
+        Add any other context, mockups, screenshots, or references that help illustrate the feature.
+        Tip: You can drag and drop images directly into this field.
+      placeholder: Any additional context...
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: I have searched existing issues and feature requests to make sure this is not a duplicate.
+          required: true

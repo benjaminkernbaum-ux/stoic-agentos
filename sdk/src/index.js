@@ -1,9 +1,9 @@
 /**
- * @stoic/agentos-sdk v3.0.0
+ * stoic-agentos-sdk v3.0.0
  * Official SDK for Stoic AgentOS — AI Agent Operations Platform
  * 
  * Usage:
- *   import { AgentOS } from '@stoic/agentos-sdk';
+ *   import { AgentOS } from 'stoic-agentos-sdk';
  *   const os = new AgentOS({ apiKey: 'sk_live_xxx', workspace: 'my-app' });
  *   
  *   // Auto-instrument LLM providers (zero-config observability)

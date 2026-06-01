@@ -12,6 +12,8 @@ import { Router } from 'express';
 import type { Request, Response } from 'express';
 import { getMetricsSnapshot, getQuickStats } from '../lib/metrics.js';
 import { supabase } from '../middleware/db.js';
+import { authenticate } from '../middleware/auth.js';
+import { safeError } from '../lib/safeError.js';
 
 const router = Router();
 const API_VERSION = 'v1';
@@ -51,7 +53,7 @@ router.get(`/api/${API_VERSION}/health/ready`, async (_req: Request, res: Respon
       checks.supabase = {
         status: 'down',
         latency_ms: Date.now() - start,
-        error: (err as Error).message,
+        error: 'Connection failed',
       };
     }
   } else {
@@ -79,8 +81,8 @@ router.get(`/api/${API_VERSION}/health/ready`, async (_req: Request, res: Respon
   });
 });
 
-// ── Full metrics dashboard — p50/p95/p99, per-endpoint ──
-router.get(`/api/${API_VERSION}/health/metrics`, (_req: Request, res: Response) => {
+// ── Full metrics dashboard — p50/p95/p99, per-endpoint (auth required) ──
+router.get(`/api/${API_VERSION}/health/metrics`, authenticate, (_req: Request, res: Response) => {
   const snapshot = getMetricsSnapshot();
   res.json(snapshot);
 });

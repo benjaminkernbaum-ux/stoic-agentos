@@ -3,6 +3,7 @@ import type { Response } from 'express';
 import { authenticate } from '../middleware/auth.js';
 import { supabase, PLAN_LIMITS } from '../middleware/db.js';
 import type { AuthenticatedRequest } from '../types.js';
+import { safeError } from '../lib/safeError.js';
 
 const router = Router();
 const API_VERSION = 'v1';
@@ -46,7 +47,7 @@ router.get(`/api/${API_VERSION}/stats`, authenticate, async (req: AuthenticatedR
       unacknowledged_alerts: alertEvents.count || 0,
     });
   } catch (err: unknown) {
-    res.status(500).json({ error: (err as Error).message });
+    safeError(res, err);
   }
 });
 

@@ -7,6 +7,7 @@ import ParticleMesh from '../components/ParticleMesh';
 import AnimatedCounter from '../components/AnimatedCounter';
 import MarketConsolidation from '../components/MarketConsolidation';
 import PricingCalculator from '../components/PricingCalculator';
+import WaitlistCapture from '../components/WaitlistCapture';
 
 const NAV_LINKS = ['Features', 'Ecosystem', 'SDK', 'Pricing', 'Docs'];
 
@@ -798,6 +799,9 @@ export default function LandingPage() {
             <span>✓ No credit card required</span>
             <span>✓ 14-day Pro trial</span>
             <span>✓ Cancel anytime</span>
+          </div>
+          <div className="section-reveal" style={{ transitionDelay: '0.4s', marginTop: 48 }}>
+            <WaitlistCapture />
           </div>
         </div>
       </section>

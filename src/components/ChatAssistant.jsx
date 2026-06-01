@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import DOMPurify from 'dompurify';
 import { supabase, API_BASE } from '../lib/supabase';
 
 // ── Markdown-lite renderer ──
@@ -567,7 +568,7 @@ export default function ChatAssistant() {
                   <div className="stoic-chat-msg-bubble">
                     <div
                       className={`stoic-chat-msg-content ${msg.isStreaming ? 'stoic-chat-streaming' : ''}`}
-                      dangerouslySetInnerHTML={{ __html: msg.role === 'assistant' ? renderMarkdown(msg.content) : msg.content.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') }}
+                      dangerouslySetInnerHTML={{ __html: msg.role === 'assistant' ? DOMPurify.sanitize(renderMarkdown(msg.content)) : msg.content.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') }}
                     />
                     {msg.role === 'assistant' && !msg.isError && !msg.isStreaming && msg.content && (
                       <div className="stoic-chat-msg-meta">

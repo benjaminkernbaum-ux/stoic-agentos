@@ -1,6 +1,6 @@
 <div align="center">
 
-# @stoic/agentos-sdk
+# stoic-agentos-sdk
 
 **The observability layer for AI agent fleets**
 
@@ -19,11 +19,11 @@ Monitor every LLM call, trace agent workflows, and persist knowledge — with 3 
 ## 🚀 Quick Start
 
 ```bash
-npm install @stoic/agentos-sdk
+npm install stoic-agentos-sdk
 ```
 
 ```javascript
-import { AgentOS } from '@stoic/agentos-sdk';
+import { AgentOS } from 'stoic-agentos-sdk';
 
 const os = new AgentOS({ apiKey: 'sk_live_your_key_here' });
 
@@ -44,7 +44,7 @@ Get your API key at [stoic-agentos.vercel.app/dashboard](https://stoic-agentos.v
 Instrument your OpenAI or Anthropic clients with **one line** — every LLM call is automatically captured with model, tokens, latency, and cost.
 
 ```javascript
-import { AgentOS } from '@stoic/agentos-sdk';
+import { AgentOS } from 'stoic-agentos-sdk';
 import OpenAI from 'openai';
 
 const os = new AgentOS({ apiKey: 'sk_live_your_key_here' });
@@ -169,16 +169,16 @@ console.log(answer.answer);
 
 ```bash
 # Initialize AgentOS in your project
-npx @stoic/agentos-sdk init <YOUR_API_KEY> <WORKSPACE_NAME>
+npx stoic-agentos-sdk init <YOUR_API_KEY> <WORKSPACE_NAME>
 
 # Check which LLM SDKs are installed
-npx @stoic/agentos-sdk instrument
+npx stoic-agentos-sdk instrument
 
 # Install git hooks (auto-capture commits)
-npx @stoic/agentos-sdk init-hooks
+npx stoic-agentos-sdk init-hooks
 
 # Test API connection
-npx @stoic/agentos-sdk test
+npx stoic-agentos-sdk test
 ```
 
 ---
@@ -249,7 +249,7 @@ Attempt 4 → return null (or throw for validation errors)
 **Error classes** you can catch:
 
 ```javascript
-import { AgentOSValidationError, AgentOSAuthError, AgentOSRateLimitError } from '@stoic/agentos-sdk';
+import { AgentOSValidationError, AgentOSAuthError, AgentOSRateLimitError } from 'stoic-agentos-sdk';
 
 try {
   await os.capture({ title: '' }); // missing required field

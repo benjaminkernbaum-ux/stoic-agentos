@@ -1,0 +1,17 @@
+{
+  "schema_version": "v1",
+  "name_for_human": "Stoic AgentOS",
+  "name_for_model": "stoic_agentos",
+  "description_for_human": "The open-source operating system for AI agent fleets. Monitor, orchestrate, and persist knowledge across autonomous AI agents.",
+  "description_for_model": "Stoic AgentOS is a production-grade AI agent operations platform. It provides LLM call tracing, three-tier memory (working/episodic/semantic), compliance audit trails with circuit breakers, auto-instrumentation for OpenAI and Anthropic, Claude-powered AI diagnostics, and multi-org RBAC with BYOK. SDKs available for Node.js (stoic-agentos-sdk) and Python (stoicos).",
+  "auth": {
+    "type": "none"
+  },
+  "api": {
+    "type": "openapi",
+    "url": "https://stoicagentos.com/api/openapi.yaml"
+  },
+  "logo_url": "https://stoicagentos.com/favicon.svg",
+  "contact_email": "benjamin@stoicagentos.com",
+  "legal_info_url": "https://stoicagentos.com/terms"
+}

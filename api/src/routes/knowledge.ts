@@ -3,6 +3,7 @@ import type { Response } from 'express';
 import { authenticate } from '../middleware/auth.js';
 import { supabase, checkLimit, PLAN_LIMITS } from '../middleware/db.js';
 import type { AuthenticatedRequest } from '../types.js';
+import { safeError } from '../lib/safeError.js';
 
 const router = Router();
 const API_VERSION = 'v1';
@@ -17,7 +18,7 @@ router.get(`/api/${API_VERSION}/knowledge-items`, authenticate, async (req: Auth
     if (error) throw error;
     res.json(data || []);
   } catch (err: unknown) {
-    res.status(500).json({ error: (err as Error).message });
+    safeError(res, err);
   }
 });
 
@@ -50,7 +51,7 @@ router.post(`/api/${API_VERSION}/knowledge-items`, authenticate, async (req: Aut
     if (error) throw error;
     res.status(201).json(data);
   } catch (err: unknown) {
-    res.status(500).json({ error: (err as Error).message });
+    safeError(res, err);
   }
 });
 
@@ -68,7 +69,7 @@ router.delete(`/api/${API_VERSION}/knowledge-items/:id`, authenticate, async (re
     if (!data) return res.status(404).json({ error: 'Knowledge item not found' });
     res.json({ deleted: true, id: req.params.id });
   } catch (err: unknown) {
-    res.status(500).json({ error: (err as Error).message });
+    safeError(res, err);
   }
 });
 

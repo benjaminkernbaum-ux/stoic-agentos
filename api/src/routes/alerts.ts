@@ -1,8 +1,11 @@
 import { Router } from 'express';
 import type { Response } from 'express';
 import { authenticate } from '../middleware/auth.js';
+import { requireMinRole } from '../middleware/rbac.js';
 import { supabase, checkLimit, PLAN_LIMITS } from '../middleware/db.js';
 import type { AuthenticatedRequest } from '../types.js';
+import { safeError } from '../lib/safeError.js';
+import { validate, alertRuleSchema } from '../middleware/validate.js';
 
 const router = Router();
 const API_VERSION = 'v1';
@@ -63,7 +66,7 @@ router.get(`/api/${API_VERSION}/alerts`, authenticate, async (req: Authenticated
       events: events || [],
     });
   } catch (err: unknown) {
-    res.status(500).json({ error: (err as Error).message });
+    safeError(res, err);
   }
 });
 
@@ -85,12 +88,12 @@ router.get(`/api/${API_VERSION}/alerts/rules`, authenticate, async (req: Authent
     }
     res.json(data || []);
   } catch (err: unknown) {
-    res.status(500).json({ error: (err as Error).message });
+    safeError(res, err);
   }
 });
 
 // ── Create Alert Rule ──
-router.post(`/api/${API_VERSION}/alerts/rules`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
+router.post(`/api/${API_VERSION}/alerts/rules`, authenticate, requireMinRole('admin'), validate(alertRuleSchema), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { name, type, config, channel, destination } = req.body;
     if (!name || !type) return res.status(400).json({ error: 'name and type required' });
@@ -126,7 +129,7 @@ router.post(`/api/${API_VERSION}/alerts/rules`, authenticate, async (req: Authen
     if (error) throw error;
     res.status(201).json(data);
   } catch (err: unknown) {
-    res.status(500).json({ error: (err as Error).message });
+    safeError(res, err);
   }
 });
 
@@ -145,12 +148,12 @@ router.patch(`/api/${API_VERSION}/alerts/rules/:id`, authenticate, async (req: A
     if (error) throw error;
     res.json(data);
   } catch (err: unknown) {
-    res.status(500).json({ error: (err as Error).message });
+    safeError(res, err);
   }
 });
 
 // ── Delete Alert Rule ──
-router.delete(`/api/${API_VERSION}/alerts/rules/:id`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
+router.delete(`/api/${API_VERSION}/alerts/rules/:id`, authenticate, requireMinRole('admin'), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { error } = await supabase!
       .from('alert_rules')
@@ -160,7 +163,7 @@ router.delete(`/api/${API_VERSION}/alerts/rules/:id`, authenticate, async (req: 
     if (error) throw error;
     res.json({ success: true });
   } catch (err: unknown) {
-    res.status(500).json({ error: (err as Error).message });
+    safeError(res, err);
   }
 });
 
@@ -177,7 +180,7 @@ router.get(`/api/${API_VERSION}/alerts/events`, authenticate, async (req: Authen
       .select('*, alert_rules(name, type)')
       .eq('org_id', req.org.id)
       .order('created_at', { ascending: false })
-      .limit(+(limit as string));
+      .limit(Math.min(+(limit as string) || 20, 200));
 
     if (unacknowledged === 'true') query = query.eq('acknowledged', false);
 
@@ -188,7 +191,7 @@ router.get(`/api/${API_VERSION}/alerts/events`, authenticate, async (req: Authen
     }
     res.json(data || []);
   } catch (err: unknown) {
-    res.status(500).json({ error: (err as Error).message });
+    safeError(res, err);
   }
 });
 
@@ -206,7 +209,7 @@ router.patch(`/api/${API_VERSION}/alerts/events/:id`, authenticate, async (req: 
     if (error) throw error;
     res.json(data);
   } catch (err: unknown) {
-    res.status(500).json({ error: (err as Error).message });
+    safeError(res, err);
   }
 });
 
@@ -222,7 +225,7 @@ router.post(`/api/${API_VERSION}/alerts/events/acknowledge-all`, authenticate, a
     if (error) throw error;
     res.json({ success: true });
   } catch (err: unknown) {
-    res.status(500).json({ error: (err as Error).message });
+    safeError(res, err);
   }
 });
 

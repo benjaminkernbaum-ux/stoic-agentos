@@ -9,9 +9,11 @@
 import { Router } from 'express';
 import type { Response } from 'express';
 import { authenticate } from '../middleware/auth.js';
+import { requireMinRole } from '../middleware/rbac.js';
 import { supabase } from '../middleware/db.js';
 import type { AuthenticatedRequest } from '../types.js';
 import { isTableMissing } from '../lib/utils.js';
+import { safeError } from '../lib/safeError.js';
 
 const router = Router();
 const V = 'v1';
@@ -33,7 +35,7 @@ router.get(`/api/${V}/memory/stats`, authenticate, async (req: AuthenticatedRequ
     }
     res.json(counts);
   } catch (err: unknown) {
-    res.status(500).json({ error: (err as Error).message });
+    safeError(res, err);
   }
 });
 
@@ -54,7 +56,7 @@ router.get(`/api/${V}/memory/working`, authenticate, async (req: AuthenticatedRe
     const { data, error } = await query;
     if (error) { if (isTableMissing(error)) return res.json([]); throw error; }
     res.json(data || []);
-  } catch (err: unknown) { res.status(500).json({ error: (err as Error).message }); }
+  } catch (err: unknown) { safeError(res, err); }
 });
 
 router.post(`/api/${V}/memory/working`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
@@ -71,16 +73,16 @@ router.post(`/api/${V}/memory/working`, authenticate, async (req: AuthenticatedR
       .select().single();
     if (error) throw error;
     res.status(201).json(data);
-  } catch (err: unknown) { res.status(500).json({ error: (err as Error).message }); }
+  } catch (err: unknown) { safeError(res, err); }
 });
 
-router.delete(`/api/${V}/memory/working/:id`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
+router.delete(`/api/${V}/memory/working/:id`, authenticate, requireMinRole('admin'), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { error } = await supabase!.from('working_memory').delete()
       .eq('id', req.params.id).eq('org_id', req.org.id);
     if (error) throw error;
     res.json({ success: true });
-  } catch (err: unknown) { res.status(500).json({ error: (err as Error).message }); }
+  } catch (err: unknown) { safeError(res, err); }
 });
 
 // ══════════════════════════════════════
@@ -97,7 +99,7 @@ router.get(`/api/${V}/memory/episodic`, authenticate, async (req: AuthenticatedR
     const { data, error } = await query;
     if (error) { if (isTableMissing(error)) return res.json([]); throw error; }
     res.json(data || []);
-  } catch (err: unknown) { res.status(500).json({ error: (err as Error).message }); }
+  } catch (err: unknown) { safeError(res, err); }
 });
 
 router.post(`/api/${V}/memory/episodic`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
@@ -110,7 +112,7 @@ router.post(`/api/${V}/memory/episodic`, authenticate, async (req: Authenticated
     }).select().single();
     if (error) throw error;
     res.status(201).json(data);
-  } catch (err: unknown) { res.status(500).json({ error: (err as Error).message }); }
+  } catch (err: unknown) { safeError(res, err); }
 });
 
 router.get(`/api/${V}/memory/episodic/timeline`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
@@ -128,7 +130,7 @@ router.get(`/api/${V}/memory/episodic/timeline`, authenticate, async (req: Authe
       days: Object.entries(days).sort(([a], [b]) => b.localeCompare(a))
         .map(([date, memories]) => ({ date, memories, count: memories.length })),
     });
-  } catch (err: unknown) { res.status(500).json({ error: (err as Error).message }); }
+  } catch (err: unknown) { safeError(res, err); }
 });
 
 // ══════════════════════════════════════
@@ -139,12 +141,15 @@ router.get(`/api/${V}/memory/semantic`, authenticate, async (req: AuthenticatedR
   try {
     let query = supabase!.from('semantic_memory').select('*')
       .eq('org_id', req.org.id).order('confidence', { ascending: false }).limit(100);
-    if (req.query.subject) query = query.ilike('subject', `%${req.query.subject}%`);
+    if (req.query.subject) {
+      const safeSub = (req.query.subject as string).replace(/[%_]/g, '');
+      query = query.ilike('subject', `%${safeSub}%`);
+    }
     if (req.query.relation) query = query.eq('relation', req.query.relation as string);
     const { data, error } = await query;
     if (error) { if (isTableMissing(error)) return res.json([]); throw error; }
     res.json(data || []);
-  } catch (err: unknown) { res.status(500).json({ error: (err as Error).message }); }
+  } catch (err: unknown) { safeError(res, err); }
 });
 
 router.post(`/api/${V}/memory/semantic`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
@@ -157,16 +162,16 @@ router.post(`/api/${V}/memory/semantic`, authenticate, async (req: Authenticated
     }).select().single();
     if (error) throw error;
     res.status(201).json(data);
-  } catch (err: unknown) { res.status(500).json({ error: (err as Error).message }); }
+  } catch (err: unknown) { safeError(res, err); }
 });
 
-router.delete(`/api/${V}/memory/semantic/:id`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
+router.delete(`/api/${V}/memory/semantic/:id`, authenticate, requireMinRole('admin'), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { error } = await supabase!.from('semantic_memory').delete()
       .eq('id', req.params.id).eq('org_id', req.org.id);
     if (error) throw error;
     res.json({ success: true });
-  } catch (err: unknown) { res.status(500).json({ error: (err as Error).message }); }
+  } catch (err: unknown) { safeError(res, err); }
 });
 
 export default router;

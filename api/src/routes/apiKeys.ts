@@ -6,6 +6,7 @@ import { requireMinRole } from '../middleware/rbac.js';
 import { supabase } from '../middleware/db.js';
 import { invalidateOrgKeyCache, isVaultMigrationError } from '../lib/anthropic.js';
 import type { AuthenticatedRequest } from '../types.js';
+import { safeError } from '../lib/safeError.js';
 
 const MIGRATION_PENDING_RESPONSE = {
   error: 'BYOK is not yet enabled on this deployment',
@@ -38,7 +39,7 @@ router.get(`/api/${API_VERSION}/api-keys`, authenticate, async (req: Authenticat
     }));
     res.json(masked);
   } catch (err: unknown) {
-    res.status(500).json({ error: (err as Error).message });
+    safeError(res, err);
   }
 });
 
@@ -62,7 +63,7 @@ router.post(`/api/${API_VERSION}/api-keys`, authenticate, requireMinRole('admin'
     // Return full key ONCE — client must save it
     res.status(201).json({ ...data, key: keyValue });
   } catch (err: unknown) {
-    res.status(500).json({ error: (err as Error).message });
+    safeError(res, err);
   }
 });
 
@@ -91,7 +92,7 @@ router.get(`/api/${API_VERSION}/api-keys/anthropic`, authenticate, async (req: A
         note: 'BYOK vault migration pending — use platform ANTHROPIC_API_KEY for now',
       });
     }
-    res.status(500).json({ error: msg });
+    safeError(res, err);
   }
 });
 
@@ -113,7 +114,7 @@ router.post(`/api/${API_VERSION}/api-keys/anthropic`, authenticate, requireMinRo
     invalidateOrgKeyCache(req.org.id);
     res.json({ configured: true, last4 });
   } catch (err: unknown) {
-    res.status(500).json({ error: (err as Error).message });
+    safeError(res, err);
   }
 });
 
@@ -130,7 +131,7 @@ router.delete(`/api/${API_VERSION}/api-keys/anthropic`, authenticate, requireMin
     invalidateOrgKeyCache(req.org.id);
     res.json({ configured: false });
   } catch (err: unknown) {
-    res.status(500).json({ error: (err as Error).message });
+    safeError(res, err);
   }
 });
 
@@ -147,7 +148,7 @@ router.delete(`/api/${API_VERSION}/api-keys/:id`, authenticate, requireMinRole('
     if (error) throw error;
     res.json({ revoked: true, id: data.id });
   } catch (err: unknown) {
-    res.status(500).json({ error: (err as Error).message });
+    safeError(res, err);
   }
 });
 

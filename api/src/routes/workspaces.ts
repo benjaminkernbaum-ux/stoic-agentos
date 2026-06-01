@@ -4,6 +4,7 @@ import { authenticate } from '../middleware/auth.js';
 import { requireMinRole } from '../middleware/rbac.js';
 import { supabase, checkLimit, PLAN_LIMITS } from '../middleware/db.js';
 import type { AuthenticatedRequest } from '../types.js';
+import { safeError } from '../lib/safeError.js';
 
 const router = Router();
 const API_VERSION = 'v1';
@@ -38,7 +39,7 @@ router.post(`/api/${API_VERSION}/workspaces`, authenticate, async (req: Authenti
     if (error) throw error;
     res.status(201).json(data);
   } catch (err: unknown) {
-    res.status(500).json({ error: (err as Error).message });
+    safeError(res, err);
   }
 });
 
@@ -52,7 +53,7 @@ router.get(`/api/${API_VERSION}/workspaces`, authenticate, async (req: Authentic
     if (error) throw error;
     res.json(data || []);
   } catch (err: unknown) {
-    res.status(500).json({ error: (err as Error).message });
+    safeError(res, err);
   }
 });
 
@@ -70,7 +71,7 @@ router.delete(`/api/${API_VERSION}/workspaces/:id`, authenticate, requireMinRole
     if (!data) return res.status(404).json({ error: 'Workspace not found' });
     res.json({ deleted: true, id: req.params.id });
   } catch (err: unknown) {
-    res.status(500).json({ error: (err as Error).message });
+    safeError(res, err);
   }
 });
 

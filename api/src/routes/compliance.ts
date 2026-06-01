@@ -8,7 +8,9 @@
 import { Router } from 'express';
 import type { Response } from 'express';
 import { authenticate } from '../middleware/auth.js';
+import { requireMinRole } from '../middleware/rbac.js';
 import { supabase } from '../middleware/db.js';
+import { safeError } from '../lib/safeError.js';
 import type { AuthenticatedRequest } from '../types.js';
 import { isTableMissing } from '../lib/utils.js';
 
@@ -32,10 +34,10 @@ router.get(`/api/${V}/compliance/audit-log`, authenticate, async (req: Authentic
     const { data, error } = await query;
     if (error) { if (isTableMissing(error)) return res.json([]); throw error; }
     res.json(data || []);
-  } catch (err: unknown) { res.status(500).json({ error: (err as Error).message }); }
+  } catch (err: unknown) { safeError(res, err); }
 });
 
-router.post(`/api/${V}/compliance/audit-log`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
+router.post(`/api/${V}/compliance/audit-log`, authenticate, requireMinRole('admin'), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { event_type, action, agent_id, reasoning, verdict, metadata, policy_version, context_hash } = req.body;
     if (!event_type || !action) return res.status(400).json({ error: 'event_type and action required' });
@@ -47,7 +49,7 @@ router.post(`/api/${V}/compliance/audit-log`, authenticate, async (req: Authenti
     }).select().single();
     if (error) throw error;
     res.status(201).json(data);
-  } catch (err: unknown) { res.status(500).json({ error: (err as Error).message }); }
+  } catch (err: unknown) { safeError(res, err); }
 });
 
 router.get(`/api/${V}/compliance/audit-log/stats`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
@@ -66,10 +68,10 @@ router.get(`/api/${V}/compliance/audit-log/stats`, authenticate, async (req: Aut
       by_day[day] = (by_day[day] || 0) + 1;
     });
     res.json({ total: rows.length, by_type, by_verdict, by_day });
-  } catch (err: unknown) { res.status(500).json({ error: (err as Error).message }); }
+  } catch (err: unknown) { safeError(res, err); }
 });
 
-router.get(`/api/${V}/compliance/audit-log/export`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
+router.get(`/api/${V}/compliance/audit-log/export`, authenticate, requireMinRole('admin'), async (req: AuthenticatedRequest, res: Response) => {
   try {
     let query = supabase!.from('audit_log').select('*')
       .eq('org_id', req.org.id).order('created_at', { ascending: false });
@@ -79,7 +81,7 @@ router.get(`/api/${V}/compliance/audit-log/export`, authenticate, async (req: Au
     if (error) { if (isTableMissing(error)) return res.json([]); throw error; }
     res.setHeader('Content-Disposition', 'attachment; filename=audit_log_export.json');
     res.json(data || []);
-  } catch (err: unknown) { res.status(500).json({ error: (err as Error).message }); }
+  } catch (err: unknown) { safeError(res, err); }
 });
 
 // ══════════════════════════════════════
@@ -117,7 +119,7 @@ router.get(`/api/${V}/compliance/circuit-breaker`, authenticate, async (req: Aut
     });
 
     res.json(breakers);
-  } catch (err: unknown) { res.status(500).json({ error: (err as Error).message }); }
+  } catch (err: unknown) { safeError(res, err); }
 });
 
 export default router;
