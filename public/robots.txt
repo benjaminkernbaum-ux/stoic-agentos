@@ -4,3 +4,7 @@ Disallow: /dashboard
 Disallow: /api/
 
 Sitemap: https://stoicagentos.com/sitemap.xml
+
+# AI Discovery
+# See https://stoicagentos.com/llms.txt for AI-readable platform description
+# See https://stoicagentos.com/.well-known/ai-plugin.json for plugin manifest

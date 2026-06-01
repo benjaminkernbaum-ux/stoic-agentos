@@ -17,6 +17,7 @@ const PrivacyPage = lazy(() => import('./pages/StaticPages').then((m) => ({ defa
 const TermsPage = lazy(() => import('./pages/StaticPages').then((m) => ({ default: m.TermsPage })));
 const SecurityPage = lazy(() => import('./pages/StaticPages').then((m) => ({ default: m.SecurityPage })));
 const NotFoundPage = lazy(() => import('./pages/StaticPages').then((m) => ({ default: m.NotFoundPage })));
+const BlogArticles = lazy(() => import('./pages/BlogArticles'));
 
 function LoadingScreen() {
   return (
@@ -48,6 +49,9 @@ function AppRoutes() {
         <Route path="/docs" element={<DocsPage />} />
         <Route path="/about" element={<AboutPage />} />
         <Route path="/blog" element={<BlogPage />} />
+        <Route path="/blog/why-traditional-apm-fails-for-ai-agents" element={<Suspense fallback={<div>Loading...</div>}><BlogArticles article="why-apm-fails" /></Suspense>} />
+        <Route path="/blog/ai-observability-market-consolidation-2026" element={<Suspense fallback={<div>Loading...</div>}><BlogArticles article="market-consolidation" /></Suspense>} />
+        <Route path="/blog/langfuse-vs-langsmith-vs-stoic-agentos" element={<Suspense fallback={<div>Loading...</div>}><BlogArticles article="comparison" /></Suspense>} />
         <Route path="/changelog" element={<ChangelogPage />} />
         <Route path="/privacy" element={<PrivacyPage />} />
         <Route path="/terms" element={<TermsPage />} />

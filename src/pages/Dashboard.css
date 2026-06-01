@@ -4565,3 +4565,61 @@
   }
 }
 
+/* ══════════════════════════════════
+   MISSING UTILITY CLASSES
+   Used by MemoryTab, ComplianceTab, etc.
+   ══════════════════════════════════ */
+
+.dash-tab-content {
+  padding: 0;
+}
+
+.dash-card {
+  background: var(--surface-2);
+  border: 1px solid var(--line-mid);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.dash-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 13px; font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s;
+  border: 1px solid var(--line-mid);
+  background: var(--surface-3);
+  color: var(--white);
+}
+.dash-btn:hover {
+  background: var(--surface-4);
+  border-color: var(--line-hi);
+}
+.dash-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.dash-btn-primary {
+  background: var(--accent-deep);
+  border-color: var(--accent);
+  color: #fff;
+}
+.dash-btn-primary:hover {
+  background: var(--accent);
+}
+
+.dash-loading-spinner {
+  width: 32px; height: 32px;
+  border: 3px solid var(--line-mid);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: dashSpin 0.8s linear infinite;
+  margin: 0 auto;
+}
+@keyframes dashSpin {
+  to { transform: rotate(360deg); }
+}
+
