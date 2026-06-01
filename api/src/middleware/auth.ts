@@ -1,6 +1,16 @@
 import type { Request, Response, NextFunction } from 'express';
+import { createHash } from 'crypto';
 import type { AuthenticatedRequest } from '../types.js';
 import { supabase } from './db.js';
+
+/** Hash an API key using SHA-256 for secure storage comparison */
+export function hashApiKey(key: string): string {
+  return createHash('sha256').update(key).digest('hex');
+}
+
+/** Debounce last_used_at updates — only write to DB once every 5 minutes per key */
+const LAST_USED_DEBOUNCE_MS = 5 * 60 * 1000;
+const lastUsedCache = new Map<string, number>();
 
 export async function authenticate(req: Request, res: Response, next: NextFunction): Promise<void> {
   const auth = req.headers.authorization;
@@ -13,17 +23,27 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
   // API key auth (sk_live_xxx or sk_test_xxx)
   if (token.startsWith('sk_')) {
     if (!supabase) { res.status(500).json({ error: 'Database not configured' }); return; }
+    // Compare by SHA-256 hash — keys are stored hashed, not in plaintext
+    const tokenHash = hashApiKey(token);
     const { data: apiKey } = await supabase
       .from('api_keys')
       .select('*, organizations(*)')
-      .eq('key', token)
+      .eq('key_hash', tokenHash)
       .eq('active', true)
       .single();
-    if (!apiKey) { res.status(401).json({ error: 'Invalid API key' }); return; }
+    if (!apiKey) {
+      res.status(401).json({ error: 'Invalid API key' });
+      return;
+    }
     (req as AuthenticatedRequest).org = apiKey.organizations;
     (req as AuthenticatedRequest).apiKey = apiKey;
-    // Update last_used_at
-    await supabase.from('api_keys').update({ last_used_at: new Date().toISOString() }).eq('id', apiKey.id);
+    // Debounced last_used_at — skip DB write if updated within 5 minutes
+    const now = Date.now();
+    const lastUpdated = lastUsedCache.get(apiKey.id);
+    if (!lastUpdated || now - lastUpdated > LAST_USED_DEBOUNCE_MS) {
+      lastUsedCache.set(apiKey.id, now);
+      supabase.from('api_keys').update({ last_used_at: new Date().toISOString() }).eq('id', apiKey.id).then(() => {});
+    }
     return next();
   }
 

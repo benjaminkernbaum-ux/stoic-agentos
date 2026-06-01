@@ -174,7 +174,7 @@ class StoicOS:
                             title=f"[{name}] ❌ Error: {str(e)}",
                             content=traceback.format_exc(),
                             agent=name,
-                            metadata={"event": "error", "duration_ms": duration_ms, "error_name": type(e).__name__},
+                            metadata={"event": "error", "duration_ms": duration_ms, "error_name": e.__class__.__name__},
                         )
                         await self.agent_heartbeat(name=name, status="error")
                         raise e
@@ -234,7 +234,7 @@ class StoicOS:
                                 title=f"[{name}] ❌ Error: {str(e)}",
                                 content=traceback.format_exc(),
                                 agent=name,
-                                metadata={"event": "error", "duration_ms": duration_ms, "error_name": type(e).__name__},
+                                metadata={"event": "error", "duration_ms": duration_ms, "error_name": e.__class__.__name__},
                             ))
                             _fire_async(self.agent_heartbeat(name=name, status="error"))
                         except Exception:

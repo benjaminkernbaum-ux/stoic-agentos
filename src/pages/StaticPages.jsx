@@ -294,6 +294,17 @@ export function PrivacyPage() {
           <li><strong>Railway</strong> — API server hosting</li>
         </ul>
 
+        <h2>6. Your Rights</h2>
+        <p>Depending on your location, you may have the following rights regarding your personal data:</p>
+        <ul>
+          <li><strong>Access:</strong> Request a copy of the personal data we hold about you</li>
+          <li><strong>Deletion:</strong> Request deletion of your account and associated data</li>
+          <li><strong>Correction:</strong> Request correction of inaccurate personal data</li>
+          <li><strong>Export:</strong> Request a machine-readable export of your data</li>
+          <li><strong>Objection:</strong> Object to certain processing of your data</li>
+        </ul>
+        <p>To exercise any of these rights, contact us at <strong>privacy@stoicagentos.com</strong>. We will respond within 30 days.</p>
+
         <h2>7. Contact</h2>
         <p>For privacy-related inquiries: <strong>privacy@stoicagentos.com</strong></p>
       </section>

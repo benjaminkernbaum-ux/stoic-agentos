@@ -1,13 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <!-- Google Tag Manager (Substitua GTM-XXXXXXX pelo seu ID) -->
-  <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
-  new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
-  j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
-  'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-  })(window,document,'script','dataLayer','GTM-XXXXXXX');</script>
-  <!-- End Google Tag Manager -->
+  <!-- Analytics: Vercel Analytics active via @vercel/analytics -->
 
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -74,10 +68,126 @@
   </script>
 </head>
 <body>
-  <!-- Google Tag Manager (noscript) -->
-  <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-XXXXXXX"
-  height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
-  <!-- End Google Tag Manager (noscript) -->
+
+  <script>
+    if (window.location.protocol === 'file:') {
+      document.addEventListener('DOMContentLoaded', function() {
+        const root = document.getElementById('root');
+        if (root) root.style.display = 'none';
+
+        // Create overlay container
+        const overlay = document.createElement('div');
+        overlay.id = 'local-diag-overlay';
+        overlay.style.cssText = `
+          position: fixed;
+          inset: 0;
+          z-index: 999999;
+          background: radial-gradient(ellipse at 20% 30%, rgba(155, 89, 255, 0.08) 0%, #06060c 60%);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 24px;
+          font-family: 'Inter', -apple-system, sans-serif;
+          color: #e8e8f0;
+        `;
+
+        overlay.innerHTML = `
+          <div style="
+            max-width: 580px;
+            width: 100%;
+            background: rgba(18, 18, 30, 0.65);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(155, 89, 255, 0.15);
+            border-radius: 16px;
+            padding: 36px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), 0 0 40px rgba(155, 89, 255, 0.08);
+            text-align: center;
+          ">
+            <div style="
+              width: 64px;
+              height: 64px;
+              background: linear-gradient(135deg, #9b59ff 0%, #00d4ff 100%);
+              border-radius: 16px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              font-size: 32px;
+              margin: 0 auto 24px;
+              box-shadow: 0 8px 24px rgba(155, 89, 255, 0.35);
+              animation: diagPulse 2.5s ease-in-out infinite;
+            ">⚡</div>
+
+            <h2 style="font-size: 24px; font-weight: 800; margin: 0 0 8px; letter-spacing: -0.5px; color: #fff;">
+              Vite Local Server Required
+            </h2>
+            <p style="font-size: 14px; color: #8888a0; margin: 0 0 24px; line-height: 1.6;">
+              Stoic AgentOS cannot run directly from a local file. Due to browser security policies (CORS and ESM imports), modern React applications must be served over a web server.
+            </p>
+
+            <div style="
+              background: #0a0a14;
+              border: 1px solid rgba(255, 255, 255, 0.06);
+              border-radius: 10px;
+              padding: 16px 20px;
+              margin-bottom: 24px;
+              text-align: left;
+            ">
+              <div style="font-size: 11px; text-transform: uppercase; color: rgba(255,255,255,0.3); font-weight: 600; letter-spacing: 1.5px; margin-bottom: 8px;">
+                How to Solve
+              </div>
+              <ol style="margin: 0; padding-left: 20px; font-size: 13.5px; color: #a9a9b8; line-height: 1.8;">
+                <li>Open your terminal or command prompt.</li>
+                <li>Navigate to: <code style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #00d4ff; background: rgba(0,212,255,0.06); padding: 2px 6px; border-radius: 4px; display: inline-block; margin: 2px 0;">c:\\Users\\benja\\OneDrive\\Documentos\\Stoic AgentOS</code></li>
+                <li>Run this command to start the development server:</li>
+              </ol>
+            </div>
+
+            <div style="
+              background: #030308;
+              border: 1px solid rgba(155, 89, 255, 0.2);
+              border-radius: 8px;
+              padding: 16px;
+              font-family: 'JetBrains Mono', monospace;
+              font-size: 13px;
+              text-align: left;
+              position: relative;
+              overflow: hidden;
+              box-shadow: inset 0 2px 8px rgba(0,0,0,0.8);
+            ">
+              <span style="color: #9b59ff; font-weight: 600;">$</span> <span style="color: #fff;">npm run dev</span>
+              <span style="
+                display: inline-block;
+                width: 7px;
+                height: 14px;
+                background: #00ff88;
+                margin-left: 4px;
+                vertical-align: middle;
+                animation: termCursor 1s steps(2, start) infinite;
+              "></span>
+            </div>
+
+            <div style="margin-top: 24px; font-size: 12px; color: rgba(255,255,255,0.25);">
+              Stoic AgentOS © 2026 · Premium DevTools Command Center
+            </div>
+          </div>
+
+          <style>
+            @keyframes diagPulse {
+              0%, 100% { transform: scale(1); box-shadow: 0 8px 24px rgba(155, 89, 255, 0.35); }
+              50% { transform: scale(1.05); box-shadow: 0 8px 36px rgba(155, 89, 255, 0.6), 0 0 20px rgba(0, 212, 255, 0.2); }
+            }
+            @keyframes termCursor {
+              0%, 100% { opacity: 0; }
+              50% { opacity: 1; }
+            }
+          </style>
+        `;
+        document.body.appendChild(overlay);
+      });
+    }
+  </script>
+
   <div id="root"></div>
   <script type="module" src="/src/main.jsx"></script>
 </body>

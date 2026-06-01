@@ -6,6 +6,7 @@
 
 <p align="center">
   <a href="https://github.com/benjaminkernbaum-ux/stoic-agentos/stargazers"><img src="https://img.shields.io/github/stars/benjaminkernbaum-ux/stoic-agentos?style=social" alt="GitHub Stars" /></a>
+  <a href="https://github.com/benjaminkernbaum-ux/stoic-agentos/network/members"><img src="https://img.shields.io/github/forks/benjaminkernbaum-ux/stoic-agentos?style=social" alt="GitHub Forks" /></a>
   <a href="https://www.npmjs.com/package/stoic-agentos-sdk"><img src="https://img.shields.io/npm/v/stoic-agentos-sdk?color=blue&label=npm" alt="npm version" /></a>
   <a href="https://www.npmjs.com/package/stoic-agentos-sdk"><img src="https://img.shields.io/npm/dm/stoic-agentos-sdk?color=green" alt="npm downloads" /></a>
   <a href="https://stoic-agentos.vercel.app"><img src="https://img.shields.io/badge/dashboard-live-brightgreen" alt="Dashboard" /></a>
@@ -21,7 +22,8 @@
 </p>
 
 <p align="center">
-  <strong>⭐ If this helps you ship AI agents faster, give us a star — it helps a lot!</strong>
+  <strong>⭐ Love this project? Star it — every star helps us reach more developers building with AI agents!</strong><br/>
+  <sub>If AgentOS saves you time debugging agents, a star is the best way to say thanks 🙏</sub>
 </p>
 
 ---
@@ -243,7 +245,16 @@ MIT © 2026 [Benjamin Kernbaum](https://github.com/benjaminkernbaum-ux)
 
 ---
 
+## 🌍 Community
+
+- 💬 [Discussions](https://github.com/benjaminkernbaum-ux/stoic-agentos/discussions) — Ask questions, share ideas
+- 🐛 [Issues](https://github.com/benjaminkernbaum-ux/stoic-agentos/issues) — Report bugs, request features
+- ⭐ [Star this repo](https://github.com/benjaminkernbaum-ux/stoic-agentos) — Help us reach more developers
+
+---
+
 <p align="center">
   <strong>Built with conviction.</strong><br/>
-  <a href="https://stoic-agentos.vercel.app">stoic-agentos.vercel.app</a>
+  <a href="https://stoicagentos.com">stoicagentos.com</a><br/><br/>
+  <a href="https://github.com/benjaminkernbaum-ux/stoic-agentos/stargazers"><img src="https://img.shields.io/github/stars/benjaminkernbaum-ux/stoic-agentos?style=for-the-badge&logo=github&label=Star%20on%20GitHub&color=9b59ff" alt="Star on GitHub" /></a>
 </p>

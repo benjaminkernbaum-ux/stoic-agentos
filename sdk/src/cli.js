@@ -11,6 +11,9 @@
 import { writeFileSync, mkdirSync, existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { execSync } from 'child_process';
+import { createRequire } from 'module';
+
+const require = createRequire(import.meta.url);
 
 const COMMANDS = {
   init: initProject,
@@ -64,8 +67,10 @@ function initProject() {
   console.log('  📊 Auto-Instrumentation:');
   console.log('     Add this to your entry file:\n');
   console.log('     import { AgentOS } from "stoic-agentos-sdk";');
+  console.log('     import OpenAI from "openai";');
   console.log('     const os = new AgentOS({ apiKey: "YOUR_KEY" });');
-  console.log('     os.instrument();\n');
+  console.log('     const openai = new OpenAI();');
+  console.log('     os.instrumentClient("openai", openai);\n');
 }
 
 function initGitHooks() {
@@ -139,8 +144,10 @@ function checkInstrumentation() {
 
   console.log('\n  📊 Setup (add to your entry file):\n');
   console.log('  import { AgentOS } from "stoic-agentos-sdk";');
+  console.log('  import OpenAI from "openai";');
   console.log('  const os = new AgentOS({ apiKey: process.env.AGENTOS_API_KEY });');
-  console.log('  os.instrument();\n');
+  console.log('  const openai = new OpenAI();');
+  console.log('  os.instrumentClient("openai", openai);\n');
   console.log('  // All LLM calls are now auto-captured! 🚀');
 
   if (hasOpenAI) {
@@ -202,7 +209,7 @@ function testConnection() {
 
 function showHelp() {
   console.log(`
-⚡ Stoic AgentOS CLI v2.0.0
+⚡ Stoic AgentOS CLI v3.0.0
 
 Commands:
   init [API_KEY] [WORKSPACE]  — Initialize AgentOS in current project
@@ -213,7 +220,7 @@ Commands:
 
 Auto-Instrumentation:
   Supported SDKs: OpenAI, Anthropic
-  One-line setup: os.instrument() — patches all LLM calls automatically
+  Per-client setup: os.instrumentClient('openai', openaiClient) — patches LLM calls automatically
 
 Environment:
   AGENTOS_API_KEY             — Your API key (from stoicagentos.com/settings)

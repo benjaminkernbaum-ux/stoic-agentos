@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>⚡ FéTok Cinematic Video Pipeline Monitor</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #06060c;
+      --panel: rgba(18, 18, 30, 0.7);
+      --border: rgba(251, 191, 36, 0.2);
+      --border-active: rgba(251, 191, 36, 0.5);
+      --gold: #fbbf24;
+      --gold-dark: #d97706;
+      --text: #e8e8f0;
+      --text-dim: #8888a0;
+      --green: #00e68a;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      padding: 24px;
+      overflow-x: hidden;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    /* Grid layout */
+    .grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 20px;
+      margin-top: 24px;
+    }
+
+    @media (max-width: 768px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+
+    /* Cards */
+    .card {
+      background: var(--panel);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--gold), var(--gold-dark));
+    }
+
+    h1 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 24px;
+      font-weight: 800;
+      background: linear-gradient(135deg, #fff 0%, var(--gold) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 6px;
+    }
+
+    h2 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 14px;
+      color: #fff;
+    }
+
+    p.subtitle {
+      font-size: 13px;
+      color: var(--text-dim);
+    }
+
+    /* Active Render Monitor */
+    .render-monitor {
+      background: #030308;
+      border: 1px solid rgba(251, 191, 36, 0.1);
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+
+    .render-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      color: var(--text-dim);
+      margin-bottom: 10px;
+    }
+
+    .progress-bar {
+      height: 6px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 3px;
+      overflow: hidden;
+      margin-bottom: 12px;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--gold-dark), var(--gold));
+      width: 0%;
+      border-radius: 3px;
+      transition: width 0.2s linear;
+    }
+
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .stat-item {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.05);
+      border-radius: 6px;
+      padding: 12px;
+      text-align: center;
+    }
+
+    .stat-val {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--gold);
+    }
+
+    .stat-lbl {
+      font-size: 10px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-top: 4px;
+    }
+
+    /* Simulated terminal log */
+    .terminal {
+      background: #020204;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+      padding: 16px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11.5px;
+      height: 200px;
+      overflow-y: auto;
+      color: rgba(255,255,255,0.7);
+      box-shadow: inset 0 2px 10px rgba(0,0,0,0.9);
+    }
+
+    .term-line {
+      margin-bottom: 6px;
+      line-height: 1.5;
+    }
+
+    .term-time { color: var(--gold); margin-right: 8px; }
+    .term-tag { color: var(--green); margin-right: 8px; }
+    .term-msg { color: #fff; }
+
+    /* Video Queue list */
+    .queue-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .queue-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.05);
+      border-radius: 8px;
+      padding: 12px;
+    }
+
+    .queue-icon {
+      font-size: 20px;
+      width: 36px;
+      height: 36px;
+      background: rgba(251, 191, 36, 0.1);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .queue-title {
+      font-size: 12.5px;
+      font-weight: 600;
+    }
+
+    .queue-meta {
+      font-size: 10.5px;
+      color: var(--text-dim);
+      margin-top: 2px;
+    }
+
+    .badge {
+      margin-left: auto;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      padding: 2px 8px;
+      border-radius: 12px;
+    }
+
+    .badge.rendering { background: rgba(251, 191, 36, 0.15); color: var(--gold); border: 1px solid rgba(251,191,36,0.25); }
+    .badge.queued { background: rgba(255,255,255,0.06); color: var(--text-dim); }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <div class="card">
+      <h1>🎬 FéTok Cinematic Video Pipeline</h1>
+      <p class="subtitle">Automated rendering and publishing command center for short-form video assets.</p>
+    </div>
+
+    <div class="grid">
+      <!-- Main Monitor -->
+      <div class="card">
+        <h2>📊 Active Render Pipeline</h2>
+        
+        <div class="render-monitor">
+          <div class="render-header">
+            <span>Video Segment: stoic_ethics_episode_47.mp4</span>
+            <span id="render-percent">0%</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill" id="render-fill"></div>
+          </div>
+          
+          <div class="stats-row">
+            <div class="stat-item">
+              <div class="stat-val" id="val-fps">30.0</div>
+              <div class="stat-lbl">FPS (FFmpeg)</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-val" id="val-bitrate">5420</div>
+              <div class="stat-lbl">kbps bitrate</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-val" id="val-time">00:00</div>
+              <div class="stat-lbl">Time Elapsed</div>
+            </div>
+          </div>
+        </div>
+
+        <h2>📟 Output Logs</h2>
+        <div class="terminal" id="term-body"></div>
+      </div>
+
+      <!-- Sidebar Queue -->
+      <div class="card">
+        <h2>📂 Rendering Queue</h2>
+        <div class="queue-list">
+          <div class="queue-item">
+            <div class="queue-icon">🎬</div>
+            <div>
+              <div class="queue-title">stoic_ethics_47.mp4</div>
+              <div class="queue-meta">FFmpeg v6.1 · 1080x1920</div>
+            </div>
+            <span class="badge rendering">Rendering</span>
+          </div>
+          <div class="queue-item">
+            <div class="queue-icon">🎬</div>
+            <div>
+              <div class="queue-title">epictetus_wisdom_12.mp4</div>
+              <div class="queue-meta">FFmpeg v6.1 · 1080x1920</div>
+            </div>
+            <span class="badge queued">Queued</span>
+          </div>
+          <div class="queue-item">
+            <div class="queue-icon">🎬</div>
+            <div>
+              <div class="queue-title">seneca_letters_09.mp4</div>
+              <div class="queue-meta">FFmpeg v6.1 · 1080x1920</div>
+            </div>
+            <span class="badge queued">Queued</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const term = document.getElementById('term-body');
+    const fill = document.getElementById('render-fill');
+    const percentText = document.getElementById('render-percent');
+    
+    const logs = [
+      "Initializing FFmpeg instance...",
+      "Setting hardware acceleration: CUDA enabled.",
+      "Loading assets: background_nature_4k.mp4 (1080x1920)",
+      "Syncing voiceover audio track: elevenlabs_narration_47.mp3",
+      "Applying video filters: contrast=1.05, saturation=0.95",
+      "Injecting subtitle overlays: JetBrains Mono font overlay",
+      "Audio normalization: peak volume set to -1dB",
+      "Encoding video stream: libx264, profile high, crf 18",
+      "OBS RTMP streaming channel established.",
+      "Video upload pipeline connected: TikTok API sandbox."
+    ];
+
+    function appendLine(msg, tag = "INFO") {
+      const now = new Date();
+      const timeStr = now.toTimeString().split(' ')[0];
+      const div = document.createElement('div');
+      div.className = 'term-line';
+      div.innerHTML = `
+        <span class="term-time">[${timeStr}]</span>
+        <span class="term-tag">&lt;${tag}&gt;</span>
+        <span class="term-msg">${msg}</span>
+      `;
+      term.appendChild(div);
+      term.scrollTop = term.scrollHeight;
+    }
+
+    // Tick loops for rendering emulation
+    let progress = 0;
+    let seconds = 0;
+
+    function renderTick() {
+      // Advance progress
+      progress += Math.random() * 1.5;
+      if (progress >= 100) {
+        progress = 0;
+        seconds = 0;
+        appendLine("Video rendering complete!", "SUCCESS");
+        appendLine("Initiating next queued render...", "INFO");
+      }
+      
+      fill.style.width = progress + '%';
+      percentText.textContent = Math.round(progress) + '%';
+
+      // Time elapsed
+      seconds++;
+      const min = Math.floor(seconds / 60).toString().padStart(2, '0');
+      const sec = (seconds % 60).toString().padStart(2, '0');
+      document.getElementById('val-time').textContent = `${min}:${sec}`;
+
+      // FPS & Bitrate fluctuations
+      document.getElementById('val-fps').textContent = (30 + (Math.random() - 0.5) * 1.2).toFixed(1);
+      document.getElementById('val-bitrate').textContent = Math.round(5400 + (Math.random() - 0.5) * 180);
+
+      // Random logs
+      if (Math.random() < 0.15) {
+        const randLog = logs[Math.floor(Math.random() * logs.length)];
+        appendLine(randLog, Math.random() < 0.1 ? "WARN" : "INFO");
+      }
+    }
+
+    // Start rendering loops
+    appendLine("FéTok Engine v1.4.1 boot sequence complete.", "SUCCESS");
+    appendLine("Awaiting active render targets...", "INFO");
+    appendLine("Render target loaded: stoic_ethics_episode_47.mp4", "INFO");
+    
+    setInterval(renderTick, 500);
+
+  </script>
+</body>
+</html>

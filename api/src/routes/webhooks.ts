@@ -4,14 +4,14 @@
  * ═══════════════════════════════════════════════════════
  *  Git webhook capture with:
  *  - Event logging and delivery tracking
- *  - HMAC-SHA256 signature verification (optional)
+ *  - HMAC-SHA256 signature verification (mandatory)
  *  - Retry logic for failed deliveries
  *  - Webhook event history endpoints
  */
 
 import { Router } from 'express';
 import type { Response } from 'express';
-import { authenticate } from '../middleware/auth.js';
+import { authenticate, hashApiKey } from '../middleware/auth.js';
 import { supabase } from '../middleware/db.js';
 import type { AuthenticatedRequest } from '../types.js';
 import {
@@ -53,11 +53,12 @@ router.post(`/api/${API_VERSION}/webhooks/git`, async (req, res) => {
       });
     }
 
-    // Verify API key
+    // Verify API key (hashed)
+    const tokenHash = hashApiKey(api_key);
     const { data: key } = await supabase
       .from('api_keys')
       .select('*, organizations(*)')
-      .eq('key', api_key)
+      .eq('key_hash', tokenHash)
       .eq('active', true)
       .single();
 
@@ -71,17 +72,22 @@ router.post(`/api/${API_VERSION}/webhooks/git`, async (req, res) => {
 
     const orgId = key.org_id;
 
-    // Optional signature verification (if X-Webhook-Signature header present)
+    // Mandatory signature verification
     const signature = req.headers['x-webhook-signature'] as string | undefined;
-    if (signature) {
-      const rawBody = JSON.stringify(req.body);
-      if (!verifySignature(rawBody, signature, api_key)) {
-        return res.status(401).json({
-          error: 'Invalid webhook signature',
-          code: 'INVALID_SIGNATURE',
-          request_id: req.requestId,
-        });
-      }
+    if (!signature) {
+      return res.status(401).json({
+        error: 'Missing X-Webhook-Signature header — signature verification is required',
+        code: 'MISSING_SIGNATURE',
+        request_id: req.requestId,
+      });
+    }
+    const rawBody = JSON.stringify(req.body);
+    if (!verifySignature(rawBody, signature, api_key)) {
+      return res.status(401).json({
+        error: 'Invalid webhook signature',
+        code: 'INVALID_SIGNATURE',
+        request_id: req.requestId,
+      });
     }
 
     // Log the webhook event

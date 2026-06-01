@@ -130,6 +130,21 @@ router.post(`/api/${API_VERSION}/agents/heartbeat`, authenticate, async (req: Au
       return res.json(data);
     }
 
+    // Check plan limit before creating new agent
+    const { count: agentCount } = await supabase!
+      .from('agents')
+      .select('*', { count: 'exact', head: true })
+      .eq('org_id', req.org.id);
+
+    if (!checkLimit(req.org.plan, 'agents', agentCount ?? 0)) {
+      return res.status(429).json({
+        error: 'Agent limit reached for your plan',
+        limit: PLAN_LIMITS[req.org.plan]?.agents,
+        current: agentCount,
+        upgrade_url: 'https://stoicagentos.com/#pricing',
+      });
+    }
+
     // Upsert new agent — uses UNIQUE(org_id, name) to handle concurrent requests atomically
     const { data, error } = await supabase!
       .from('agents')

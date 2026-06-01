@@ -2,7 +2,7 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import type { PlanLimits, PlanName } from '../types.js';
 
 // ── Config ──
-const SUPABASE_URL = process.env.SUPABASE_URL || 'https://viiagdhtzbvkfhcjqrlz.supabase.co';
+const SUPABASE_URL = process.env.SUPABASE_URL || '';
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY || '';
 
 // ── Supabase Client (service role — bypasses RLS) ──

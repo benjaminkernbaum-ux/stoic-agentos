@@ -215,7 +215,7 @@ export default function OverviewTab({ stats, agents, observations, workspaces = 
             title="Launch Your Agent Fleet"
             description="Get operational in seconds — seed sample data to preview your fleet, or register your first agent."
             steps={[
-              'Install the SDK: npm i @stoic/agentos-sdk',
+              'Install the SDK: npm i stoic-agentos-sdk',
               'Send your first heartbeat from any agent',
               'Watch real-time status appear here',
             ]}

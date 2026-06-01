@@ -1,0 +1,28 @@
+{
+  "nodes": [
+    { "id": "vercel-frontend", "label": "Vercel Frontend (Vite)", "type": "workspace", "mentions": 1420 },
+    { "id": "agent-api", "label": "Express API Server", "type": "agent", "status": "running", "mentions": 948 },
+    { "id": "supabase-db", "label": "Supabase PostgreSQL", "type": "workspace", "mentions": 1284 },
+    { "id": "n8n-workflows", "label": "n8n Orchestration", "type": "entity", "mentions": 587 },
+    { "id": "claude-sonnet", "label": "Claude 3.5 Sonnet", "type": "model", "mentions": 2043 },
+    { "id": "claude-haiku", "label": "Claude 3.5 Haiku", "type": "model", "mentions": 1540 },
+    { "id": "mercury-agent", "label": "MERCURY outreach-bot", "type": "agent", "status": "running", "mentions": 843 },
+    { "id": "hermes-agent", "label": "HERMES crm-sync", "type": "agent", "status": "running", "mentions": 612 },
+    { "id": "ledger-agent", "label": "LEDGER bookkeep-bot", "type": "agent", "status": "idle", "mentions": 204 },
+    { "id": "fincfo-agent", "label": "FINCFO finance-bot", "type": "agent", "status": "running", "mentions": 489 },
+    { "id": "git-hooks", "label": "Git Auto-Capture Hooks", "type": "observation_type", "mentions": 512 }
+  ],
+  "links": [
+    { "source": "vercel-frontend", "target": "agent-api", "relationship": "fetches" },
+    { "source": "agent-api", "target": "supabase-db", "relationship": "queries" },
+    { "source": "agent-api", "target": "n8n-workflows", "relationship": "triggers" },
+    { "source": "n8n-workflows", "target": "claude-sonnet", "relationship": "calls" },
+    { "source": "mercury-agent", "target": "agent-api", "relationship": "telemetry" },
+    { "source": "hermes-agent", "target": "supabase-db", "relationship": "syncs" },
+    { "source": "fincfo-agent", "target": "claude-sonnet", "relationship": "reasons" },
+    { "source": "ledger-agent", "target": "supabase-db", "relationship": "logs" },
+    { "source": "agent-api", "target": "claude-haiku", "relationship": "metrics" },
+    { "source": "git-hooks", "target": "agent-api", "relationship": "webhooks" },
+    { "source": "mercury-agent", "target": "claude-sonnet", "relationship": "llm_eval" }
+  ]
+}

@@ -52,7 +52,7 @@ const API_KEY = process.env.AGENTOS_API_KEY || '';
 const INFRA_PATH = process.env.INFRA_AGENT_PATH || '';
 const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY || '';
 
-const MODELS = { fast: 'claude-haiku-4-5', smart: 'claude-sonnet-4-6' };
+const MODELS = { fast: 'claude-haiku-4-5', smart: 'claude-sonnet-4-20250514' };
 const anthropic = ANTHROPIC_KEY ? new Anthropic({ apiKey: ANTHROPIC_KEY }) : null;
 
 async function claudeCall({ model = 'fast', system, prompt, maxTokens = 1024 }) {
@@ -333,7 +333,9 @@ server.tool(
       };
     }
 
-    const fullScript = args ? `${script} -- ${args}` : script;
+    // Security: sanitize args to prevent command injection
+    const sanitizedArgs = args ? args.replace(/[;&|`$(){}\[\]!#~<>\\"'\n\r]/g, '') : '';
+    const fullScript = sanitizedArgs ? `${script} -- ${sanitizedArgs}` : script;
     const result = runInfraCommand(fullScript, timeout);
     return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
   }
@@ -348,7 +350,7 @@ server.tool(
   'Use Claude to summarize recent agent observations into an executive briefing. Uses Haiku 4.5 by default for speed.',
   {
     hours: z.number().optional().default(24).describe('Window in hours (default 24)'),
-    model: z.enum(['fast', 'smart']).optional().default('fast').describe('fast=Haiku 4.5, smart=Sonnet 4.6'),
+    model: z.enum(['fast', 'smart']).optional().default('fast').describe('fast=Haiku 4.5, smart=Sonnet 4'),
   },
   async ({ hours, model }) => {
     if (!anthropic) {
@@ -380,7 +382,7 @@ server.tool(
 
 server.tool(
   'agentos_analyze_agent',
-  'Use Claude (Sonnet 4.6 with adaptive thinking) to diagnose an agent\'s reliability from its observation log.',
+  'Use Claude (Sonnet 4 with adaptive thinking) to diagnose an agent\'s reliability from its observation log.',
   {
     agent_name: z.string().describe('Agent name (as known to AgentOS)'),
   },
@@ -425,10 +427,10 @@ server.tool(
 
 server.tool(
   'agentos_ask',
-  'Free-form Q&A about the org\'s agent fleet, grounded in recent observations and registered agents/workspaces. Defaults to Haiku 4.5; pass model="smart" for Sonnet 4.6.',
+  'Free-form Q&A about the org\'s agent fleet, grounded in recent observations and registered agents/workspaces. Defaults to Haiku 4.5; pass model="smart" for Sonnet 4.',
   {
     question: z.string().describe('The question to answer'),
-    model: z.enum(['fast', 'smart']).optional().default('fast').describe('fast=Haiku 4.5, smart=Sonnet 4.6'),
+    model: z.enum(['fast', 'smart']).optional().default('fast').describe('fast=Haiku 4.5, smart=Sonnet 4'),
   },
   async ({ question, model }) => {
     if (!anthropic) {

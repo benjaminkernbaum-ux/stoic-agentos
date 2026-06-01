@@ -1880,6 +1880,45 @@ body::before {
 </style>
 </head>
 <body>
+<script>
+  if (window.location.protocol === 'file:') {
+    document.addEventListener('DOMContentLoaded', function() {
+      const banner = document.createElement('div');
+      banner.style.cssText = `
+        background: linear-gradient(90deg, #161625 0%, #1e1e38 50%, #161625 100%);
+        border-bottom: 1px solid rgba(155, 89, 255, 0.25);
+        color: #d4a5ff;
+        padding: 10px 24px;
+        text-align: center;
+        font-size: 12.5px;
+        font-family: 'Inter', sans-serif;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        position: relative;
+        z-index: 99999;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+      `;
+      banner.innerHTML = `
+        <span>⚡ <strong>Offline Demo Mode:</strong> File opened directly via file://. Active backend connections (like vaults and live graphs) require running the local server.</span>
+        <button onclick="this.parentElement.style.display='none'" style="
+          background: rgba(255,255,255,0.06);
+          border: 1px solid rgba(255,255,255,0.12);
+          color: #8888a0;
+          cursor: pointer;
+          border-radius: 4px;
+          padding: 2px 8px;
+          font-size: 10px;
+          font-weight: 600;
+          transition: all 0.2s;
+        " onmouseover="this.style.color='#fff';this.style.borderColor='rgba(255,255,255,0.3)'" onmouseout="this.style.color='#8888a0';this.style.borderColor='rgba(255,255,255,0.12)'">Dismiss</button>
+      `;
+      document.body.insertBefore(banner, document.body.firstChild);
+    });
+  }
+</script>
 
 <!-- ═══ COMMAND PALETTE ═══ -->
 <div class="cmd-palette-overlay" id="cmd-overlay" onclick="if(event.target===this)closePalette()">

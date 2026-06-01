@@ -294,7 +294,7 @@ export default function AgentsTab({ agents, setShowAgentModal, setSelectedAgent,
             title="Register Your First Agent"
             description="Create agents manually or use the SDK to auto-register them on first heartbeat."
             steps={[
-              'Install SDK: npm i @stoic/agentos-sdk',
+              'Install SDK: npm i stoic-agentos-sdk',
               'Call os.wrapAgent() in your agent code',
               'Agents auto-register on first run',
             ]}

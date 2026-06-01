@@ -454,7 +454,7 @@ export default function TracesTab({ traces: initialTraces, traceStats: initialSt
             description="Capture every LLM call, tool use, and retrieval step with timing, tokens, and cost breakdowns — all in a visual waterfall."
             icon={<TracesEmptyViz />}
             steps={[
-              'Install SDK: npm i @stoic/agentos-sdk',
+              'Install SDK: npm i stoic-agentos-sdk',
               'Call os.instrument() to auto-patch OpenAI & Anthropic',
               'Every LLM call is captured as a trace with spans',
             ]}

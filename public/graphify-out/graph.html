@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>⚡ Stoic AgentOS — Codebase Knowledge Graph</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #06060c;
+      --panel: rgba(18, 18, 30, 0.7);
+      --border: rgba(155, 89, 255, 0.2);
+      --text: #e8e8f0;
+      --text-dim: #8888a0;
+      --cyan: #00d4ff;
+      --purple: #9b59ff;
+      --green: #00e68a;
+      --orange: #ff9f43;
+      --pink: #ff6b9d;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+      display: block;
+    }
+
+    .ui-overlay {
+      position: absolute;
+      top: 24px;
+      left: 24px;
+      z-index: 10;
+      pointer-events: none;
+    }
+
+    .card {
+      background: var(--panel);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px 24px;
+      max-width: 320px;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4), 0 0 20px rgba(155, 89, 255, 0.05);
+      pointer-events: auto;
+    }
+
+    h1 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 6px;
+      background: linear-gradient(135deg, var(--cyan) 0%, var(--purple) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    p {
+      font-size: 12px;
+      color: var(--text-dim);
+      line-height: 1.5;
+    }
+
+    .legend {
+      margin-top: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    .hint {
+      position: absolute;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--panel);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 11px;
+      z-index: 10;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+
+  <canvas id="graph-canvas"></canvas>
+
+  <div class="ui-overlay">
+    <div class="card">
+      <h1>⚡ Codebase Knowledge Graph</h1>
+      <p>Interactive visualization of Stoic AgentOS cognitive network nodes and system operations.</p>
+      
+      <div class="legend">
+        <div class="legend-item"><span class="dot" style="background: var(--purple);"></span> <span style="color: var(--purple);">Agent</span></div>
+        <div class="legend-item"><span class="dot" style="background: var(--green);"></span> <span style="color: var(--green);">Workspace</span></div>
+        <div class="legend-item"><span class="dot" style="background: var(--cyan);"></span> <span style="color: var(--cyan);">Model</span></div>
+        <div class="legend-item"><span class="dot" style="background: var(--orange);"></span> <span style="color: var(--orange);">Entity</span></div>
+        <div class="legend-item"><span class="dot" style="background: var(--pink);"></span> <span style="color: var(--pink);">Obs Type</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="hint">🎯 Click and drag nodes to interact with physics engine</div>
+
+  <script>
+    // Fallback static JSON data in case fetch fails
+    const staticGraphData = {
+      "nodes": [
+        { "id": "vercel-frontend", "label": "Vercel Frontend (Vite)", "type": "workspace" },
+        { "id": "agent-api", "label": "Express API Server", "type": "agent", "status": "running" },
+        { "id": "supabase-db", "label": "Supabase PostgreSQL", "type": "workspace" },
+        { "id": "n8n-workflows", "label": "n8n Orchestration", "type": "entity" },
+        { "id": "claude-sonnet", "label": "Claude 3.5 Sonnet", "type": "model" },
+        { "id": "claude-haiku", "label": "Claude 3.5 Haiku", "type": "model" },
+        { "id": "mercury-agent", "label": "MERCURY outreach-bot", "type": "agent", "status": "running" },
+        { "id": "hermes-agent", "label": "HERMES crm-sync", "type": "agent", "status": "running" },
+        { "id": "ledger-agent", "label": "LEDGER bookkeep-bot", "type": "agent", "status": "idle" },
+        { "id": "fincfo-agent", "label": "FINCFO finance-bot", "type": "agent", "status": "running" },
+        { "id": "git-hooks", "label": "Git Auto-Capture Hooks", "type": "observation_type" }
+      ],
+      "links": [
+        { "source": "vercel-frontend", "target": "agent-api", "relationship": "fetches" },
+        { "source": "agent-api", "target": "supabase-db", "relationship": "queries" },
+        { "source": "agent-api", "target": "n8n-workflows", "relationship": "triggers" },
+        { "source": "n8n-workflows", "target": "claude-sonnet", "relationship": "calls" },
+        { "source": "mercury-agent", "target": "agent-api", "relationship": "telemetry" },
+        { "source": "hermes-agent", "target": "supabase-db", "relationship": "syncs" },
+        { "source": "fincfo-agent", "target": "claude-sonnet", "relationship": "reasons" },
+        { "source": "ledger-agent", "target": "supabase-db", "relationship": "logs" },
+        { "source": "agent-api", "target": "claude-haiku", "relationship": "metrics" },
+        { "source": "git-hooks", "target": "agent-api", "relationship": "webhooks" },
+        { "source": "mercury-agent", "target": "claude-sonnet", "relationship": "llm_eval" }
+      ]
+    };
+
+    const colors = {
+      agent: '#9b59ff',
+      workspace: '#00e68a',
+      model: '#00d4ff',
+      entity: '#ff9f43',
+      observation_type: '#ff6b9d'
+    };
+
+    const canvas = document.getElementById('graph-canvas');
+    const ctx = canvas.getContext('2d');
+    let width = window.innerWidth;
+    let height = window.innerHeight;
+
+    function resize() {
+      const dpr = window.devicePixelRatio || 1;
+      width = window.innerWidth;
+      height = window.innerHeight;
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+      canvas.style.width = width + 'px';
+      canvas.style.height = height + 'px';
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    // Physics Nodes
+    const nodes = [];
+    const nodeMap = {};
+    const links = [];
+
+    function initGraph(data) {
+      nodes.length = 0;
+      links.length = 0;
+
+      data.nodes.forEach(n => {
+        const node = {
+          id: n.id,
+          label: n.label,
+          type: n.type,
+          x: width / 2 + (Math.random() - 0.5) * 200,
+          y: height / 2 + (Math.random() - 0.5) * 200,
+          vx: 0,
+          vy: 0,
+          r: 24,
+          color: colors[n.type] || '#fff'
+        };
+        nodes.push(node);
+        nodeMap[n.id] = node;
+      });
+
+      data.links.forEach(l => {
+        if (nodeMap[l.source] && nodeMap[l.target]) {
+          links.push({
+            source: nodeMap[l.source],
+            target: nodeMap[l.target],
+            rel: l.relationship
+          });
+        }
+      });
+    }
+
+    // Force simulation logic
+    function step() {
+      const k = 0.03; // Spring constant
+      const length = 120; // Target length
+      const rep = 400; // Repulsion constant
+      const centerForce = 0.005;
+
+      // Center force
+      nodes.forEach(n => {
+        n.vx += (width / 2 - n.x) * centerForce;
+        n.vy += (height / 2 - n.y) * centerForce;
+      });
+
+      // Repulsion between nodes
+      for (let i = 0; i < nodes.length; i++) {
+        for (let j = i + 1; j < nodes.length; j++) {
+          const n1 = nodes[i];
+          const n2 = nodes[j];
+          const dx = n2.x - n1.x;
+          const dy = n2.y - n1.y;
+          const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+          if (dist < 300) {
+            const f = rep / (dist * dist);
+            n1.vx -= (dx / dist) * f;
+            n1.vy -= (dy / dist) * f;
+            n2.vx += (dx / dist) * f;
+            n2.vy += (dy / dist) * f;
+          }
+        }
+      }
+
+      // Spring force on links
+      links.forEach(l => {
+        const dx = l.target.x - l.source.x;
+        const dy = l.target.y - l.source.y;
+        const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+        const f = (dist - length) * k;
+        l.source.vx += (dx / dist) * f;
+        l.source.vy += (dy / dist) * f;
+        l.target.vx -= (dx / dist) * f;
+        l.target.vy -= (dy / dist) * f;
+      });
+
+      // Update positions
+      nodes.forEach(n => {
+        if (n === dragNode) return;
+        n.vx *= 0.85; // Damping
+        n.vy *= 0.85;
+        n.x += n.vx;
+        n.y += n.vy;
+
+        // Contain
+        n.x = Math.max(50, Math.min(width - 50, n.x));
+        n.y = Math.max(50, Math.min(height - 50, n.y));
+      });
+    }
+
+    // Drag-and-drop state
+    let dragNode = null;
+    window.addEventListener('mousedown', e => {
+      const mx = e.clientX;
+      const my = e.clientY;
+      dragNode = nodes.find(n => {
+        const d = Math.sqrt((n.x - mx)**2 + (n.y - my)**2);
+        return d < n.r;
+      });
+    });
+
+    window.addEventListener('mousemove', e => {
+      if (dragNode) {
+        dragNode.x = e.clientX;
+        dragNode.y = e.clientY;
+      }
+    });
+
+    window.addEventListener('mouseup', () => {
+      dragNode = null;
+    });
+
+    // Draw loop
+    let t = 0;
+    function draw() {
+      t++;
+      step();
+      ctx.fillStyle = '#06060c';
+      ctx.fillRect(0, 0, width, height);
+
+      // Draw background cyber grid
+      ctx.strokeStyle = 'rgba(255,255,255,0.015)';
+      ctx.lineWidth = 1;
+      const gridSize = 40;
+      for (let x = 0; x < width; x += gridSize) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, height); ctx.stroke();
+      }
+      for (let y = 0; y < height; y += gridSize) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke();
+      }
+
+      // Draw links
+      links.forEach(l => {
+        ctx.beginPath();
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+        ctx.lineWidth = 1.5;
+        ctx.moveTo(l.source.x, l.source.y);
+        ctx.lineTo(l.target.x, l.target.y);
+        ctx.stroke();
+
+        // Draw relationship text
+        const mx = (l.source.x + l.target.x) / 2;
+        const my = (l.source.y + l.target.y) / 2;
+        ctx.fillStyle = 'rgba(255,255,255,0.25)';
+        ctx.font = '8px Space Grotesk';
+        ctx.textAlign = 'center';
+        ctx.fillText(l.rel, mx, my - 4);
+      });
+
+      // Draw nodes
+      nodes.forEach(n => {
+        const hoverPulse = Math.sin(t * 0.03) * 3 + 24;
+        
+        // Outer glowing ring
+        const grad = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, hoverPulse * 1.8);
+        grad.addColorStop(0, n.color + '25');
+        grad.addColorStop(1, 'transparent');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, hoverPulse * 1.8, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Node Circle
+        ctx.beginPath();
+        ctx.fillStyle = '#12121e';
+        ctx.strokeStyle = n.color;
+        ctx.lineWidth = 2.5;
+        ctx.arc(n.x, n.y, n.r * 0.8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // Label
+        ctx.fillStyle = '#fff';
+        ctx.font = '10px Space Grotesk';
+        ctx.textAlign = 'center';
+        ctx.fillText(n.label, n.x, n.y + n.r + 4);
+      });
+
+      requestAnimationFrame(draw);
+    }
+
+    // Try live fetch, fallback to static if local file protocol
+    fetch('graph.json')
+      .then(r => r.json())
+      .then(data => {
+        initGraph(data);
+        draw();
+      })
+      .catch(() => {
+        initGraph(staticGraphData);
+        draw();
+      });
+
+  </script>
+</body>
+</html>

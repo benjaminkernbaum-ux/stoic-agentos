@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Navigate, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import Turnstile from '../components/Turnstile';
 import './Auth.css';
 
 export default function LoginPage() {
@@ -10,6 +11,7 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState(null);
 
   if (isAuthenticated) return <Navigate to="/dashboard" replace />;
 
@@ -21,6 +23,12 @@ export default function LoginPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+
+    if (!turnstileToken) {
+      setError('Please complete the human verification challenge.');
+      return;
+    }
+
     setLoading(true);
     try {
       const { data, error: authError } = await signIn(form.email, form.password);
@@ -119,8 +127,16 @@ export default function LoginPage() {
               disabled={loading || success}
             />
           </div>
-          <button type="submit" className="auth-btn primary" disabled={loading || success}>
-            {success ? '✅ Redirecting...' : loading ? 'Signing in...' : 'Sign In'}
+
+          {/* Cloudflare Turnstile — "I'm not a robot" */}
+          <Turnstile
+            onVerify={(token) => setTurnstileToken(token)}
+            onExpire={() => setTurnstileToken(null)}
+            onError={() => setTurnstileToken(null)}
+          />
+
+          <button type="submit" className="auth-btn primary" disabled={loading || success || !turnstileToken}>
+            {success ? '✅ Redirecting...' : loading ? 'Signing in...' : !turnstileToken ? 'Complete verification above' : 'Sign In'}
           </button>
         </form>
 

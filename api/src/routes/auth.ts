@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import type { Request, Response } from 'express';
 import crypto from 'crypto';
+import { hashApiKey } from '../middleware/auth.js';
 import { supabase } from '../middleware/db.js';
 
 const router = Router();
@@ -50,7 +51,8 @@ router.post(`/api/${API_VERSION}/auth/setup-org`, async (req: Request, res: Resp
     const apiKey = `sk_live_${crypto.randomBytes(24).toString('hex')}`;
     await supabase.from('api_keys').insert({
       org_id: org.id,
-      key: apiKey,
+      key_hash: hashApiKey(apiKey),
+      key_prefix: apiKey.slice(0, 12),
       name: 'Default',
     });
 

@@ -9,9 +9,6 @@
     ".": {
       "import": "./src/index.js",
       "types": "./src/index.d.ts"
-    },
-    "./instrument": {
-      "import": "./src/instrument.js"
     }
   },
   "bin": {

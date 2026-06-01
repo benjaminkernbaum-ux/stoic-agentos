@@ -15,6 +15,7 @@
 import express from 'express';
 import type { Request, Response } from 'express';
 import cors from 'cors';
+import { securityHeaders } from './middleware/security.js';
 import { supabase } from './middleware/db.js';
 
 // Production middleware
@@ -24,7 +25,7 @@ import {
   globalErrorHandler,
   installProcessHandlers,
 } from './middleware/production.js';
-import { apiLimiter } from './middleware/rateLimiter.js';
+import { apiLimiter, authLimiter } from './middleware/rateLimiter.js';
 
 // Route modules
 import healthRoutes from './routes/health.js';
@@ -57,6 +58,9 @@ const API_VERSION = 'v1';
 
 const app = express();
 
+// Trust first proxy (Railway) — ensures req.ip returns client IP, not proxy IP
+app.set('trust proxy', 1);
+
 // ── Core Middleware (order matters) ──
 
 // 1. Request ID — must be first so all subsequent logs include it
@@ -75,8 +79,9 @@ app.use(cors({
   origin: (origin, callback) => {
     // Allow requests with no origin (mobile apps, curl, etc.)
     if (!origin) return callback(null, true);
-    // Allow any Vercel preview deployment
-    if (origin.endsWith('.vercel.app') || ALLOWED_ORIGINS.includes(origin)) {
+    // Allow Vercel preview deployments for stoic-agentos only (not arbitrary 'stoic' substrings)
+    const host = origin.replace('https://', '');
+    if (origin.endsWith('.vercel.app') && host.startsWith('stoic-agentos') || ALLOWED_ORIGINS.includes(origin)) {
       return callback(null, true);
     }
     callback(new Error(`CORS: ${origin} not allowed`));
@@ -84,6 +89,9 @@ app.use(cors({
   credentials: true,
   exposedHeaders: ['X-Request-ID', 'X-RateLimit-Limit', 'X-RateLimit-Remaining', 'X-RateLimit-Reset', 'Retry-After'],
 }));
+
+// 2b. Security headers (HSTS, CSP, X-Frame-Options, etc.)
+app.use(securityHeaders);
 
 // 3. Body parsing
 app.use(express.json({ limit: '1mb' }));
@@ -93,6 +101,9 @@ app.use(metricsMiddleware);
 
 // 5. Rate limiting (applied to all API routes)
 app.use('/api/', apiLimiter);
+
+// 5b. Stricter auth rate limiting (anti-brute-force)
+app.use('/api/v1/auth/', authLimiter);
 
 // Make supabase accessible via app.locals
 app.locals.supabase = supabase;

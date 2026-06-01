@@ -2,6 +2,7 @@ import { Router } from 'express';
 import type { Request, Response } from 'express';
 import express from 'express';
 import { authenticate } from '../middleware/auth.js';
+import { requireMinRole } from '../middleware/rbac.js';
 import { supabase } from '../middleware/db.js';
 import type { AuthenticatedRequest } from '../types.js';
 
@@ -15,7 +16,7 @@ const STRIPE_PRICES: Record<string, string> = {
 };
 
 // ── Checkout Session ──
-router.post(`/api/${API_VERSION}/billing/checkout`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
+router.post(`/api/${API_VERSION}/billing/checkout`, authenticate, requireMinRole('admin'), async (req: AuthenticatedRequest, res: Response) => {
   if (!STRIPE_SECRET) return res.status(503).json({ error: 'Stripe not configured' });
 
   try {
@@ -55,7 +56,7 @@ router.post(`/api/${API_VERSION}/billing/checkout`, authenticate, async (req: Au
 });
 
 // ── Customer Portal ──
-router.post(`/api/${API_VERSION}/billing/portal`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
+router.post(`/api/${API_VERSION}/billing/portal`, authenticate, requireMinRole('admin'), async (req: AuthenticatedRequest, res: Response) => {
   if (!STRIPE_SECRET) return res.status(503).json({ error: 'Stripe not configured' });
 
   try {
@@ -83,14 +84,16 @@ router.post('/webhooks/stripe', express.raw({ type: 'application/json' }), async
     const Stripe = (await import('stripe')).default;
     const stripe = new Stripe(STRIPE_SECRET);
     const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
-
-    let event: Record<string, unknown>;
-    if (endpointSecret) {
-      const sig = req.headers['stripe-signature'] as string;
-      event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret) as unknown as Record<string, unknown>;
-    } else {
-      event = req.body;
+    if (!endpointSecret) {
+      console.error('CRITICAL: STRIPE_WEBHOOK_SECRET not configured — rejecting webhook');
+      return res.status(503).json({ error: 'Webhook verification not configured' });
     }
+
+    const sig = req.headers['stripe-signature'] as string;
+    if (!sig) {
+      return res.status(400).json({ error: 'Missing stripe-signature header' });
+    }
+    const event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret) as unknown as Record<string, unknown>;
 
     switch (event.type) {
       case 'checkout.session.completed': {

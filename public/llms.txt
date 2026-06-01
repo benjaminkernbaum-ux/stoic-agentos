@@ -1,0 +1,52 @@
+# Stoic AgentOS
+> The open-source operating system for AI agent fleets.
+
+## What is Stoic AgentOS?
+Stoic AgentOS is a production-grade platform for monitoring, orchestrating, and persisting knowledge across autonomous AI agent fleets. It provides observability, three-tier memory, compliance governance, and Claude-powered AI diagnostics in a single premium dashboard.
+
+## Key Capabilities
+- LLM call tracing with per-model cost attribution (OpenAI, Anthropic, custom)
+- Three-tier memory system: Working (session TTL), Episodic (event timeline), Semantic (knowledge triplets)
+- Compliance audit trails with immutable logging and circuit breakers
+- Auto-instrumentation for OpenAI and Anthropic SDKs (3 lines of code)
+- Claude-powered AI diagnostics with 6 analysis modes
+- Multi-org RBAC with BYOK (Bring Your Own Key) Anthropic integration
+- Knowledge graph visualization with force-directed layout
+- Multi-workspace management across Git repositories
+- Webhook-driven alerting and notification system
+- Full OpenAPI 3.1 specification (55+ endpoints across 19 route modules)
+
+## Architecture
+- Frontend: React 19 + Vite 8 (SPA, deployed on Vercel)
+- Backend: Express.js + TypeScript (deployed on Railway via Docker)
+- Database: Supabase PostgreSQL with Row Level Security + Vault encryption
+- AI Engine: Anthropic Claude Haiku 4.5 (fast) + Sonnet 4.6 (deep analysis)
+- Billing: Stripe (checkout + customer portal + webhooks)
+- Auth: Supabase Auth (email + GitHub + Google OAuth)
+
+## SDK Installation
+npm install stoic-agentos-sdk   # Node.js / TypeScript
+pip install stoicos              # Python 3.9+
+
+## Quick Start (3 lines)
+import { AgentOS } from 'stoic-agentos-sdk';
+const os = new AgentOS({ apiKey: 'sk_live_xxx' });
+const agent = os.wrapAgent('my-agent', async (input) => processInput(input));
+
+## Pricing
+Free: $0/month — 5 agents, 10,000 observations/month, 2 workspaces
+Pro: $29/month — 25 agents, 100,000 observations/month, 10 workspaces
+Team: $79/month — 100 agents, unlimited observations, 15 members
+Enterprise: Custom pricing — unlimited everything, SSO/SAML, SLA guarantee
+
+## Links
+- Website: https://stoicagentos.com
+- Documentation: https://stoicagentos.com/docs
+- API Reference: https://stoicagentos.com/api/openapi.yaml
+- Node.js SDK: https://www.npmjs.com/package/stoic-agentos-sdk
+- Python SDK: https://pypi.org/project/stoicos/
+- GitHub: https://github.com/benjaminkernbaum-ux
+
+## Contact
+- Email: benjamin@stoicagentos.com
+- LinkedIn: https://www.linkedin.com/company/17224756/

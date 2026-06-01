@@ -1,10 +1,12 @@
 /**
  * ═══════════════════════════════════════════════════════
- *  Stoic AgentOS — Security Headers Middleware
+ *  Stoic AgentOS — Security Headers Middleware (TypeScript)
  * ═══════════════════════════════════════════════════════
  *  Production security headers without external deps.
  *  Covers OWASP top-10 header recommendations.
  */
+
+import type { Request, Response, NextFunction } from 'express';
 
 // ── Allowed Origins ─────────────────────────────────
 const ALLOWED_ORIGINS = [
@@ -27,7 +29,7 @@ if (isDev) {
  * Security headers middleware
  * Sets all recommended production security headers.
  */
-export function securityHeaders(req, res, next) {
+export function securityHeaders(req: Request, res: Response, next: NextFunction): Response | void {
   // ── CORS ──
   const origin = req.headers.origin;
   if (origin && (ALLOWED_ORIGINS.includes(origin) || isDev)) {
@@ -76,9 +78,9 @@ export function securityHeaders(req, res, next) {
  * Request ID middleware
  * Assigns a unique ID to every request for tracing.
  */
-export function requestId(req, res, next) {
+export function requestId(req: Request & { requestId?: string }, res: Response, next: NextFunction): void {
   const id = req.headers['x-request-id'] || `req_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
-  req.requestId = id;
+  req.requestId = id as string;
   res.set('X-Request-ID', id);
   next();
 }

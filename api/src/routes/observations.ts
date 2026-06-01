@@ -59,12 +59,15 @@ router.post(`/api/${API_VERSION}/observations`, authenticate, async (req: Authen
           .trim()
           .slice(0, 80);
 
+        // Escape LIKE wildcards to prevent injection via observation titles
+        const safeEntityName = entityName.slice(0, 30).replace(/[%_\\]/g, '\\$&');
+
         // Check if entity already exists
         const { data: existing } = await supabase!
           .from('knowledge_items')
           .select('id, content')
           .eq('org_id', req.org.id)
-          .ilike('name', `%${entityName.slice(0, 30)}%`)
+          .ilike('name', `%${safeEntityName}%`)
           .limit(1)
           .single();
 

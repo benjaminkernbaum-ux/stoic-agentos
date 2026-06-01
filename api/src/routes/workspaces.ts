@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import type { Response } from 'express';
 import { authenticate } from '../middleware/auth.js';
+import { requireMinRole } from '../middleware/rbac.js';
 import { supabase, checkLimit, PLAN_LIMITS } from '../middleware/db.js';
 import type { AuthenticatedRequest } from '../types.js';
 
@@ -56,7 +57,7 @@ router.get(`/api/${API_VERSION}/workspaces`, authenticate, async (req: Authentic
 });
 
 // ── Delete Workspace ──
-router.delete(`/api/${API_VERSION}/workspaces/:id`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
+router.delete(`/api/${API_VERSION}/workspaces/:id`, authenticate, requireMinRole('admin'), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { data, error } = await supabase!
       .from('workspaces')

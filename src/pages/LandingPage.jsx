@@ -5,6 +5,8 @@ import InfraSimulation from '../components/InfraSimulation';
 import NeuralHeroCanvas from '../components/NeuralHeroCanvas';
 import ParticleMesh from '../components/ParticleMesh';
 import AnimatedCounter from '../components/AnimatedCounter';
+import MarketConsolidation from '../components/MarketConsolidation';
+import PricingCalculator from '../components/PricingCalculator';
 
 const NAV_LINKS = ['Features', 'Ecosystem', 'SDK', 'Pricing', 'Docs'];
 
@@ -14,7 +16,7 @@ const FEATURES = [
   { icon: '🕸️', color: 'rgba(0,212,255,0.12)', title: 'Knowledge Graph', desc: 'Interactive force-directed visualization of your codebase relationships. See how agents, files, and workflows connect.' },
   { icon: '📦', color: 'rgba(0,230,138,0.12)', title: 'Multi-Workspace', desc: 'Manage 50+ repos from a single pane of glass. Git status, branches, dirty files, and context routing across projects.' },
   { icon: '⚡', color: 'rgba(255,159,67,0.12)', title: 'Auto-Capture Hooks', desc: 'Git post-commit hooks auto-log every change. Scheduled brain refresh keeps knowledge items fresh without manual work.' },
-  { icon: '🔧', color: 'rgba(255,107,157,0.12)', title: 'SDK & API Access', desc: 'npm install @stoic/agentos-sdk — wrap any agent in 3 lines of code. Full REST API with API key management and webhook integrations.' },
+  { icon: '🔧', color: 'rgba(255,107,157,0.12)', title: 'SDK & API Access', desc: 'npm install stoic-agentos-sdk — wrap any agent in 3 lines of code. Full REST API with API key management and webhook integrations.' },
 ];
 
 const PRICING = [
@@ -25,15 +27,15 @@ const PRICING = [
 ];
 
 const COMPARE = [
-  { feature: 'Agent Fleet Monitoring', us: '✅', langsmith: '✅', langfuse: '✅', agentops: '🟡' },
-  { feature: 'Three-Tier Memory System', us: '✅', langsmith: '❌', langfuse: '❌', agentops: '❌' },
-  { feature: 'Knowledge Graph', us: '✅', langsmith: '❌', langfuse: '❌', agentops: '❌' },
-  { feature: 'Multi-Repo Workspace', us: '✅', langsmith: '❌', langfuse: '❌', agentops: '❌' },
-  { feature: 'Auto-Capture (Git Hooks)', us: '✅', langsmith: '❌', langfuse: '🟡', agentops: '🟡' },
-  { feature: 'Compliance & Audit Log', us: '✅', langsmith: '❌', langfuse: '❌', agentops: '❌' },
-  { feature: 'AI Chat (Claude-Powered)', us: '✅', langsmith: '❌', langfuse: '❌', agentops: '❌' },
-  { feature: 'Visual Dashboard', us: '✅', langsmith: '🟡', langfuse: '✅', agentops: '🟡' },
-  { feature: 'Open-Source Core', us: '✅', langsmith: '❌', langfuse: '✅', agentops: '✅' },
+  { feature: 'Agent Fleet Monitoring', us: '✅', langsmith: '✅', langfuse: '✅', braintrust: '✅', agentops: '🟡' },
+  { feature: 'Three-Tier Memory System', us: '✅', langsmith: '❌', langfuse: '❌', braintrust: '❌', agentops: '❌' },
+  { feature: 'Knowledge Graph', us: '✅', langsmith: '❌', langfuse: '❌', braintrust: '❌', agentops: '❌' },
+  { feature: 'Multi-Repo Workspace', us: '✅', langsmith: '❌', langfuse: '❌', braintrust: '❌', agentops: '❌' },
+  { feature: 'Eval Framework', us: '🟡', langsmith: '✅', langfuse: '✅', braintrust: '✅', agentops: '🟡' },
+  { feature: 'Compliance & Audit Log', us: '✅', langsmith: '❌', langfuse: '❌', braintrust: '❌', agentops: '❌' },
+  { feature: 'AI Chat (Claude-Powered)', us: '✅', langsmith: '❌', langfuse: '❌', braintrust: '❌', agentops: '❌' },
+  { feature: 'Circuit Breakers', us: '✅', langsmith: '❌', langfuse: '❌', braintrust: '❌', agentops: '❌' },
+  { feature: 'Open-Source Core', us: '✅', langsmith: '❌', langfuse: '✅', braintrust: '❌', agentops: '✅' },
 ];
 
 const ECOSYSTEM = [
@@ -57,27 +59,6 @@ const ECOSYSTEM = [
   },
 ];
 
-const SDK_CODE = `<span class="kw">import</span> { AgentOS } <span class="kw">from</span> <span class="str">'@stoic/agentos-sdk'</span>;
-
-<span class="cm">// Initialize with your API key</span>
-<span class="kw">const</span> os = <span class="kw">new</span> <span class="fn">AgentOS</span>({
-  apiKey: <span class="str">'sk_live_xxx'</span>,
-  workspace: <span class="str">'my-saas-backend'</span>,
-});
-
-<span class="cm">// Wrap any agent — auto-captures start/end/errors</span>
-<span class="kw">const</span> invoiceAgent = os.<span class="fn">wrapAgent</span>(<span class="str">'invoice-processor'</span>, <span class="kw">async</span> (input) <span class="op">=></span> {
-  <span class="kw">const</span> result = <span class="kw">await</span> <span class="fn">processInvoice</span>(input);
-  <span class="kw">return</span> result;
-});
-
-<span class="cm">// Manual capture for decisions & discoveries</span>
-os.<span class="fn">capture</span>({
-  type: <span class="str">'decision'</span>,
-  title: <span class="str">'Switched to GPT-4o-mini'</span>,
-  content: <span class="str">'Reduced cost by 40% with no quality loss'</span>,
-  agent: <span class="str">'content-writer'</span>,
-});`;
 
 /* ─── TECHNICAL FEATURE GRID (ENTERPRISE) ─── */
 const TECH_FEATURES = [
@@ -304,7 +285,7 @@ def process_invoice(file_path):
 
 # Telemetry is auto-captured in background`;
 
-  const nodeCode = `import { AgentOS } from '@stoic/agentos-sdk';
+  const nodeCode = `import { AgentOS } from 'stoic-agentos-sdk';
 
 const os = new AgentOS({
   apiKey: 'sk_live_xxx',
@@ -353,6 +334,7 @@ export default function LandingPage() {
   const infraRef = useScrollReveal();
   const metricsRef = useScrollReveal();
   const socialRef = useScrollReveal();
+  const consolidationRef = useScrollReveal();
   const featuresRef = useScrollReveal();
   const previewRef = useScrollReveal();
   const sdkRef = useScrollReveal();
@@ -490,6 +472,15 @@ export default function LandingPage() {
       </section>
 
       {/* ══════════════════════════════════
+           MARKET CONSOLIDATION — Competitive Moat
+         ══════════════════════════════════ */}
+      <section className="section" ref={consolidationRef}>
+        <div className="container section-reveal">
+          <MarketConsolidation />
+        </div>
+      </section>
+
+      {/* ══════════════════════════════════
            INFRASTRUCTURE SIMULATION
          ══════════════════════════════════ */}
       <section className="section" style={{ paddingTop: 0 }} ref={infraRef}>
@@ -586,7 +577,7 @@ export default function LandingPage() {
               <div className="how-step-number">1</div>
               <div className="how-step-icon">📦</div>
               <h3>Install the SDK</h3>
-              <code style={{ fontSize: '0.8rem', padding: '6px 12px', borderRadius: 6, background: 'rgba(155,89,255,0.1)', border: '1px solid rgba(155,89,255,0.2)', color: '#d4a5ff' }}>npm install @stoic/agentos-sdk</code>
+              <code style={{ fontSize: '0.8rem', padding: '6px 12px', borderRadius: 6, background: 'rgba(155,89,255,0.1)', border: '1px solid rgba(155,89,255,0.2)', color: '#d4a5ff' }}>npm install stoic-agentos-sdk</code>
               <p>One dependency. Works with any JavaScript/TypeScript agent framework.</p>
             </div>
             <div className="how-step-arrow section-reveal" style={{ transitionDelay: '0.3s' }}>→</div>
@@ -626,7 +617,7 @@ export default function LandingPage() {
             <InteractiveCodePlayground />
           </div>
           <div className="section-reveal" style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 32, transitionDelay: '0.3s' }}>
-            <div className="social-badge" onClick={() => navigator.clipboard?.writeText('npm install @stoic/agentos-sdk')} style={{ cursor: 'pointer' }}>📦 npm install @stoic/agentos-sdk</div>
+            <div className="social-badge" onClick={() => navigator.clipboard?.writeText('npm install stoic-agentos-sdk')} style={{ cursor: 'pointer' }}>📦 npm install stoic-agentos-sdk</div>
             <div className="social-badge" onClick={() => navigator.clipboard?.writeText('pip install stoicos')} style={{ cursor: 'pointer' }}>🐍 pip install stoicos</div>
           </div>
         </div>
@@ -646,6 +637,7 @@ export default function LandingPage() {
                   <th className="us">⚡ AgentOS</th>
                   <th>LangSmith</th>
                   <th>Langfuse</th>
+                  <th>Braintrust</th>
                   <th>AgentOps</th>
                 </tr>
               </thead>
@@ -656,6 +648,7 @@ export default function LandingPage() {
                     <td className="us">{row.us}</td>
                     <td>{row.langsmith}</td>
                     <td>{row.langfuse}</td>
+                    <td>{row.braintrust}</td>
                     <td>{row.agentops}</td>
                   </tr>
                 ))}
@@ -747,6 +740,9 @@ export default function LandingPage() {
           <div className="section-label section-reveal">💎 PRICING</div>
           <h2 className="section-title section-reveal">Start free. Scale when ready.</h2>
           <p className="section-sub section-reveal">No credit card required. Upgrade as your agent fleet grows.</p>
+          <div className="section-reveal" style={{ transitionDelay: '0.1s', marginBottom: 48 }}>
+            <PricingCalculator />
+          </div>
           <div className="pricing-grid section-reveal" style={{ transitionDelay: '0.2s' }}>
             {PRICING.map((p, i) => (
               <div key={i} className={`pricing-card ${p.style}`}>

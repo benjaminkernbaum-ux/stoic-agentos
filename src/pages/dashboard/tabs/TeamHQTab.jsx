@@ -54,7 +54,10 @@ export default function TeamHQTab({ planName, handleUpgrade, upgradeLoading }) {
   const [time, setTime] = useState(new Date());
   const [iframeLoaded, setIframeLoaded] = useState(false);
   const [showCTA, setShowCTA] = useState(false);
-  const isPaid = planName !== 'FREE';
+
+  // Dev override: add ?demo=free to URL to force the free-user locked view
+  const demoFree = new URLSearchParams(window.location.search).get('demo') === 'free';
+  const isPaid = demoFree ? false : planName !== 'FREE';
 
   useEffect(() => {
     injectKeyframes();

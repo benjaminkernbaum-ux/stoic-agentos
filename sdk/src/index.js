@@ -1,5 +1,5 @@
 /**
- * @stoic/agentos-sdk v2.1.0
+ * @stoic/agentos-sdk v3.0.0
  * Official SDK for Stoic AgentOS — AI Agent Operations Platform
  * 
  * Usage:
@@ -461,7 +461,7 @@ export class AgentOS {
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${this.apiKey}`,
-            'User-Agent': 'stoic-agentos-sdk/2.1.0',
+            'User-Agent': 'stoic-agentos-sdk/3.0.0',
           },
           body: JSON.stringify(body),
         });
@@ -515,7 +515,7 @@ export class AgentOS {
         const resp = await fetch(`${this.apiUrl}${path}`, {
           headers: {
             'Authorization': `Bearer ${this.apiKey}`,
-            'User-Agent': 'stoic-agentos-sdk/2.1.0',
+            'User-Agent': 'stoic-agentos-sdk/3.0.0',
           },
         });
 
