@@ -2,47 +2,52 @@ import { useState, useMemo } from 'react';
 
 const INTEGRATIONS = {
   google: {
-    label: 'Google',
-    icon: 'G',
+    label: 'Google Workspace', icon: '🔵',
     items: [
-      { id: 'gmail', name: 'Gmail', icon: '📧', desc: 'Read, compose, and organize emails in your Gmail inbox.', color: '#ea4335' },
-      { id: 'bigquery', name: 'Google BigQuery', icon: '📊', desc: 'Run queries and analyze large datasets stored in Google BigQuery.', color: '#4285f4' },
-      { id: 'calendar', name: 'Google Calendar', icon: '📅', desc: 'View, create, and manage calendar events and meeting schedules.', color: '#34a853' },
-      { id: 'docs', name: 'Google Docs', icon: '📄', desc: 'Create, read, and edit documents in Google Docs.', color: '#4285f4' },
-      { id: 'sheets', name: 'Google Sheets', icon: '📗', desc: 'Read, update, and analyze data in Google Sheets spreadsheets.', color: '#34a853' },
-      { id: 'drive', name: 'Google Drive', icon: '💾', desc: 'Search, upload, and organize files in Google Drive.', color: '#fbbc04' },
+      { id: 'gmail', name: 'Gmail', icon: '📧', desc: 'Read, compose, and organize emails in your Gmail inbox.', color: '#ea4335', status: 'stable' },
+      { id: 'bigquery', name: 'BigQuery', icon: '📊', desc: 'Run queries and analyze large datasets in BigQuery.', color: '#4285f4', status: 'stable' },
+      { id: 'calendar', name: 'Calendar', icon: '📅', desc: 'Manage calendar events and meeting schedules.', color: '#34a853', status: 'stable' },
+      { id: 'docs', name: 'Docs', icon: '📄', desc: 'Create, read, and edit documents.', color: '#4285f4', status: 'stable' },
+      { id: 'sheets', name: 'Sheets', icon: '📗', desc: 'Read, update, and analyze spreadsheet data.', color: '#34a853', status: 'stable' },
+      { id: 'drive', name: 'Drive', icon: '💾', desc: 'Search, upload, and organize files.', color: '#fbbc04', status: 'stable' },
     ],
   },
   microsoft: {
-    label: 'Microsoft',
-    icon: '⊞',
+    label: 'Microsoft 365', icon: '🟦',
     items: [
-      { id: 'excel', name: 'Excel', icon: '📊', desc: 'Read, write, and analyze data in Microsoft Excel workbooks.', color: '#217346' },
-      { id: 'outlook', name: 'Outlook', icon: '📨', desc: 'Read, draft, and organize Outlook emails, meetings, and calendar...', color: '#0078d4' },
-      { id: 'powerpoint', name: 'PowerPoint', icon: '📽️', desc: 'Search, read, and create Microsoft PowerPoint presentations.', color: '#b7472a' },
-      { id: 'sharepoint', name: 'SharePoint', icon: '🏢', desc: 'Browse, read, and manage documents and sites in Microsoft...', color: '#036c70' },
-      { id: 'teams', name: 'Teams', icon: '💬', desc: 'Send and read messages, channels, and collaboration updates in...', color: '#6264a7' },
-      { id: 'word', name: 'Word', icon: '📝', desc: 'Search, read, and create Microsoft Word documents.', color: '#2b579a' },
+      { id: 'excel', name: 'Excel', icon: '📊', desc: 'Read, write, and analyze Excel workbooks.', color: '#217346', status: 'stable' },
+      { id: 'outlook', name: 'Outlook', icon: '📨', desc: 'Manage Outlook emails, meetings, and calendars.', color: '#0078d4', status: 'stable' },
+      { id: 'teams', name: 'Teams', icon: '💬', desc: 'Send messages and collaborate in Teams channels.', color: '#6264a7', status: 'stable' },
+      { id: 'sharepoint', name: 'SharePoint', icon: '🏢', desc: 'Browse and manage documents and sites.', color: '#036c70', status: 'beta' },
+      { id: 'powerpoint', name: 'PowerPoint', icon: '📽️', desc: 'Create and edit presentations.', color: '#b7472a', status: 'beta' },
     ],
   },
   devtools: {
-    label: 'Developer',
+    label: 'Developer Tools', icon: '🛠️',
     items: [
-      { id: 'github', name: 'GitHub', icon: '🐙', desc: 'Browse repositories, manage issues and pull requests, and review...', color: '#f0f6fc' },
-      { id: 'jira', name: 'Jira', icon: '📋', desc: 'Create, update, and track issues and sprints in Jira projects.', color: '#0052cc' },
-      { id: 'linear', name: 'Linear', icon: '📐', desc: 'Manage issues, projects, and workflows in Linear.', color: '#5e6ad2' },
-      { id: 'vercel', name: 'Vercel', icon: '▲', desc: 'Deploy, monitor, and manage Vercel projects and deployments.', color: '#ffffff' },
+      { id: 'github', name: 'GitHub', icon: '🐙', desc: 'Repositories, issues, PRs, and code review.', color: '#f0f6fc', status: 'stable' },
+      { id: 'vercel', name: 'Vercel', icon: '▲', desc: 'Deploy, monitor, and manage deployments.', color: '#ffffff', status: 'stable' },
+      { id: 'jira', name: 'Jira', icon: '📋', desc: 'Track issues, sprints, and project progress.', color: '#0052cc', status: 'stable' },
+      { id: 'linear', name: 'Linear', icon: '📐', desc: 'Manage issues, projects, and workflows.', color: '#5e6ad2', status: 'beta' },
+      { id: 'supabase', name: 'Supabase', icon: '⚡', desc: 'Database, auth, and realtime subscriptions.', color: '#3ecf8e', status: 'stable' },
     ],
   },
-  other: {
-    label: 'Other',
+  data: {
+    label: 'Data & AI', icon: '🧠',
     items: [
-      { id: 'slack', name: 'Slack', icon: '💬', desc: 'Send messages, manage channels, and automate Slack workflows.', color: '#4a154b' },
-      { id: 'notion', name: 'Notion', icon: '📓', desc: 'Read, create, and organize pages and databases in Notion.', color: '#ffffff' },
-      { id: 'exa', name: 'Exa', icon: '🔍', desc: 'Search the web using AI-powered semantic search for highly releva...', color: '#5b5fc7' },
-      { id: 'apollo', name: 'Apollo', icon: '✳️', desc: 'Search contacts, enrich leads, and manage your sales pipeline with...', color: '#7c5cfc' },
-      { id: 'airtable', name: 'Airtable', icon: '🗃️', desc: 'Read, create, and manage records in Airtable bases.', color: '#18bfff' },
-      { id: 'zapier', name: 'Zapier', icon: '⚡', desc: 'Connect and automate workflows across 5,000+ apps with Zapier.', color: '#ff4a00' },
+      { id: 'openai', name: 'OpenAI', icon: '🤖', desc: 'GPT-4o, embeddings, and assistant APIs.', color: '#10a37f', status: 'stable' },
+      { id: 'anthropic', name: 'Anthropic', icon: '🅰️', desc: 'Claude models for analysis and generation.', color: '#d4a574', status: 'stable' },
+      { id: 'pinecone', name: 'Pinecone', icon: '🌲', desc: 'Vector database for semantic search.', color: '#000000', status: 'beta' },
+      { id: 'snowflake', name: 'Snowflake', icon: '❄️', desc: 'Cloud data warehouse queries.', color: '#29b5e8', status: 'beta' },
+    ],
+  },
+  comms: {
+    label: 'Communication', icon: '💬',
+    items: [
+      { id: 'slack', name: 'Slack', icon: '💬', desc: 'Messages, channels, and workflow automation.', color: '#4a154b', status: 'stable' },
+      { id: 'notion', name: 'Notion', icon: '📓', desc: 'Pages, databases, and knowledge base.', color: '#ffffff', status: 'stable' },
+      { id: 'discord', name: 'Discord', icon: '🎮', desc: 'Server messages and bot interactions.', color: '#5865f2', status: 'beta' },
+      { id: 'zapier', name: 'Zapier', icon: '⚡', desc: 'Connect and automate 5,000+ apps.', color: '#ff4a00', status: 'stable' },
     ],
   },
 };
@@ -50,16 +55,17 @@ const INTEGRATIONS = {
 const CATEGORIES = [
   { id: 'all', label: 'All', icon: '📦' },
   { id: 'connected', label: 'Connected', icon: '🔗' },
-  { id: 'google', label: 'Productivity', icon: '📊' },
-  { id: 'microsoft', label: 'Microsoft', icon: '⊞' },
-  { id: 'devtools', label: 'Developer', icon: '🛠️' },
-  { id: 'other', label: 'Communication', icon: '💬' },
+  { id: 'google', label: 'Google', icon: '🔵' },
+  { id: 'microsoft', label: 'Microsoft', icon: '🟦' },
+  { id: 'devtools', label: 'Dev Tools', icon: '🛠️' },
+  { id: 'data', label: 'Data & AI', icon: '🧠' },
+  { id: 'comms', label: 'Communication', icon: '💬' },
 ];
 
 export default function IntegrationsTab() {
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('all');
-  const [connected, setConnected] = useState(new Set());
+  const [connected, setConnected] = useState(new Set(['github', 'slack', 'supabase']));
 
   const toggleConnect = (id) => {
     setConnected(prev => {
@@ -68,6 +74,8 @@ export default function IntegrationsTab() {
       return next;
     });
   };
+
+  const totalIntegrations = Object.values(INTEGRATIONS).reduce((s, g) => s + g.items.length, 0);
 
   const sections = useMemo(() => {
     const result = [];
@@ -88,70 +96,83 @@ export default function IntegrationsTab() {
   }, [search, category, connected]);
 
   return (
-    <div className="dash-content fleet-integrations-layout">
-      {/* Left filter sidebar */}
-      <div className="fleet-integ-sidebar">
+    <div className="dash-content hub-layout">
+      {/* Sidebar */}
+      <div className="hub-sidebar">
+        <div className="hub-sidebar-header">🔌 Connect Hub</div>
         <input
-          className="fleet-integ-search"
-          placeholder="Search..."
+          className="hub-search"
+          placeholder="Search integrations..."
           value={search}
           onChange={e => setSearch(e.target.value)}
         />
-
-        <div className="fleet-integ-cats">
+        <div className="hub-cats">
           {CATEGORIES.map(cat => (
             <button
               key={cat.id}
-              className={`fleet-integ-cat ${category === cat.id ? 'active' : ''}`}
+              className={`hub-cat ${category === cat.id ? 'active' : ''}`}
               onClick={() => setCategory(cat.id)}
             >
-              <span className="fleet-integ-cat-icon">{cat.icon}</span>
-              <span>{cat.label}</span>
+              <span className="hub-cat-icon">{cat.icon}</span>
+              <span className="hub-cat-label">{cat.label}</span>
+              {cat.id === 'connected' && <span className="hub-cat-count">{connected.size}</span>}
             </button>
           ))}
         </div>
-
-        <div className="fleet-integ-section-label">APPS</div>
-        <button className="fleet-integ-cat" onClick={() => setCategory('other')}>
-          <span className="fleet-integ-cat-icon">💬</span><span>Slack & Teams</span>
-        </button>
-
-        <div className="fleet-integ-section-label">WORKSPACE</div>
-        <button className="fleet-integ-cat">
-          <span className="fleet-integ-cat-icon">💻</span><span>Computer</span>
-        </button>
+        <div className="hub-sidebar-footer">
+          <button className="hub-custom-mcp">+ Custom MCP Server</button>
+        </div>
       </div>
 
-      {/* Main grid */}
-      <div className="fleet-integ-main">
+      {/* Main */}
+      <div className="hub-main">
+        {/* Stats strip */}
+        <div className="hub-stats">
+          <div className="hub-stat">
+            <span className="hub-stat-value">{totalIntegrations}</span>
+            <span className="hub-stat-label">Available</span>
+          </div>
+          <div className="hub-stat">
+            <span className="hub-stat-value connected">{connected.size}</span>
+            <span className="hub-stat-label">Connected</span>
+          </div>
+          <div className="hub-stat">
+            <span className="hub-stat-value">{Object.keys(INTEGRATIONS).length}</span>
+            <span className="hub-stat-label">Categories</span>
+          </div>
+        </div>
+
         {sections.length === 0 ? (
-          <div className="fleet-integ-empty">
+          <div className="hub-empty">
             <span style={{ fontSize: 48 }}>🔌</span>
             <h3>No integrations found</h3>
             <p>Try a different search or category</p>
           </div>
         ) : (
           sections.map(section => (
-            <div key={section.key} className="fleet-integ-group">
-              <div className="fleet-integ-group-header">
-                <span className="fleet-integ-group-icon">{section.icon || '⚙️'}</span>
-                <span className="fleet-integ-group-label">{section.label}</span>
+            <div key={section.key} className="hub-group">
+              <div className="hub-group-header">
+                <span className="hub-group-icon">{section.icon}</span>
+                <span className="hub-group-label">{section.label}</span>
+                <span className="hub-group-count">{section.items.length}</span>
               </div>
-              <div className="fleet-integ-grid">
+              <div className="hub-grid">
                 {section.items.map(item => (
-                  <div key={item.id} className="fleet-integ-card">
-                    <div className="fleet-integ-card-icon" style={{ background: `${item.color}18`, color: item.color }}>
-                      {item.icon}
+                  <div key={item.id} className={`hub-card ${connected.has(item.id) ? 'connected' : ''}`}>
+                    <div className="hub-card-top">
+                      <div className="hub-card-icon" style={{ background: `${item.color}15` }}>
+                        <span>{item.icon}</span>
+                      </div>
+                      {item.status === 'beta' && <span className="hub-card-beta">BETA</span>}
+                      {connected.has(item.id) && <span className="hub-card-live">● Live</span>}
                     </div>
-                    <div className="fleet-integ-card-info">
-                      <div className="fleet-integ-card-name">{item.name}</div>
-                      <div className="fleet-integ-card-desc">{item.desc}</div>
-                    </div>
+                    <h4 className="hub-card-name">{item.name}</h4>
+                    <p className="hub-card-desc">{item.desc}</p>
                     <button
-                      className={`fleet-integ-connect ${connected.has(item.id) ? 'connected' : ''}`}
+                      className={`hub-card-btn ${connected.has(item.id) ? 'disconnect' : ''}`}
                       onClick={() => toggleConnect(item.id)}
                     >
-                      {connected.has(item.id) ? '✓ Connected' : 'Connect'}
+                      {connected.has(item.id) ? '✓ Disconnect' : 'Connect →'}
                     </button>
                   </div>
                 ))}
@@ -159,10 +180,6 @@ export default function IntegrationsTab() {
             </div>
           ))
         )}
-
-        <button className="fleet-integ-custom-mcp">
-          <span style={{ marginRight: 8 }}>+</span> Custom MCP
-        </button>
       </div>
     </div>
   );

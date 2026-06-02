@@ -26,6 +26,7 @@ import { safeError } from '../lib/safeError.js';
 import { ingestLimiter } from '../middleware/rateLimiter.js';
 import { validate, traceCreateSchema, traceUpdateSchema, spanCreateSchema, traceIngestSchema } from '../middleware/validate.js';
 import type { AuthenticatedRequest } from '../types.js';
+import { getMonthlyCount, incrementCounter } from '../lib/counterCache.js';
 
 const router = Router();
 const API_VERSION = 'v1';
@@ -43,19 +44,13 @@ router.post(`/api/${API_VERSION}/traces`, authenticate, validate(traceCreateSche
     const { name, agent, trace_id, metadata } = req.body;
     if (!name) return res.status(400).json({ error: 'name is required' });
 
-    // Check monthly trace limit
-    const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
-    const { count } = await supabase!
-      .from('traces')
-      .select('*', { count: 'exact', head: true })
-      .eq('org_id', req.org.id)
-      .gte('created_at', monthStart);
-
-    if (!checkLimit(req.org.plan, 'traces', count ?? 0)) {
+    // Check monthly trace limit (cached — avoids COUNT(*) per request)
+    const monthlyCount = await getMonthlyCount(supabase!, req.org.id, 'traces');
+    if (monthlyCount >= 0 && !checkLimit(req.org.plan, 'traces', monthlyCount)) {
       return res.status(429).json({
         error: 'Monthly trace limit reached',
         limit: PLAN_LIMITS[req.org.plan]?.traces,
-        current: count,
+        current: monthlyCount,
         upgrade_url: '/pricing',
       });
     }
@@ -75,6 +70,9 @@ router.post(`/api/${API_VERSION}/traces`, authenticate, validate(traceCreateSche
       .single();
 
     if (error) throw error;
+
+    // Bump cached counter (avoids re-querying DB)
+    incrementCounter(req.org.id, 'traces');
 
     console.log(`📊 Trace started: ${name} [${data.trace_id}]`);
     res.status(201).json(data);
@@ -481,19 +479,13 @@ router.post(`/api/${API_VERSION}/traces/ingest`, authenticate, ingestLimiter, va
       return res.status(400).json({ error: 'trace object with trace_id and name required' });
     }
 
-    // Check monthly trace limit
-    const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
-    const { count } = await supabase!
-      .from('traces')
-      .select('*', { count: 'exact', head: true })
-      .eq('org_id', req.org.id)
-      .gte('created_at', monthStart);
-
-    if (!checkLimit(req.org.plan, 'traces', count ?? 0)) {
+    // Check monthly trace limit (cached — avoids COUNT(*) per request)
+    const monthlyCount = await getMonthlyCount(supabase!, req.org.id, 'traces');
+    if (monthlyCount >= 0 && !checkLimit(req.org.plan, 'traces', monthlyCount)) {
       return res.status(429).json({
         error: 'Monthly trace limit reached',
         limit: PLAN_LIMITS[req.org.plan]?.traces,
-        current: count,
+        current: monthlyCount,
         upgrade_url: '/pricing',
       });
     }
@@ -568,6 +560,9 @@ router.post(`/api/${API_VERSION}/traces/ingest`, authenticate, ingestLimiter, va
         // Non-fatal — trace was already created
       }
     }
+
+    // Bump cached counter (avoids re-querying DB)
+    incrementCounter(req.org.id, 'traces');
 
     console.log(`📊 Trace ingested: ${trace.trace_id} — ${processedSpans.length} spans, ${finalTokens} tokens, $${finalCost.toFixed(4)}`);
 

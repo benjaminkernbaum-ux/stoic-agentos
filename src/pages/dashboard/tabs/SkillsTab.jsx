@@ -1,27 +1,35 @@
 import { useState } from 'react';
 
-const SKILLS = [
-  { id: 'web-search', name: 'Web Search', icon: '🔍', category: 'Tools', desc: 'Search the web for real-time information, news, and documentation using semantic search.', agents: 5, status: 'active' },
-  { id: 'file-ops', name: 'File Operations', icon: '📁', category: 'Tools', desc: 'Read, write, create, and manage files across connected workspaces and storage services.', agents: 3, status: 'active' },
-  { id: 'api-calls', name: 'API Calls', icon: '🌐', category: 'Tools', desc: 'Make HTTP requests to external APIs with authentication, rate limiting, and retry logic.', agents: 7, status: 'active' },
-  { id: 'memory-recall', name: 'Memory Recall', icon: '🧠', category: 'Knowledge', desc: 'Access episodic and semantic memory to recall past interactions, decisions, and learned context.', agents: 4, status: 'active' },
-  { id: 'code-exec', name: 'Code Execution', icon: '⚡', category: 'Actions', desc: 'Execute Python, JavaScript, and shell scripts in a sandboxed environment with resource limits.', agents: 6, status: 'active' },
-  { id: 'email-send', name: 'Email', icon: '✉️', category: 'Actions', desc: 'Compose, send, and manage emails via Gmail and Outlook integrations with template support.', agents: 2, status: 'active' },
-  { id: 'slack-msg', name: 'Slack Messaging', icon: '💬', category: 'Actions', desc: 'Post messages, create threads, react to messages, and manage Slack channel interactions.', agents: 3, status: 'active' },
-  { id: 'db-query', name: 'Database Query', icon: '🗄️', category: 'Tools', desc: 'Run SQL queries against PostgreSQL, MySQL, and BigQuery with result formatting and pagination.', agents: 4, status: 'active' },
-  { id: 'doc-parse', name: 'Document Parser', icon: '📄', category: 'Knowledge', desc: 'Extract text, tables, and metadata from PDFs, Word documents, and spreadsheets.', agents: 2, status: 'active' },
-  { id: 'vector-search', name: 'Vector Search', icon: '🔮', category: 'Knowledge', desc: 'Perform semantic similarity search across embedded documents and knowledge bases.', agents: 5, status: 'active' },
-  { id: 'scheduling', name: 'Scheduling', icon: '⏰', category: 'Actions', desc: 'Create, modify, and manage calendar events and automated recurring schedules.', agents: 1, status: 'active' },
-  { id: 'screenshot', name: 'Screenshot Capture', icon: '📸', category: 'Tools', desc: 'Capture screenshots of web pages, dashboards, and UIs for visual analysis and reporting.', agents: 1, status: 'beta' },
+const CAPABILITIES = [
+  { id: 'web-search', name: 'Web Search', icon: '🔍', category: 'Perception', desc: 'Real-time web search with semantic ranking and source validation.', agents: 5, reliability: 98, tier: 'core' },
+  { id: 'file-ops', name: 'File Operations', icon: '📁', category: 'Perception', desc: 'Read, write, create, and manage files across connected workspaces.', agents: 3, reliability: 99, tier: 'core' },
+  { id: 'api-calls', name: 'API Gateway', icon: '🌐', category: 'Action', desc: 'HTTP requests with auth, rate limiting, retry logic, and response parsing.', agents: 7, reliability: 97, tier: 'core' },
+  { id: 'memory-recall', name: 'Memory Recall', icon: '🧠', category: 'Cognition', desc: 'Episodic and semantic memory — recall past interactions and learned context.', agents: 4, reliability: 94, tier: 'core' },
+  { id: 'code-exec', name: 'Code Sandbox', icon: '⚡', category: 'Action', desc: 'Execute Python, JavaScript, and shell scripts in a sandboxed environment.', agents: 6, reliability: 96, tier: 'core' },
+  { id: 'email-send', name: 'Email', icon: '✉️', category: 'Action', desc: 'Compose, send, and manage emails via Gmail and Outlook.', agents: 2, reliability: 99, tier: 'standard' },
+  { id: 'slack-msg', name: 'Slack', icon: '💬', category: 'Action', desc: 'Post messages, create threads, react to messages in Slack.', agents: 3, reliability: 98, tier: 'standard' },
+  { id: 'db-query', name: 'SQL Query', icon: '🗄️', category: 'Perception', desc: 'Run SQL queries against PostgreSQL, MySQL, and BigQuery.', agents: 4, reliability: 95, tier: 'standard' },
+  { id: 'doc-parse', name: 'Doc Parser', icon: '📄', category: 'Perception', desc: 'Extract text, tables, and metadata from PDFs, Word docs, spreadsheets.', agents: 2, reliability: 92, tier: 'standard' },
+  { id: 'vector-search', name: 'Vector Search', icon: '🔮', category: 'Cognition', desc: 'Semantic similarity search across embedded documents and knowledge bases.', agents: 5, reliability: 96, tier: 'core' },
+  { id: 'scheduling', name: 'Scheduler', icon: '⏰', category: 'Action', desc: 'Create and manage calendar events and automated recurring schedules.', agents: 1, reliability: 99, tier: 'standard' },
+  { id: 'screenshot', name: 'Visual Capture', icon: '📸', category: 'Perception', desc: 'Capture screenshots of web pages and UIs for visual analysis.', agents: 1, reliability: 88, tier: 'experimental' },
+  { id: 'reasoning', name: 'Chain-of-Thought', icon: '🔗', category: 'Cognition', desc: 'Multi-step reasoning with verification and self-correction loops.', agents: 6, reliability: 91, tier: 'core' },
+  { id: 'planning', name: 'Task Planner', icon: '🗺️', category: 'Cognition', desc: 'Break complex goals into sub-tasks, manage dependencies, track progress.', agents: 4, reliability: 93, tier: 'core' },
 ];
 
-const CATEGORIES = ['All', 'Tools', 'Knowledge', 'Actions'];
+const CATEGORIES = ['All', 'Perception', 'Cognition', 'Action'];
+
+const TIER_STYLES = {
+  core: { color: '#a78bfa', bg: 'rgba(167,139,250,0.12)', label: 'CORE' },
+  standard: { color: '#60a5fa', bg: 'rgba(96,165,250,0.12)', label: 'STANDARD' },
+  experimental: { color: '#fbbf24', bg: 'rgba(251,191,36,0.12)', label: 'EXPERIMENTAL' },
+};
 
 export default function SkillsTab() {
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('All');
 
-  const filtered = SKILLS.filter(s => {
+  const filtered = CAPABILITIES.filter(s => {
     const matchCat = category === 'All' || s.category === category;
     const matchSearch = !search ||
       s.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -29,65 +37,99 @@ export default function SkillsTab() {
     return matchCat && matchSearch;
   });
 
-  const totalAgents = SKILLS.reduce((sum, s) => sum + s.agents, 0);
+  const totalAgents = CAPABILITIES.reduce((sum, s) => sum + s.agents, 0);
+  const avgReliability = Math.round(CAPABILITIES.reduce((sum, s) => sum + s.reliability, 0) / CAPABILITIES.length);
 
   return (
     <div className="dash-content">
       {/* Header */}
-      <div className="fleet-section-header">
+      <div className="cap-header">
         <div>
-          <h2 className="fleet-section-title">🧩 Skills Library</h2>
-          <p className="fleet-section-sub">{SKILLS.length} skills available · {totalAgents} agent connections</p>
+          <h2 className="cap-title">🧩 Capabilities</h2>
+          <p className="cap-subtitle">The skills your agents can use — organized by cognitive function</p>
+        </div>
+        <div className="cap-header-stats">
+          <div className="cap-stat-pill">
+            <span className="cap-stat-value">{CAPABILITIES.length}</span>
+            <span className="cap-stat-label">Skills</span>
+          </div>
+          <div className="cap-stat-pill">
+            <span className="cap-stat-value">{totalAgents}</span>
+            <span className="cap-stat-label">Connections</span>
+          </div>
+          <div className="cap-stat-pill">
+            <span className="cap-stat-value">{avgReliability}%</span>
+            <span className="cap-stat-label">Avg Reliability</span>
+          </div>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="fleet-filter-bar">
+      <div className="cap-filters">
         <input
-          className="fleet-filter-search"
-          placeholder="Search skills..."
+          className="cap-search"
+          placeholder="Search capabilities..."
           value={search}
           onChange={e => setSearch(e.target.value)}
         />
-        <div className="fleet-filter-chips">
+        <div className="cap-chips">
           {CATEGORIES.map(cat => (
             <button
               key={cat}
-              className={`fleet-filter-chip ${category === cat ? 'active' : ''}`}
+              className={`cap-chip ${category === cat ? 'active' : ''}`}
               onClick={() => setCategory(cat)}
-            >{cat}</button>
+            >{cat === 'All' ? '📦 All' : cat === 'Perception' ? '👁️ Perception' : cat === 'Cognition' ? '🧠 Cognition' : '⚡ Action'}</button>
           ))}
         </div>
       </div>
 
       {/* Grid */}
-      <div className="fleet-skills-grid">
-        {filtered.map(skill => (
-          <div key={skill.id} className="fleet-skill-card">
-            <div className="fleet-skill-card-top">
-              <span className="fleet-skill-icon">{skill.icon}</span>
-              {skill.status === 'beta' && (
-                <span className="fleet-skill-beta">BETA</span>
-              )}
+      <div className="cap-grid">
+        {filtered.map(skill => {
+          const tier = TIER_STYLES[skill.tier];
+          return (
+            <div key={skill.id} className="cap-card">
+              <div className="cap-card-top">
+                <span className="cap-card-icon">{skill.icon}</span>
+                <span className="cap-card-tier" style={{ color: tier.color, background: tier.bg }}>
+                  {tier.label}
+                </span>
+              </div>
+              <h4 className="cap-card-name">{skill.name}</h4>
+              <span className="cap-card-category">{skill.category}</span>
+              <p className="cap-card-desc">{skill.desc}</p>
+              {/* Reliability bar */}
+              <div className="cap-card-reliability">
+                <div className="cap-card-reliability-header">
+                  <span>Reliability</span>
+                  <span className="cap-card-reliability-val">{skill.reliability}%</span>
+                </div>
+                <div className="cap-card-reliability-bar">
+                  <div
+                    className="cap-card-reliability-fill"
+                    style={{
+                      width: `${skill.reliability}%`,
+                      background: skill.reliability >= 95 ? '#22c55e' : skill.reliability >= 90 ? '#f59e0b' : '#ef4444'
+                    }}
+                  />
+                </div>
+              </div>
+              <div className="cap-card-footer">
+                <span className="cap-card-agents">
+                  <span className="cap-card-agent-dot" />
+                  {skill.agents} agent{skill.agents !== 1 ? 's' : ''}
+                </span>
+              </div>
             </div>
-            <h4 className="fleet-skill-name">{skill.name}</h4>
-            <p className="fleet-skill-desc">{skill.desc}</p>
-            <div className="fleet-skill-footer">
-              <span className="fleet-skill-cat">{skill.category}</span>
-              <span className="fleet-skill-agents">
-                <span className="fleet-skill-agent-dot" />
-                {skill.agents} agent{skill.agents !== 1 ? 's' : ''}
-              </span>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {filtered.length === 0 && (
-        <div className="fleet-empty-center">
+        <div className="cap-empty">
           <span style={{ fontSize: 48 }}>🧩</span>
-          <h3>No skills found</h3>
-          <p>Try adjusting your search or category filter</p>
+          <h3>No capabilities found</h3>
+          <p>Adjust your search or category filter</p>
         </div>
       )}
     </div>

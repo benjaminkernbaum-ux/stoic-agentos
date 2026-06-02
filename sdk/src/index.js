@@ -221,7 +221,7 @@ export class AgentOS {
   }
 
   /**
-   * Flush queued observations to the API
+   * Flush queued observations to the API (uses batch endpoint)
    */
   async flush() {
     if (this._flushTimer) {
@@ -233,10 +233,24 @@ export class AgentOS {
     if (batch.length === 0) return;
 
     if (this.debug) {
-      console.log(`[AgentOS] Flushing ${batch.length} observations`);
+      console.log(`[AgentOS] Flushing ${batch.length} observations (batch)`);
     }
 
-    // Send individually (batch endpoint can be added later)
+    // Try batch endpoint first (single HTTP call for all observations)
+    try {
+      const result = await this._send('/observations/batch', { observations: batch });
+      if (result !== null) {
+        if (this.debug) console.log(`[AgentOS] Batch flush: ${result.inserted} observations sent`);
+        return;
+      }
+    } catch {
+      // Batch endpoint not available — fall back below
+    }
+
+    // Fallback: send individually (for older API versions without /batch)
+    if (this.debug) {
+      console.log(`[AgentOS] Batch endpoint unavailable, falling back to individual sends`);
+    }
     const results = await Promise.allSettled(
       batch.map(obs => this._send('/observations', obs))
     );

@@ -131,6 +131,11 @@ export const observationCreateSchema = {
   metadata:    { type: 'object', required: false },
 };
 
+/** POST /api/v1/observations/batch */
+export const observationBatchSchema = {
+  observations: { type: 'array', required: true, maxItems: 100 },
+};
+
 /** POST /api/v1/agents */
 export const agentCreateSchema = {
   name:        { type: 'string', required: true, minLength: 1, maxLength: 100 },
@@ -155,6 +160,7 @@ export default {
   spanCreateSchema,
   traceIngestSchema,
   observationCreateSchema,
+  observationBatchSchema,
   agentCreateSchema,
   alertRuleSchema,
 };

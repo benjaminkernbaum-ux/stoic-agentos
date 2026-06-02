@@ -9,110 +9,127 @@ function timeAgo(ts) {
   return `${Math.floor(s / 86400)}d ago`;
 }
 
-const DEMO_MESSAGES = [
-  { id: 1, agent: 'code-reviewer', icon: '🤖', title: 'PR #142 review complete', body: 'Found 2 issues in authentication module — memory leak in session handler and missing input validation on /api/v1/agents endpoint.', priority: 'high', read: false, ts: Date.now() - 300000 },
-  { id: 2, agent: 'data-pipeline', icon: '📊', title: 'Batch processing finished', body: '15,420 records processed with 99.1% accuracy. 3 records flagged for manual review.', priority: 'normal', read: false, ts: Date.now() - 1800000 },
-  { id: 3, agent: 'slack-responder', icon: '💬', title: 'Slack thread summarized', body: 'Key decisions from #engineering: Deploy to staging by Friday, switch to connection pooling, and schedule load test for Q3 release.', priority: 'normal', read: true, ts: Date.now() - 7200000 },
-  { id: 4, agent: 'ci-monitor', icon: '🚀', title: 'Deploy succeeded — v2.4.1', body: 'Production deploy completed in 3m 42s. All health checks passing. Zero-downtime rollout confirmed.', priority: 'low', read: true, ts: Date.now() - 14400000 },
-  { id: 5, agent: 'research-agent', icon: '🔍', title: 'Market research report ready', body: 'Analyzed 47 competitor products. Full report with pricing comparison and feature matrix available.', priority: 'normal', read: true, ts: Date.now() - 86400000 },
+function timeBucket(ts) {
+  const hours = (Date.now() - ts) / 3600000;
+  if (hours < 1) return 'Now';
+  if (hours < 6) return 'Earlier';
+  if (hours < 24) return 'Today';
+  if (hours < 48) return 'Yesterday';
+  return 'Older';
+}
+
+const DEMO_SIGNALS = [
+  { id: 1, agent: 'code-reviewer', icon: '🔍', type: 'alert', title: 'PR #142 — 2 issues found', body: 'Memory leak in session handler and missing input validation on /api/v1/agents endpoint. Auto-fix available.', priority: 'high', read: false, ts: Date.now() - 300000, action: 'Review Fix' },
+  { id: 2, agent: 'data-pipeline', icon: '📊', type: 'report', title: 'Batch processing complete', body: '15,420 records processed with 99.1% accuracy. 3 records flagged for manual review. Pipeline duration: 4m 12s.', priority: 'normal', read: false, ts: Date.now() - 1800000, action: 'View Report' },
+  { id: 3, agent: 'slack-responder', icon: '💬', type: 'digest', title: 'Slack digest — #engineering', body: 'Key decisions: Deploy to staging by Friday, switch to connection pooling, schedule load test for Q3. 14 threads summarized.', priority: 'normal', read: true, ts: Date.now() - 7200000, action: 'Read Full' },
+  { id: 4, agent: 'ci-monitor', icon: '🚀', type: 'success', title: 'Deploy v2.4.1 — All green', body: 'Production deploy completed in 3m 42s. Health checks: 12/12 passing. Zero-downtime rollout confirmed.', priority: 'low', read: true, ts: Date.now() - 14400000, action: null },
+  { id: 5, agent: 'security-scan', icon: '🛡️', type: 'alert', title: 'Dependency vulnerability detected', body: 'CVE-2026-1234 found in lodash@4.17.20. Severity: Medium. Auto-upgrade available to 4.17.25.', priority: 'high', read: true, ts: Date.now() - 28800000, action: 'Auto-Fix' },
+  { id: 6, agent: 'research-agent', icon: '🔬', type: 'report', title: 'Market research report ready', body: 'Analyzed 47 competitor products across 6 dimensions. Full report with pricing comparison and feature matrix.', priority: 'normal', read: true, ts: Date.now() - 86400000, action: 'Download' },
 ];
 
-const PRIORITY_COLORS = {
-  high: { bg: 'rgba(239,68,68,0.12)', color: '#ef4444', label: 'High' },
-  normal: { bg: 'rgba(167,139,250,0.12)', color: '#a78bfa', label: 'Normal' },
-  low: { bg: 'rgba(113,113,122,0.12)', color: '#71717a', label: 'Low' },
+const TYPE_STYLES = {
+  alert:   { border: '#ef4444', bg: 'rgba(239,68,68,0.06)', icon: '⚠️' },
+  report:  { border: '#a78bfa', bg: 'rgba(167,139,250,0.06)', icon: '📄' },
+  digest:  { border: '#60a5fa', bg: 'rgba(96,165,250,0.06)', icon: '📋' },
+  success: { border: '#22c55e', bg: 'rgba(34,197,94,0.06)', icon: '✓' },
 };
 
 export default function InboxTab() {
-  const [messages, setMessages] = useState(DEMO_MESSAGES);
-  const [filter, setFilter] = useState('all'); // all, unread, high
+  const [signals, setSignals] = useState(DEMO_SIGNALS);
+  const [filter, setFilter] = useState('all');
   const [selectedId, setSelectedId] = useState(null);
-  const [search, setSearch] = useState('');
 
   const filtered = useMemo(() => {
-    let result = messages;
+    let result = signals;
     if (filter === 'unread') result = result.filter(m => !m.read);
-    if (filter === 'high') result = result.filter(m => m.priority === 'high');
-    if (search) {
-      const q = search.toLowerCase();
-      result = result.filter(m =>
-        m.title.toLowerCase().includes(q) ||
-        m.agent.toLowerCase().includes(q) ||
-        m.body.toLowerCase().includes(q)
-      );
-    }
+    if (filter === 'alerts') result = result.filter(m => m.type === 'alert');
+    if (filter === 'reports') result = result.filter(m => m.type === 'report');
     return result;
-  }, [messages, filter, search]);
+  }, [signals, filter]);
 
-  const selected = messages.find(m => m.id === selectedId);
-  const unreadCount = messages.filter(m => !m.read).length;
+  // Group by time bucket
+  const grouped = useMemo(() => {
+    const buckets = {};
+    for (const sig of filtered) {
+      const bucket = timeBucket(sig.ts);
+      if (!buckets[bucket]) buckets[bucket] = [];
+      buckets[bucket].push(sig);
+    }
+    return Object.entries(buckets);
+  }, [filtered]);
+
+  const selected = signals.find(m => m.id === selectedId);
+  const unreadCount = signals.filter(m => !m.read).length;
+  const alertCount = signals.filter(m => m.type === 'alert' && !m.read).length;
 
   const markRead = (id) => {
-    setMessages(prev => prev.map(m => m.id === id ? { ...m, read: true } : m));
+    setSignals(prev => prev.map(m => m.id === id ? { ...m, read: true } : m));
     setSelectedId(id);
   };
 
-  const markAllRead = () => {
-    setMessages(prev => prev.map(m => ({ ...m, read: true })));
-  };
+  const markAllRead = () => setSignals(prev => prev.map(m => ({ ...m, read: true })));
 
   return (
-    <div className="dash-content fleet-inbox-layout">
-      {/* Message list */}
-      <div className="fleet-inbox-list">
-        <div className="fleet-inbox-list-header">
-          <h3 className="fleet-inbox-title">
-            📬 Inbox
-            {unreadCount > 0 && <span className="fleet-inbox-badge">{unreadCount}</span>}
+    <div className="dash-content signal-layout">
+      {/* Signal feed */}
+      <div className="signal-feed">
+        <div className="signal-feed-header">
+          <h3 className="signal-feed-title">
+            📡 Signal Feed
+            {unreadCount > 0 && <span className="signal-badge">{unreadCount}</span>}
+            {alertCount > 0 && <span className="signal-badge alert">⚠ {alertCount}</span>}
           </h3>
-          <button className="fleet-inbox-mark-all" onClick={markAllRead}>Mark all read</button>
+          <button className="signal-mark-all" onClick={markAllRead}>Clear all</button>
         </div>
 
-        {/* Filters */}
-        <div className="fleet-inbox-filters">
+        <div className="signal-filters">
           {[
             { id: 'all', label: 'All' },
-            { id: 'unread', label: 'Unread' },
-            { id: 'high', label: '🔴 High' },
+            { id: 'unread', label: `Unread (${unreadCount})` },
+            { id: 'alerts', label: '⚠️ Alerts' },
+            { id: 'reports', label: '📄 Reports' },
           ].map(f => (
             <button
               key={f.id}
-              className={`fleet-inbox-filter ${filter === f.id ? 'active' : ''}`}
+              className={`signal-filter ${filter === f.id ? 'active' : ''}`}
               onClick={() => setFilter(f.id)}
             >{f.label}</button>
           ))}
         </div>
 
-        <input
-          className="fleet-inbox-search"
-          placeholder="Search messages..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-        />
-
-        <div className="fleet-inbox-items">
-          {filtered.length === 0 ? (
-            <div className="fleet-inbox-empty">
-              <span style={{ fontSize: 32 }}>📭</span>
-              <p>No messages</p>
+        <div className="signal-timeline">
+          {grouped.length === 0 ? (
+            <div className="signal-empty">
+              <span style={{ fontSize: 36 }}>📡</span>
+              <p>No signals matching filter</p>
             </div>
           ) : (
-            filtered.map(msg => (
-              <div
-                key={msg.id}
-                className={`fleet-inbox-item ${msg.id === selectedId ? 'selected' : ''} ${!msg.read ? 'unread' : ''}`}
-                onClick={() => markRead(msg.id)}
-              >
-                <div className="fleet-inbox-item-icon">{msg.icon}</div>
-                <div className="fleet-inbox-item-body">
-                  <div className="fleet-inbox-item-top">
-                    <span className="fleet-inbox-item-agent">{msg.agent}</span>
-                    <span className="fleet-inbox-item-time">{timeAgo(msg.ts)}</span>
-                  </div>
-                  <div className="fleet-inbox-item-title">{msg.title}</div>
-                  <div className="fleet-inbox-item-preview">{msg.body.slice(0, 80)}...</div>
-                </div>
-                {!msg.read && <div className="fleet-inbox-unread-dot" />}
+            grouped.map(([bucket, sigs]) => (
+              <div key={bucket} className="signal-bucket">
+                <div className="signal-bucket-label">{bucket}</div>
+                {sigs.map(sig => {
+                  const style = TYPE_STYLES[sig.type] || TYPE_STYLES.report;
+                  return (
+                    <div
+                      key={sig.id}
+                      className={`signal-item ${sig.id === selectedId ? 'selected' : ''} ${!sig.read ? 'unread' : ''}`}
+                      style={{ borderLeftColor: style.border, background: sig.id === selectedId ? style.bg : undefined }}
+                      onClick={() => markRead(sig.id)}
+                    >
+                      <div className="signal-item-icon">{sig.icon}</div>
+                      <div className="signal-item-body">
+                        <div className="signal-item-header">
+                          <span className="signal-item-agent">{sig.agent}</span>
+                          <span className="signal-item-type" style={{ color: style.border }}>{style.icon} {sig.type}</span>
+                          <span className="signal-item-time">{timeAgo(sig.ts)}</span>
+                        </div>
+                        <div className="signal-item-title">{sig.title}</div>
+                        <div className="signal-item-preview">{sig.body.slice(0, 90)}...</div>
+                      </div>
+                      {!sig.read && <div className="signal-unread-pulse" />}
+                    </div>
+                  );
+                })}
               </div>
             ))
           )}
@@ -120,32 +137,40 @@ export default function InboxTab() {
       </div>
 
       {/* Detail pane */}
-      <div className="fleet-inbox-detail">
+      <div className="signal-detail">
         {selected ? (
           <>
-            <div className="fleet-inbox-detail-header">
-              <span className="fleet-inbox-detail-icon">{selected.icon}</span>
-              <div>
-                <h3 className="fleet-inbox-detail-title">{selected.title}</h3>
-                <div className="fleet-inbox-detail-meta">
-                  <span className="fleet-inbox-detail-agent">{selected.agent}</span>
-                  <span
-                    className="fleet-inbox-priority-badge"
-                    style={{ background: PRIORITY_COLORS[selected.priority].bg, color: PRIORITY_COLORS[selected.priority].color }}
-                  >{PRIORITY_COLORS[selected.priority].label}</span>
-                  <span className="fleet-inbox-detail-time">{timeAgo(selected.ts)}</span>
+            <div className="signal-detail-header">
+              <div className="signal-detail-icon-wrap" style={{ background: TYPE_STYLES[selected.type]?.bg }}>
+                <span className="signal-detail-icon">{selected.icon}</span>
+              </div>
+              <div className="signal-detail-info">
+                <h3 className="signal-detail-title">{selected.title}</h3>
+                <div className="signal-detail-meta">
+                  <span className="signal-detail-agent">🤖 {selected.agent}</span>
+                  <span className="signal-detail-type" style={{ color: TYPE_STYLES[selected.type]?.border }}>
+                    {TYPE_STYLES[selected.type]?.icon} {selected.type}
+                  </span>
+                  <span className="signal-detail-time">{timeAgo(selected.ts)}</span>
                 </div>
               </div>
             </div>
-            <div className="fleet-inbox-detail-body">
+            <div className="signal-detail-body">
               <p>{selected.body}</p>
             </div>
+            {selected.action && (
+              <div className="signal-detail-actions">
+                <button className="signal-action-btn primary">{selected.action}</button>
+                <button className="signal-action-btn">Dismiss</button>
+                <button className="signal-action-btn">Reply to Agent</button>
+              </div>
+            )}
           </>
         ) : (
-          <div className="fleet-inbox-detail-empty">
-            <span style={{ fontSize: 48 }}>📬</span>
-            <h3>Select a message</h3>
-            <p>Choose a message from the inbox to view its details</p>
+          <div className="signal-detail-empty">
+            <div className="signal-detail-empty-icon">📡</div>
+            <h3>Select a signal</h3>
+            <p>Choose an agent signal from the feed to inspect details and take action</p>
           </div>
         )}
       </div>

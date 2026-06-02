@@ -5,7 +5,8 @@ import { requireMinRole } from '../middleware/rbac.js';
 import { supabase, checkLimit, PLAN_LIMITS } from '../middleware/db.js';
 import type { AuthenticatedRequest } from '../types.js';
 import { safeError } from '../lib/safeError.js';
-import { validate, observationCreateSchema } from '../middleware/validate.js';
+import { validate, observationCreateSchema, observationBatchSchema } from '../middleware/validate.js';
+import { getMonthlyCount, incrementCounter } from '../lib/counterCache.js';
 
 const router = Router();
 const API_VERSION = 'v1';
@@ -16,19 +17,13 @@ router.post(`/api/${API_VERSION}/observations`, authenticate, validate(observati
     const { workspace, agent, type, title, content, metadata } = req.body;
     if (!type || !title) return res.status(400).json({ error: 'type and title required' });
 
-    // Check observation limit
-    const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
-    const { count } = await supabase!
-      .from('observations')
-      .select('*', { count: 'exact', head: true })
-      .eq('org_id', req.org.id)
-      .gte('created_at', monthStart);
-
-    if (!checkLimit(req.org.plan, 'observations', count ?? 0)) {
+    // Check observation limit (cached — avoids COUNT(*) per request)
+    const monthlyCount = await getMonthlyCount(supabase!, req.org.id, 'observations');
+    if (monthlyCount >= 0 && !checkLimit(req.org.plan, 'observations', monthlyCount)) {
       return res.status(429).json({
         error: 'Observation limit reached',
         limit: PLAN_LIMITS[req.org.plan]?.observations,
-        current: count,
+        current: monthlyCount,
         upgrade_url: '/pricing',
       });
     }
@@ -104,7 +99,72 @@ router.post(`/api/${API_VERSION}/observations`, authenticate, validate(observati
       }
     }
 
+    // Bump cached counter
+    incrementCounter(req.org.id, 'observations');
+
     res.status(201).json(data);
+  } catch (err: unknown) {
+    safeError(res, err);
+  }
+});
+
+// ── Batch Create Observations ──
+// Accepts up to 100 observations in a single API call.
+// Reduces SDK HTTP round-trips by 10x.
+router.post(`/api/${API_VERSION}/observations/batch`, authenticate, validate(observationBatchSchema), async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { observations } = req.body;
+    if (!Array.isArray(observations) || observations.length === 0) {
+      return res.status(400).json({ error: 'observations array is required and must not be empty' });
+    }
+    if (observations.length > 100) {
+      return res.status(400).json({ error: 'Maximum 100 observations per batch' });
+    }
+
+    // Check observation limit (cached — single check for entire batch)
+    const monthlyCount = await getMonthlyCount(supabase!, req.org.id, 'observations');
+    if (monthlyCount >= 0 && !checkLimit(req.org.plan, 'observations', monthlyCount + observations.length - 1)) {
+      return res.status(429).json({
+        error: 'Observation limit would be exceeded',
+        limit: PLAN_LIMITS[req.org.plan]?.observations,
+        current: monthlyCount,
+        batch_size: observations.length,
+        upgrade_url: '/pricing',
+      });
+    }
+
+    // Build rows for batch insert
+    const VALID_TYPES = ['file_edit', 'command', 'decision', 'error', 'discovery', 'architecture', 'dependency', 'config', 'deployment', 'note', 'agent_run'];
+    const rows = observations.map((obs: Record<string, unknown>) => {
+      const type = (obs.type as string) || 'note';
+      return {
+        org_id: req.org.id,
+        workspace_id: (obs.workspace as string) || null,
+        agent_id: (obs.agent as string) || null,
+        type: VALID_TYPES.includes(type) ? type : 'note',
+        title: (obs.title as string) || 'Untitled',
+        content: (obs.content as string) || '',
+        metadata: (obs.metadata as Record<string, unknown>) || {},
+        importance: type === 'architecture' ? 9 : type === 'decision' ? 8 : type === 'error' ? 7 : 6,
+      };
+    });
+
+    // Single batch insert (not N individual inserts)
+    const { data, error } = await supabase!
+      .from('observations')
+      .insert(rows)
+      .select();
+
+    if (error) throw error;
+
+    // Bump cached counter by batch size
+    incrementCounter(req.org.id, 'observations', rows.length);
+
+    console.log(`📋 Batch observation: ${rows.length} items for org ${req.org.id}`);
+    res.status(201).json({
+      inserted: data?.length ?? 0,
+      observations: data || [],
+    });
   } catch (err: unknown) {
     safeError(res, err);
   }

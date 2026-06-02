@@ -47,8 +47,8 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen, activeTab, setAct
 
           {/* ── Main ── */}
           {[
-            { id: 'chat',    icon: '💬', label: 'Chat',    badge: null },
-            { id: 'inbox',   icon: '📬', label: 'Inbox',   badge: null },
+            { id: 'chat',    icon: '🛰️', label: 'Mission Comms', badge: null },
+            { id: 'inbox',   icon: '📡', label: 'Signal Feed',   badge: null },
           ].map(item => (
             <button
               key={item.id}
@@ -66,10 +66,10 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen, activeTab, setAct
           {/* ── Explore ── */}
           <div className="dash-nav-section">EXPLORE</div>
           {[
-            { id: 'agents',       icon: '🤖', label: 'Workspace Agents', badge: liveAgents > 0 ? { text: liveAgents, color: 'green' } : null },
-            { id: 'templates',    icon: '📋', label: 'Templates',        badge: null },
-            { id: 'integrations', icon: '🔌', label: 'Integrations',     badge: null },
-            { id: 'skills',       icon: '🧩', label: 'Skills',           badge: null },
+            { id: 'agents',       icon: '🤖', label: 'Agents',          badge: liveAgents > 0 ? { text: liveAgents, color: 'green' } : null },
+            { id: 'templates',    icon: '🧬', label: 'Blueprints',      badge: null },
+            { id: 'integrations', icon: '🔌', label: 'Connect Hub',     badge: null },
+            { id: 'skills',       icon: '🧩', label: 'Capabilities',    badge: null },
           ].map(item => (
             <button
               key={item.id}
@@ -84,19 +84,19 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen, activeTab, setAct
             </button>
           ))}
 
-          {/* ── Get Started ── */}
-          <div className="dash-nav-section">GET STARTED</div>
+          {/* ── Deploy ── */}
+          <div className="dash-nav-section">DEPLOY</div>
           <button className="dash-nav-btn dash-nav-action" onClick={() => handleTabClick('chat')}>
             <span className="dash-nav-icon">✨</span>
-            <span className="dash-nav-label">Create agent with AI</span>
+            <span className="dash-nav-label">Brief an agent</span>
           </button>
           <button className="dash-nav-btn dash-nav-action" onClick={() => handleTabClick('templates')}>
-            <span className="dash-nav-icon">📦</span>
-            <span className="dash-nav-label">Start from a template</span>
+            <span className="dash-nav-icon">🧬</span>
+            <span className="dash-nav-label">Deploy blueprint</span>
           </button>
           <button className="dash-nav-btn dash-nav-action" onClick={() => { if (setShowAgentModal) setShowAgentModal(true); }}>
             <span className="dash-nav-icon">✏️</span>
-            <span className="dash-nav-label">Create agent manually</span>
+            <span className="dash-nav-label">Build from scratch</span>
           </button>
 
           {/* ── Operate ── */}

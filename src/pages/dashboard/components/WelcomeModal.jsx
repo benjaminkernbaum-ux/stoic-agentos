@@ -1,42 +1,92 @@
-const FEATURES = [
-  { icon: '🔗', title: 'Connect your tools', desc: 'Integrate with the services your team already relies on.' },
-  { icon: '⏰', title: 'Run on a schedule', desc: 'Automate work — hourly, daily, or custom.' },
-  { icon: '💬', title: 'Trigger from Slack', desc: 'Agents respond to messages and events automatically.' },
-  { icon: '👥', title: 'Share across your workspace', desc: 'Give your whole team access to the agents you build.' },
-  { icon: '🧠', title: 'Built-in memory', desc: 'Agents retain context across runs and get better over time.' },
-  { icon: '📊', title: 'Full observability', desc: 'Debug, monitor, and audit every agent step with traces.' },
+import { useState } from 'react';
+
+const STEPS = [
+  {
+    icon: '🛰️', title: 'Welcome to Stoic AgentOS',
+    desc: 'Your autonomous agent operating system. Build, deploy, and manage AI agents that work around the clock.',
+    features: [
+      { icon: '🤖', title: 'Deploy agents', desc: 'Create agents that handle complex tasks autonomously.' },
+      { icon: '🔗', title: 'Connect tools', desc: 'Integrate with GitHub, Slack, databases, and 20+ services.' },
+      { icon: '🧠', title: 'Built-in memory', desc: 'Agents learn from past runs and get better over time.' },
+    ],
+  },
+  {
+    icon: '⚡', title: 'Your Superpowers',
+    desc: 'Here\'s what makes Stoic different from every other agent platform.',
+    features: [
+      { icon: '📡', title: 'Signal feed', desc: 'Real-time alerts, reports, and digests from all your agents.' },
+      { icon: '🕸️', title: 'Knowledge graph', desc: 'Visual map of everything your agents discover.' },
+      { icon: '🛡️', title: 'Circuit breakers', desc: 'Automatic safety limits that prevent runaway costs.' },
+    ],
+  },
+  {
+    icon: '🚀', title: 'Ready to Launch',
+    desc: 'Choose how you want to start. You can always change this later.',
+    features: [
+      { icon: '💬', title: 'Chat with AI', desc: 'Describe what you need, we\'ll build the agent.' },
+      { icon: '🧬', title: 'Use a blueprint', desc: 'Start from a pre-built, battle-tested template.' },
+      { icon: '✏️', title: 'Build from scratch', desc: 'Full control — configure every setting yourself.' },
+    ],
+  },
 ];
 
 export default function WelcomeModal({ show, onClose, onGetStarted }) {
+  const [step, setStep] = useState(0);
+
   if (!show) return null;
 
+  const current = STEPS[step];
+  const isLast = step === STEPS.length - 1;
+
   return (
-    <div className="fleet-welcome-backdrop" onClick={onClose}>
-      <div className="fleet-welcome-modal" onClick={e => e.stopPropagation()}>
-        <button className="fleet-welcome-close" onClick={onClose}>✕</button>
+    <div className="welcome-backdrop" onClick={onClose}>
+      <div className="welcome-modal" onClick={e => e.stopPropagation()}>
+        <button className="welcome-close" onClick={onClose}>✕</button>
 
-        <h2 className="fleet-welcome-title">Welcome to Stoic AgentOS</h2>
-        <p className="fleet-welcome-sub">
-          Create agents that handle complex tasks like research, inbox triage and project tracking.
-        </p>
+        {/* Step indicator */}
+        <div className="welcome-steps">
+          {STEPS.map((_, i) => (
+            <div
+              key={i}
+              className={`welcome-step-dot ${i === step ? 'active' : ''} ${i < step ? 'done' : ''}`}
+            />
+          ))}
+        </div>
 
-        <div className="fleet-welcome-grid">
-          {FEATURES.map(f => (
-            <div key={f.title} className="fleet-welcome-card">
-              <span className="fleet-welcome-card-icon">{f.icon}</span>
+        {/* Content */}
+        <div className="welcome-icon">{current.icon}</div>
+        <h2 className="welcome-title">{current.title}</h2>
+        <p className="welcome-desc">{current.desc}</p>
+
+        <div className="welcome-features">
+          {current.features.map(f => (
+            <div key={f.title} className="welcome-feature">
+              <span className="welcome-feature-icon">{f.icon}</span>
               <div>
-                <div className="fleet-welcome-card-title">{f.title}</div>
-                <div className="fleet-welcome-card-desc">{f.desc}</div>
+                <div className="welcome-feature-title">{f.title}</div>
+                <div className="welcome-feature-desc">{f.desc}</div>
               </div>
             </div>
           ))}
         </div>
 
-        <div className="fleet-welcome-actions">
-          <button className="fleet-welcome-skip" onClick={onClose}>Skip setup</button>
-          <button className="fleet-welcome-go" onClick={onGetStarted}>
-            Get started <span style={{ marginLeft: 6 }}>→</span>
-          </button>
+        {/* Actions */}
+        <div className="welcome-actions">
+          <button className="welcome-skip" onClick={onClose}>Skip setup</button>
+          <div className="welcome-actions-right">
+            {step > 0 && (
+              <button className="welcome-back" onClick={() => setStep(s => s - 1)}>← Back</button>
+            )}
+            {isLast ? (
+              <button className="welcome-launch" onClick={onGetStarted}>
+                Launch Mission Control 🚀
+              </button>
+            ) : (
+              <button className="welcome-next" onClick={() => setStep(s => s + 1)}>
+                Next →
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>
