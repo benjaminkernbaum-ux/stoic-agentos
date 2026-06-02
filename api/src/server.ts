@@ -71,7 +71,6 @@ app.use(requestIdMiddleware);
 const ALLOWED_ORIGINS = [
   'https://stoicagentos.com',
   'https://www.stoicagentos.com',
-  'https://stoic-agentos.vercel.app',
   'https://api.stoicagentos.com',
 ];
 if (process.env.NODE_ENV === 'development') ALLOWED_ORIGINS.push('http://localhost:5173');

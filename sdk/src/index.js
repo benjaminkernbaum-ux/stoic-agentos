@@ -89,13 +89,13 @@ export class AgentOS {
         '[AgentOS] ⚠️  No API key provided.\n' +
         '  Set AGENTOS_API_KEY environment variable or pass apiKey option:\n' +
         '  const os = new AgentOS({ apiKey: "sk_live_xxx" });\n' +
-        '  Get your key at: https://stoic-agentos.vercel.app/dashboard'
+        '  Get your key at: https://stoicagentos.com/dashboard'
       );
     } else if (!this.apiKey.startsWith('sk_live_') && !this.apiKey.startsWith('sk_test_')) {
       console.warn(
         '[AgentOS] ⚠️  API key format looks wrong.\n' +
         '  Expected format: sk_live_xxx or sk_test_xxx\n' +
-        '  Get your key at: https://stoic-agentos.vercel.app/dashboard'
+        '  Get your key at: https://stoicagentos.com/dashboard'
       );
     }
 
@@ -494,7 +494,7 @@ export class AgentOS {
 
         if (resp.status === 401) {
           const err = await resp.json().catch(() => ({}));
-          throw new AgentOSAuthError(err.error || 'Invalid API key. Check your key at https://stoic-agentos.vercel.app/dashboard');
+          throw new AgentOSAuthError(err.error || 'Invalid API key. Check your key at https://stoicagentos.com/dashboard');
         }
 
         if (!resp.ok) {

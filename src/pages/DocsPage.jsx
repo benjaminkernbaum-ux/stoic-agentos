@@ -83,7 +83,7 @@ function GettingStarted() {
 
     <Callout type="success" title="Free Tier Available">No credit card required. Start with 5 agents, 10K observations/month, and 2 workspaces for free.</Callout>
 
-    <div className="docs-step"><div className="docs-step-number">1</div><div className="docs-step-content"><div className="docs-step-title">Create an Account</div><div className="docs-step-desc">Sign up at <a href="https://stoic-agentos.vercel.app/signup">stoic-agentos.vercel.app/signup</a></div></div></div>
+    <div className="docs-step"><div className="docs-step-number">1</div><div className="docs-step-content"><div className="docs-step-title">Create an Account</div><div className="docs-step-desc">Sign up at <a href="https://stoicagentos.com/signup">stoicagentos.com/signup</a></div></div></div>
     <div className="docs-step"><div className="docs-step-number">2</div><div className="docs-step-content"><div className="docs-step-title">Get Your API Key</div><div className="docs-step-desc">After signup, go to Dashboard → Settings → API Keys → Generate Key. Your key starts with <code>sk_live_</code>.</div></div></div>
     <div className="docs-step"><div className="docs-step-number">3</div><div className="docs-step-content"><div className="docs-step-title">Install the SDK</div><div className="docs-step-desc">Install via npm or use the REST API directly.</div></div></div>
 
