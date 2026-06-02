@@ -46,8 +46,8 @@ export function AuthProvider({ children }) {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
+        await createDefaultOrg(userId);
         setLoading(false);
-        createDefaultOrg(userId);
         return;
       }
 
@@ -65,19 +65,18 @@ export function AuthProvider({ children }) {
             plan: membership.organization.plan,
             role: membership.role,
           });
-          setLoading(false);
         } else {
-          setLoading(false);
-          createDefaultOrg(userId);
+          await createDefaultOrg(userId);
         }
       } else {
         // No org yet — create one
-        setLoading(false);
-        createDefaultOrg(userId);
+        await createDefaultOrg(userId);
       }
-    } catch {
+    } catch (err) {
+      console.error('loadOrg failed:', err);
+      await createDefaultOrg(userId);
+    } finally {
       setLoading(false);
-      createDefaultOrg(userId);
     }
   }
 
@@ -111,9 +110,11 @@ export function AuthProvider({ children }) {
           plan: orgData.plan || 'free',
           role: 'owner',
         });
+      } else {
+        console.error('createDefaultOrg: server responded with', res.status, await res.text().catch(() => ''));
       }
     } catch (err) {
-      console.error('Failed to create org:', err);
+      console.error('createDefaultOrg failed:', err);
     }
   }
 

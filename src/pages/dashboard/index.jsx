@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import OnboardingTour from '../../components/OnboardingTour';
+import ErrorBoundary from '../../components/ErrorBoundary';
 import ChatAssistant from '../../components/ChatAssistant';
 import { useToast, ToastContainer } from './hooks/useToast.jsx';
 import { useDashboardData } from './hooks/useDashboardData';
@@ -134,9 +135,19 @@ export default function Dashboard() {
       toast('Upgrade cancelled — you are still on the free plan.', 'info');
       navigate('/dashboard', { replace: true });
     }
-  }, []);
+  }, [searchParams, toast, navigate]);
 
-  if (authLoading) return null;
+  if (authLoading) return (
+    <div style={{ display: 'flex', height: '100vh', background: '#0a0a0c' }}>
+      <div style={{ width: 240, background: '#111113', borderRight: '1px solid rgba(255,255,255,0.06)' }} />
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ height: 52, borderBottom: '1px solid rgba(255,255,255,0.06)' }} />
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ width: 32, height: 32, borderRadius: '50%', border: '3px solid rgba(167,139,250,0.3)', borderTopColor: '#a78bfa', animation: 'spin 0.8s linear infinite' }} />
+        </div>
+      </div>
+    </div>
+  );
 
   const liveAgents  = data.agents.filter(a => a.status === 'running').length;
   const errorAgents = data.agents.filter(a => a.status === 'error').length;
@@ -177,6 +188,7 @@ export default function Dashboard() {
           onMobileMenuToggle={() => setMobileSidebarOpen(o => !o)}
         />
 
+        <ErrorBoundary>
         {activeTab === 'overview' && (
           <OverviewTab
             stats={data.stats} agents={data.agents} observations={data.observations}
@@ -314,6 +326,7 @@ export default function Dashboard() {
             handleLogout={handleLogout} toast={toast}
           />
         )}
+        </ErrorBoundary>
       </div>
 
       <OnboardingTour

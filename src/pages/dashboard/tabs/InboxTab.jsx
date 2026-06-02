@@ -182,7 +182,7 @@ export default function InboxTab({ org }) {
                           <span className="signal-item-time">{timeAgo(sig.ts)}</span>
                         </div>
                         <div className="signal-item-title">{sig.title}</div>
-                        <div className="signal-item-preview">{sig.body.slice(0, 90)}...</div>
+                        <div className="signal-item-preview">{sig.body.length > 90 ? sig.body.slice(0, 90) + '...' : sig.body}</div>
                       </div>
                       {!sig.read && <div className="signal-unread-pulse" />}
                     </div>

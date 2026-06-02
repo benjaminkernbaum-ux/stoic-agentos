@@ -33,9 +33,9 @@ describe('anthropic.js', () => {
   });
 
   describe('MODELS', () => {
-    it('maps fast to Haiku 4.5 and smart to Sonnet 4.6', () => {
-      expect(mod.MODELS.fast).toBe('claude-haiku-4-5');
-      expect(mod.MODELS.smart).toBe('claude-sonnet-4-6');
+    it('maps fast to Haiku 3.5 and smart to Sonnet 3.5', () => {
+      expect(mod.MODELS.fast).toBe('claude-3-5-haiku-20241022');
+      expect(mod.MODELS.smart).toBe('claude-3-5-sonnet-20241022');
     });
   });
 
@@ -192,7 +192,7 @@ describe('anthropic.js', () => {
 
       createMock.mockResolvedValueOnce({
         content: [{ type: 'text', text: 'hello world' }],
-        model: 'claude-haiku-4-5',
+        model: 'claude-3-5-haiku-20241022',
         usage: { input_tokens: 10, output_tokens: 5 },
         stop_reason: 'end_turn',
       });
@@ -206,7 +206,7 @@ describe('anthropic.js', () => {
 
       expect(result.text).toBe('hello world');
       expect(createMock).toHaveBeenCalledWith(expect.objectContaining({
-        model: 'claude-haiku-4-5',
+        model: 'claude-3-5-haiku-20241022',
         system: 'be helpful',
         cache_control: { type: 'ephemeral' },
       }));
@@ -219,7 +219,7 @@ describe('anthropic.js', () => {
 
       createMock.mockResolvedValue({
         content: [{ type: 'text', text: 'ok' }],
-        model: 'claude-sonnet-4-6',
+        model: 'claude-3-5-sonnet-20241022',
         usage: {},
         stop_reason: 'end_turn',
       });
@@ -242,7 +242,7 @@ describe('anthropic.js', () => {
           { type: 'text', text: 'first' },
           { type: 'text', text: 'second' },
         ],
-        model: 'claude-sonnet-4-6',
+        model: 'claude-3-5-sonnet-20241022',
         usage: {},
         stop_reason: 'end_turn',
       });

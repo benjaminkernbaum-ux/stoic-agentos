@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 
 const STEPS = [
   {
@@ -32,6 +32,45 @@ const STEPS = [
 
 export default function WelcomeModal({ show, onClose, onGetStarted }) {
   const [step, setStep] = useState(0);
+  const modalRef = useRef(null);
+
+  // Reset step when modal opens
+  useEffect(() => {
+    if (show) setStep(0);
+  }, [show]);
+
+  // Escape key handler
+  useEffect(() => {
+    if (!show) return;
+    const handler = (e) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [show, onClose]);
+
+  // Focus trap — keep focus inside the modal
+  const handleKeyDown = useCallback((e) => {
+    if (e.key !== 'Tab') return;
+    const focusable = modalRef.current?.querySelectorAll(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    );
+    if (!focusable || focusable.length === 0) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (e.shiftKey) {
+      if (document.activeElement === first) { e.preventDefault(); last.focus(); }
+    } else {
+      if (document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+  }, []);
+
+  // Auto-focus the modal when it opens
+  useEffect(() => {
+    if (show && modalRef.current) {
+      modalRef.current.focus();
+    }
+  }, [show]);
 
   if (!show) return null;
 
@@ -40,8 +79,17 @@ export default function WelcomeModal({ show, onClose, onGetStarted }) {
 
   return (
     <div className="welcome-backdrop" onClick={onClose}>
-      <div className="welcome-modal" onClick={e => e.stopPropagation()}>
-        <button className="welcome-close" onClick={onClose}>✕</button>
+      <div
+        className="welcome-modal"
+        onClick={e => e.stopPropagation()}
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Welcome to Stoic AgentOS"
+        tabIndex={-1}
+        onKeyDown={handleKeyDown}
+      >
+        <button className="welcome-close" onClick={onClose} aria-label="Close">✕</button>
 
         {/* Step indicator */}
         <div className="welcome-steps">
@@ -59,8 +107,8 @@ export default function WelcomeModal({ show, onClose, onGetStarted }) {
         <p className="welcome-desc">{current.desc}</p>
 
         <div className="welcome-features">
-          {current.features.map(f => (
-            <div key={f.title} className="welcome-feature">
+          {current.features.map((f, idx) => (
+            <div key={`${step}-${idx}`} className="welcome-feature">
               <span className="welcome-feature-icon">{f.icon}</span>
               <div>
                 <div className="welcome-feature-title">{f.title}</div>

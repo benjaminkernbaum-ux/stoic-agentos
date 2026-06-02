@@ -244,7 +244,7 @@ export default function SettingsTab({ userName, user, orgName, planName, handleU
                   onClick={() => handleUpgrade('pro')}
                   disabled={upgradeLoading}
                 >
-                  {upgradeLoading ? '...' : 'Pro — $49/mo'}
+                  {upgradeLoading ? '...' : 'Pro — $29/mo'}
                 </button>
                 <button
                   className="btn btn-secondary btn-sm"
@@ -252,7 +252,7 @@ export default function SettingsTab({ userName, user, orgName, planName, handleU
                   disabled={upgradeLoading}
                   style={{ borderColor: 'rgba(0,212,255,0.5)', color: '#00d4ff' }}
                 >
-                  {upgradeLoading ? '...' : 'Team — $299/mo'}
+                  {upgradeLoading ? '...' : 'Team — $79/mo'}
                 </button>
               </>
             )}
@@ -264,7 +264,7 @@ export default function SettingsTab({ userName, user, orgName, planName, handleU
                   disabled={upgradeLoading}
                   style={{ borderColor: 'rgba(0,212,255,0.5)', color: '#00d4ff' }}
                 >
-                  {upgradeLoading ? '...' : 'Upgrade to Team — $299/mo'}
+                  {upgradeLoading ? '...' : 'Upgrade to Team — $79/mo'}
                 </button>
                 <button
                   className="btn btn-ghost btn-sm"

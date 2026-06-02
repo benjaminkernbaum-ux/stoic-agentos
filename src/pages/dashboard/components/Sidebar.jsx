@@ -1,4 +1,5 @@
 export default function Sidebar({ sidebarOpen, setSidebarOpen, activeTab, setActiveTab, liveAgents, errorAgents, planName, handleLogout, mobileSidebarOpen, setMobileSidebarOpen, setShowAgentModal }) {
+  const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.userAgent);
 
   const handleTabClick = (id) => {
     setActiveTab(id);
@@ -42,7 +43,7 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen, activeTab, setAct
           >
             <span className="dash-nav-search-icon">🔍</span>
             <span className="dash-nav-label">Search...</span>
-            <span className="dash-nav-kbd">⌘K</span>
+            <span className="dash-nav-kbd">{isMac ? '⌘K' : 'Ctrl+K'}</span>
           </button>
 
           {/* ── Main ── */}

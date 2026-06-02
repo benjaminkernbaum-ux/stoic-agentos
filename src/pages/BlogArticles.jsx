@@ -432,7 +432,7 @@ function ComparisonArticle() {
                 <td style={tdStyle}>50K observations/mo</td>
                 <td style={tdStyle}>5K traces/mo</td>
                 <td style={tdStyle}>1K logs/mo</td>
-                <td style={tdStyle}>1K observations/mo</td>
+                <td style={tdStyle}>10,000 observations/mo</td>
               </tr>
               <tr>
                 <td style={{ ...tdStyle, color: '#fff', fontWeight: 600 }}>Pro / Team</td>
@@ -446,7 +446,7 @@ function ComparisonArticle() {
                 <td style={tdStyle}>Custom</td>
                 <td style={tdStyle}>Custom</td>
                 <td style={tdStyle}>Custom</td>
-                <td style={tdStyle}>$199/mo (no per-seat)</td>
+                <td style={tdStyle}>Custom</td>
               </tr>
               <tr>
                 <td style={{ ...tdStyle, color: '#fff', fontWeight: 600 }}>Per-Seat Pricing</td>

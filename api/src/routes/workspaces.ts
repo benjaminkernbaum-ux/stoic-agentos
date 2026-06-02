@@ -9,7 +9,7 @@ import { safeError } from '../lib/safeError.js';
 const router = Router();
 const API_VERSION = 'v1';
 
-router.post(`/api/${API_VERSION}/workspaces`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
+router.post(`/api/${API_VERSION}/workspaces`, authenticate, requireMinRole('admin'), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { name, path, stack, git_remote, branch } = req.body;
     if (!name) return res.status(400).json({ error: 'name required' });

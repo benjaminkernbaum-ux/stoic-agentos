@@ -303,7 +303,7 @@ function BillingDocs() {
 
     <h2 id="plans">Plans</h2>
     <table className="docs-params" style={{ marginTop: 16 }}>
-      <thead><tr><th>Feature</th><th>Free</th><th>Pro ($49/mo)</th><th>Team ($299/mo)</th></tr></thead>
+      <thead><tr><th>Feature</th><th>Free</th><th>Pro ($29/mo)</th><th>Team ($79/mo)</th></tr></thead>
       <tbody>
         <tr><td>Agents</td><td>5</td><td>25</td><td>100</td></tr>
         <tr><td>Observations/mo</td><td>10,000</td><td>100,000</td><td>Unlimited</td></tr>

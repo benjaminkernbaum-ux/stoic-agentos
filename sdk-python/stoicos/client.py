@@ -266,6 +266,41 @@ class StoicOS:
         return await self._get("/traces", params)
 
     # ═══════════════════════════════════
+    # CLAUDE INSIGHTS (AI Insights)
+    # ═══════════════════════════════════
+
+    async def summarize(
+        self,
+        hours: int = 24,
+        agent_id: str | None = None,
+        workspace_id: str | None = None,
+    ) -> dict[str, Any] | None:
+        """Get an AI-powered summary of recent observations."""
+        body: dict[str, Any] = {"hours": hours}
+        if agent_id:
+            body["agent_id"] = agent_id
+        if workspace_id:
+            body["workspace_id"] = workspace_id
+        return await self._post("/insights/summarize", body)
+
+    async def analyze_agent(self, agent_id: str) -> dict[str, Any] | None:
+        """Diagnose an agent's reliability using Claude Sonnet."""
+        return await self._post("/insights/analyze-agent", {"agent_id": agent_id})
+
+    async def ask(
+        self,
+        question: str,
+        model: str = "fast",
+        force_fresh: bool = False,
+    ) -> dict[str, Any] | None:
+        """Ask free-form questions about your agent fleet, grounded in logs."""
+        return await self._post("/insights/ask", {
+            "question": question,
+            "model": model,
+            "force_fresh": force_fresh,
+        })
+
+    # ═══════════════════════════════════
     # MEMORY (Three-Tier)
     # ═══════════════════════════════════
 
@@ -375,4 +410,22 @@ class StoicOS:
 
     async def _delete(self, path: str, params: dict[str, str] | None = None) -> Any:
         """DELETE with retry."""
-        return await self._post(path, method="DELETE")
+        last_err: Exception | None = None
+        for attempt in range(self._max_retries + 1):
+            try:
+                resp = await self._client.request("DELETE", f"{self.api_url}{path}", params=params)
+
+                if resp.status_code == 429 and attempt < self._max_retries:
+                    await asyncio.sleep(0.5 * (2 ** attempt))
+                    continue
+
+                if resp.status_code >= 400:
+                    return None
+
+                return resp.json()
+            except Exception as e:
+                last_err = e
+                if attempt < self._max_retries:
+                    await asyncio.sleep(0.5 * (2 ** attempt))
+
+        return None

@@ -9,7 +9,7 @@ const SERVICES = [
   { id: 'api', name: 'agent-api', icon: '⚡', iconBg: 'rgba(155,89,255,0.15)', status: 'Live', statusColor: '#00e68a', x: '50%', y: '28%', badge: '6 endpoints' },
   { id: 'supabase', name: 'supabase-db', icon: '🗄', iconBg: 'rgba(0,212,255,0.12)', status: '14 tables', statusColor: '#00d4ff', x: '18%', y: '55%', badge: 'pg-data' },
   { id: 'n8n', name: 'n8n-workflows', icon: '⚙️', iconBg: 'rgba(255,159,67,0.12)', status: '23 flows', statusColor: '#ff9f43', x: '78%', y: '55%', badge: 'Docker' },
-  { id: 'stripe', name: 'stripe-billing', icon: '💳', iconBg: 'rgba(107,99,255,0.12)', status: 'Live', statusColor: '#00e68a', x: '30%', y: '80%', badge: '$49/mo' },
+  { id: 'stripe', name: 'stripe-billing', icon: '💳', iconBg: 'rgba(107,99,255,0.12)', status: 'Live', statusColor: '#00e68a', x: '30%', y: '80%', badge: '$29/mo' },
   { id: 'vercel', name: 'vercel-frontend', icon: '▲', iconBg: 'rgba(255,255,255,0.08)', status: 'Production', statusColor: '#00e68a', x: '68%', y: '80%', badge: 'React' },
 ];
 const CONNECTIONS = [['api','supabase'],['api','n8n'],['api','stripe'],['api','vercel'],['supabase','stripe'],['vercel','n8n']];

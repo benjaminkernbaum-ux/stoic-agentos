@@ -6,6 +6,15 @@
 /* ── Reset ── */
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
+/* ── Global Focus Indicators (WCAG 2.1 AA §2.4.7) ── */
+:focus-visible {
+  outline: 2px solid rgba(167, 139, 250, 0.7);
+  outline-offset: 2px;
+}
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
 :root {
   /* ── Colors ── */
   --bg-deep: #050508;

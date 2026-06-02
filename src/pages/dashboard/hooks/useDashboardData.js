@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase, API_BASE } from '../../../lib/supabase';
 
 export function useDashboardData(org) {
@@ -12,21 +12,23 @@ export function useDashboardData(org) {
   const [knowledgeItems, setKnowledgeItems] = useState([]);
   const [traces, setTraces] = useState([]);
   const [traceStats, setTraceStats] = useState(null);
+  const abortRef = useRef(null);
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (signal) => {
     if (!org?.id) return;
     setDataLoading(true);
     try {
       const token = (await supabase.auth.getSession()).data.session?.access_token;
       const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
       const [agentsRes, obsRes, wsRes, statsRes, tracesRes, traceStatsRes] = await Promise.allSettled([
-        fetch(`${API_BASE}/api/v1/agents?org_id=${org.id}`, { headers }),
-        fetch(`${API_BASE}/api/v1/observations?org_id=${org.id}&limit=50`, { headers }),
-        fetch(`${API_BASE}/api/v1/workspaces?org_id=${org.id}`, { headers }),
-        fetch(`${API_BASE}/api/v1/stats?org_id=${org.id}`, { headers }),
-        fetch(`${API_BASE}/api/v1/traces?org_id=${org.id}&limit=50`, { headers }),
-        fetch(`${API_BASE}/api/v1/traces/stats?org_id=${org.id}`, { headers }),
+        fetch(`${API_BASE}/api/v1/agents?org_id=${org.id}`, { headers, signal }),
+        fetch(`${API_BASE}/api/v1/observations?org_id=${org.id}&limit=50`, { headers, signal }),
+        fetch(`${API_BASE}/api/v1/workspaces?org_id=${org.id}`, { headers, signal }),
+        fetch(`${API_BASE}/api/v1/stats?org_id=${org.id}`, { headers, signal }),
+        fetch(`${API_BASE}/api/v1/traces?org_id=${org.id}&limit=50`, { headers, signal }),
+        fetch(`${API_BASE}/api/v1/traces/stats?org_id=${org.id}`, { headers, signal }),
       ]);
+      if (signal?.aborted) return;
       if (agentsRes.status === 'fulfilled' && agentsRes.value.ok) setAgents(await agentsRes.value.json());
       if (obsRes.status === 'fulfilled' && obsRes.value.ok) setObservations(await obsRes.value.json());
       if (wsRes.status === 'fulfilled' && wsRes.value.ok) setWorkspaces(await wsRes.value.json());
@@ -44,9 +46,10 @@ export function useDashboardData(org) {
         setTraceStats(ts?.stats || ts || null);
       }
     } catch (err) {
+      if (err.name === 'AbortError') return;
       console.error('Failed to fetch dashboard data:', err);
     }
-    setDataLoading(false);
+    if (!signal?.aborted) setDataLoading(false);
   }, [org?.id]);
 
   // Fetch API keys
@@ -68,7 +71,12 @@ export function useDashboardData(org) {
 
   // Fetch main data
   useEffect(() => {
-    if (org?.id) fetchData();
+    if (!org?.id) return;
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+    fetchData(controller.signal);
+    return () => controller.abort();
   }, [org?.id, fetchData]);
 
   // Fetch knowledge items
