@@ -17,7 +17,7 @@ const TEMPLATES = [
 
 const CATEGORIES = ['All', 'DevOps', 'Communication', 'Data', 'Research', 'Automation'];
 
-export default function TemplatesTab({ setActiveTab }) {
+export default function TemplatesTab() {
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('All');
   const [selectedId, setSelectedId] = useState(null);
@@ -30,7 +30,6 @@ export default function TemplatesTab({ setActiveTab }) {
     return matchCat && matchSearch;
   });
 
-  const selected = TEMPLATES.find(t => t.id === selectedId);
 
   return (
     <div className="dash-content">

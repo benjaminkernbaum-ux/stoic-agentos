@@ -286,7 +286,7 @@ export default function Dashboard() {
         )}
 
         {activeTab === 'templates' && (
-          <TemplatesTab setActiveTab={setActiveTab} />
+          <TemplatesTab />
         )}
 
         {activeTab === 'skills' && (

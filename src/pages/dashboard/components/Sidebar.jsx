@@ -38,7 +38,7 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen, activeTab, setAct
           {/* ── Search hint ── */}
           <button
             className="dash-nav-search-btn"
-            onClick={() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }))}
+            onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true, bubbles: true }))}
           >
             <span className="dash-nav-search-icon">🔍</span>
             <span className="dash-nav-label">Search...</span>

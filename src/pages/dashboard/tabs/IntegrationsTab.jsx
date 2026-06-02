@@ -51,6 +51,7 @@ const CATEGORIES = [
   { id: 'all', label: 'All', icon: '📦' },
   { id: 'connected', label: 'Connected', icon: '🔗' },
   { id: 'google', label: 'Productivity', icon: '📊' },
+  { id: 'microsoft', label: 'Microsoft', icon: '⊞' },
   { id: 'devtools', label: 'Developer', icon: '🛠️' },
   { id: 'other', label: 'Communication', icon: '💬' },
 ];

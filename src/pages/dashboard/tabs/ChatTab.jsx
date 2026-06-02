@@ -33,6 +33,13 @@ export default function ChatTab({ agents }) {
   const [threadSidebar, setThreadSidebar] = useState(true);
   const endRef = useRef(null);
   const inputRef = useRef(null);
+  const modelPickerRef = useRef(null);
+  const activeThreadRef = useRef(activeThread);
+  const modelRef = useRef(model);
+
+  // Keep refs in sync
+  activeThreadRef.current = activeThread;
+  modelRef.current = model;
 
   const thread = threads.find(t => t.id === activeThread) || threads[0];
   const messages = thread?.messages || [];
@@ -40,6 +47,18 @@ export default function ChatTab({ agents }) {
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages.length]);
+
+  // Close model picker on click outside
+  useEffect(() => {
+    if (!showModelPicker) return;
+    const handler = (e) => {
+      if (modelPickerRef.current && !modelPickerRef.current.contains(e.target)) {
+        setShowModelPicker(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showModelPicker]);
 
   const handleSend = () => {
     if (!input.trim()) return;
@@ -51,15 +70,17 @@ export default function ChatTab({ agents }) {
     ));
     setInput('');
 
-    // Simulate agent response
+    // Simulate agent response — use refs to avoid stale closure
+    const threadId = activeThreadRef.current;
+    const modelId = modelRef.current;
     setTimeout(() => {
       const agentMsg = {
         id: Date.now() + 1, role: 'agent',
-        content: `I'll help you with that. Let me process your request using the ${MODELS.find(m => m.id === model)?.label || 'Default'} model...`,
+        content: `I'll help you with that. Let me process your request using the ${MODELS.find(m => m.id === modelId)?.label || 'Default'} model...`,
         ts: Date.now(),
       };
       setThreads(prev => prev.map(t =>
-        t.id === activeThread ? { ...t, messages: [...t.messages, agentMsg] } : t
+        t.id === threadId ? { ...t, messages: [...t.messages, agentMsg] } : t
       ));
     }, 1200);
   };
@@ -137,7 +158,7 @@ export default function ChatTab({ agents }) {
             />
             <div className="fleet-chat-input-controls">
               <button className="fleet-chat-attach">+</button>
-              <div className="fleet-model-picker-wrap">
+              <div className="fleet-model-picker-wrap" ref={modelPickerRef}>
                 <button className="fleet-model-btn" onClick={() => setShowModelPicker(s => !s)}>
                   <span className="fleet-model-icon">✦</span>
                   <span>{selectedModel.label}</span>
