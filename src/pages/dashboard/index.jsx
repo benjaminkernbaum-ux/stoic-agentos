@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import OnboardingTour from '../../components/OnboardingTour';
@@ -46,7 +46,6 @@ export default function Dashboard() {
   const [activeTab, setActiveTab] = useState('overview');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const [time, setTime] = useState(new Date());
   const [cmdOpen, setCmdOpen] = useState(false);
   const [cmdQuery, setCmdQuery] = useState('');
   const [brainFilter, setBrainFilter] = useState('all');
@@ -85,11 +84,7 @@ export default function Dashboard() {
     setWorkspaces: data.setWorkspaces,
   });
 
-  // Live clock
-  useEffect(() => {
-    const t = setInterval(() => setTime(new Date()), 1000);
-    return () => clearInterval(t);
-  }, []);
+
 
   // Lock body scroll when mobile sidebar is open
   useEffect(() => {
@@ -149,9 +144,9 @@ export default function Dashboard() {
     </div>
   );
 
-  const liveAgents  = data.agents.filter(a => a.status === 'running').length;
-  const errorAgents = data.agents.filter(a => a.status === 'error').length;
-  const usagePct    = data.usage.limit > 0 ? ((data.usage.count / data.usage.limit) * 100).toFixed(1) : 0;
+  const liveAgents  = useMemo(() => data.agents.filter(a => a.status === 'running').length, [data.agents]);
+  const errorAgents = useMemo(() => data.agents.filter(a => a.status === 'error').length, [data.agents]);
+  const usagePct    = useMemo(() => data.usage.limit > 0 ? ((data.usage.count / data.usage.limit) * 100).toFixed(1) : 0, [data.usage]);
   const userName    = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User';
   const orgName     = org?.name || 'My Organization';
   const planName    = (org?.plan || 'free').toUpperCase();
@@ -162,6 +157,7 @@ export default function Dashboard() {
 
   return (
     <div className="dash">
+      <a href="#main-content" className="skip-to-content">Skip to main content</a>
 
 
       <CommandPalette
@@ -177,13 +173,14 @@ export default function Dashboard() {
         planName={planName} handleLogout={handleLogout}
         mobileSidebarOpen={mobileSidebarOpen} setMobileSidebarOpen={setMobileSidebarOpen}
         setShowAgentModal={setShowAgentModal}
+        setCmdOpen={setCmdOpen}
       />
 
-      <div className="dash-body">
+      <div className="dash-body" id="main-content">
         <Topbar
           activeTab={activeTab} setActiveTab={setActiveTab}
           setCmdOpen={setCmdOpen} setCmdQuery={setCmdQuery}
-          liveAgents={liveAgents} time={time}
+          liveAgents={liveAgents}
           userName={userName} orgName={orgName} firstInit={firstInit}
           onMobileMenuToggle={() => setMobileSidebarOpen(o => !o)}
         />

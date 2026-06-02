@@ -313,7 +313,19 @@ const invoiceAgent = os.wrapAgent(
         <div className="playground-terminal">
           <div className="term-header">Terminal — Live Traces</div>
           <div className="term-body">
-            {logs.map((l, i) => <div key={i} className="term-line" dangerouslySetInnerHTML={{__html: l.replace(/"(.*?)"/g, '<span class="str">"$1"</span>')}}></div>)}
+            {logs.map((l, i) => {
+              // Parse quoted strings into React elements instead of using dangerouslySetInnerHTML
+              const parts = l.split(/(".*?")/g);
+              return (
+                <div key={i} className="term-line">
+                  {parts.map((part, j) =>
+                    part.startsWith('"') && part.endsWith('"')
+                      ? <span key={j} className="str">{part}</span>
+                      : part
+                  )}
+                </div>
+              );
+            })}
             <div className="term-cursor"></div>
           </div>
         </div>

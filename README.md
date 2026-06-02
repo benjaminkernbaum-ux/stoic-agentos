@@ -9,14 +9,14 @@
   <a href="https://github.com/benjaminkernbaum-ux/stoic-agentos/network/members"><img src="https://img.shields.io/github/forks/benjaminkernbaum-ux/stoic-agentos?style=social" alt="GitHub Forks" /></a>
   <a href="https://www.npmjs.com/package/stoic-agentos-sdk"><img src="https://img.shields.io/npm/v/stoic-agentos-sdk?color=blue&label=npm" alt="npm version" /></a>
   <a href="https://www.npmjs.com/package/stoic-agentos-sdk"><img src="https://img.shields.io/npm/dm/stoic-agentos-sdk?color=green" alt="npm downloads" /></a>
-  <a href="https://stoic-agentos.vercel.app"><img src="https://img.shields.io/badge/dashboard-live-brightgreen" alt="Dashboard" /></a>
+  <a href="https://stoicagentos.com"><img src="https://img.shields.io/badge/dashboard-live-brightgreen" alt="Dashboard" /></a>
   <a href="https://github.com/benjaminkernbaum-ux/stoic-agentos/blob/master/LICENSE"><img src="https://img.shields.io/badge/license-MIT-purple" alt="License" /></a>
 </p>
 
 <p align="center">
-  <a href="https://stoic-agentos.vercel.app">Dashboard</a> · 
-  <a href="https://stoic-agentos.vercel.app/docs">Docs</a> · 
-  <a href="https://stoic-agentos.vercel.app/signup">Get Started Free</a> · 
+  <a href="https://stoicagentos.com">Dashboard</a> · 
+  <a href="https://stoicagentos.com/docs">Docs</a> · 
+  <a href="https://stoicagentos.com/signup">Get Started Free</a> · 
   <a href="https://www.npmjs.com/package/stoic-agentos-sdk">npm</a> · 
   <a href="#quick-start">Quick Start</a>
 </p>
@@ -63,7 +63,7 @@ npm install stoic-agentos-sdk
 
 ### 2. Get Your API Key
 
-Sign up at [stoic-agentos.vercel.app](https://stoic-agentos.vercel.app/signup) → Dashboard → Settings → Generate Key
+Sign up at [stoicagentos.com](https://stoicagentos.com/signup) → Dashboard → Settings → Generate Key
 
 ### 3. Monitor Your First Agent
 
@@ -141,7 +141,7 @@ os.capture({
 | Knowledge items | 5 | 25 | Unlimited | Unlimited |
 | Members | 1 | 5 | 15 | Unlimited |
 
-[**Start Free →**](https://stoic-agentos.vercel.app/signup)
+[**Start Free →**](https://stoicagentos.com/signup)
 
 ## Architecture
 

@@ -2,7 +2,7 @@
 
 > **Owner**: Benjamin Kernbaum (`benjaminkernbaum-ux`)
 > **Product**: AI Agent Operations Platform — SaaS for monitoring, orchestrating, and persisting knowledge across AI agent fleets
-> **Live URL**: https://stoic-agentos.vercel.app
+> **Live URL**: https://stoicagentos.com
 > **API**: https://api.stoicagentos.com
 > **Repo**: https://github.com/benjaminkernbaum-ux/stoic-agentos
 

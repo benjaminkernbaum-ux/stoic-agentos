@@ -35,7 +35,7 @@ await os.capture({
 });
 ```
 
-Get your API key at [stoic-agentos.vercel.app/dashboard](https://stoic-agentos.vercel.app/dashboard).
+Get your API key at [stoicagentos.com/dashboard](https://stoicagentos.com/dashboard).
 
 ---
 

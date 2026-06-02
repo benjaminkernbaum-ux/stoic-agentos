@@ -236,7 +236,7 @@
   padding: 0 32px; gap: 16px;
   background: var(--surface-1);
   border-bottom: 1px solid var(--line);
-  position: sticky; top: 0; z-index: 100;
+  position: sticky; top: 0; z-index: 201;
 }
 .dash-topbar-title {
   font-size: 14px; font-weight: 600;
@@ -284,7 +284,7 @@
   animation: pulse-dot 2s infinite;
   flex-shrink: 0;
 }
-@keyframes pulse-dot { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+/* pulse-dot keyframes defined globally in index.css */
 
 .dash-time {
   font-size: 12px; font-weight: 500;
@@ -1382,7 +1382,7 @@
   position: fixed; inset: 0;
   background: rgba(0,0,0,0.75);
   backdrop-filter: blur(16px) saturate(1.2);
-  z-index: 9900;
+  z-index: 1000;
   display: flex; align-items: flex-start; justify-content: center;
   padding-top: 100px;
   animation: fade-in 0.12s ease;
@@ -2380,7 +2380,7 @@
   border: 1px solid rgba(167,139,250,0.3);
   color: #fff;
   cursor: pointer;
-  z-index: 9999;
+  z-index: 1001;
   display: flex; align-items: center; justify-content: center;
   box-shadow: 0 4px 24px rgba(124,58,237,0.4), 0 0 0 0 rgba(124,58,237,0.3);
   transition: all 0.2s cubic-bezier(.4,0,.2,1);
@@ -2417,7 +2417,7 @@
     0 24px 80px rgba(0,0,0,0.6),
     0 0 0 1px rgba(255,255,255,0.05) inset,
     0 0 60px rgba(124,58,237,0.08);
-  z-index: 9998;
+  z-index: 1000;
   display: flex; flex-direction: column;
   overflow: hidden;
   animation: chat-panel-in 0.25s cubic-bezier(.34,1.56,.64,1);
@@ -4909,7 +4909,7 @@
 /* ══════════════════════════════════
    WELCOME WIZARD  (Onboarding)
    ══════════════════════════════════ */
-.welcome-backdrop { position: fixed; inset: 0; z-index: 9999; background: rgba(0,0,0,0.75); backdrop-filter: blur(10px); display: flex; align-items: center; justify-content: center; animation: fadeIn 0.2s ease; }
+.welcome-backdrop { position: fixed; inset: 0; z-index: 1001; background: rgba(0,0,0,0.75); backdrop-filter: blur(10px); display: flex; align-items: center; justify-content: center; animation: fadeIn 0.2s ease; }
 .welcome-modal { background: var(--surface-2); border: 1px solid var(--line-mid); border-radius: 20px; padding: 36px 40px; max-width: 560px; width: 90%; position: relative; box-shadow: 0 24px 80px rgba(0,0,0,0.6), 0 0 60px rgba(124,58,237,0.08); animation: slideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1); }
 .welcome-close { position: absolute; top: 16px; right: 16px; background: none; border: none; color: var(--gray-3); font-size: 18px; cursor: pointer; }
 .welcome-close:hover { color: var(--white); }
@@ -4952,3 +4952,25 @@
   .hub-stats { flex-direction: column; }
 }
 
+/* ══════════════════════════════════
+   SKIP-TO-CONTENT (a11y)
+   ══════════════════════════════════ */
+.skip-to-content {
+  position: absolute; left: -9999px; top: auto; width: 1px; height: 1px; overflow: hidden;
+  z-index: 10000; padding: 12px 20px; background: var(--accent); color: #fff;
+  font-weight: 600; border-radius: 0 0 8px 0; text-decoration: none;
+}
+.skip-to-content:focus {
+  position: fixed; left: 0; top: 0; width: auto; height: auto; overflow: visible;
+}
+
+/* ══════════════════════════════════
+   PREFERS-REDUCED-MOTION
+   ══════════════════════════════════ */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

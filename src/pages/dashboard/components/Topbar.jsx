@@ -1,6 +1,12 @@
+import { useState, useEffect } from 'react';
 import { TAB_TITLES } from '../constants';
 
-export default function Topbar({ activeTab, setActiveTab, setCmdOpen, setCmdQuery, liveAgents, time, userName, orgName, firstInit, onMobileMenuToggle }) {
+export default function Topbar({ activeTab, setActiveTab, setCmdOpen, setCmdQuery, liveAgents, userName, orgName, firstInit, onMobileMenuToggle }) {
+  const [time, setTime] = useState(new Date());
+  useEffect(() => {
+    const t = setInterval(() => setTime(new Date()), 1000);
+    return () => clearInterval(t);
+  }, []);
   const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.userAgent);
   const shortcutHint = isMac ? '⌘K' : 'Ctrl+K';
   return (

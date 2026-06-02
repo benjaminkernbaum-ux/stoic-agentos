@@ -60,7 +60,7 @@ export const TAB_TITLES = {
   commandcenter:  'Command Center',
 };
 
-export const BRAIN_FILTERS = ['all', 'note', 'decision', 'architecture', 'git_commit', 'deployment', 'discovery', 'error'];
+export const BRAIN_FILTERS = ['all', 'note', 'decision', 'architecture', 'git_commit', 'deployment', 'discovery', 'error', 'agent_run', 'file_edit'];
 
 export const AGENT_STATUSES = ['running', 'idle', 'paused', 'disabled'];
 

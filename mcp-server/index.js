@@ -681,7 +681,7 @@ server.resource(
 
 ## Quick Facts
 - **Product**: AI Agent Operations Platform (SaaS)
-- **Frontend**: Vite + React 19 → Vercel (stoic-agentos.vercel.app)
+- **Frontend**: Vite + React 19 → Vercel (stoicagentos.com)
 - **API**: Express.js → Railway (api.stoicagentos.com)
 - **Database**: Supabase (viiagdhtzbvkfhcjqrlz)
 - **Billing**: Stripe (Pro $29/mo, Team $79/mo)

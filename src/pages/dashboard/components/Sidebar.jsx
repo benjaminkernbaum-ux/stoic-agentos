@@ -1,4 +1,4 @@
-export default function Sidebar({ sidebarOpen, setSidebarOpen, activeTab, setActiveTab, liveAgents, errorAgents, planName, handleLogout, mobileSidebarOpen, setMobileSidebarOpen, setShowAgentModal }) {
+export default function Sidebar({ sidebarOpen, setSidebarOpen, activeTab, setActiveTab, liveAgents, errorAgents, planName, handleLogout, mobileSidebarOpen, setMobileSidebarOpen, setShowAgentModal, setCmdOpen }) {
   const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.userAgent);
 
   const handleTabClick = (id) => {
@@ -39,7 +39,7 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen, activeTab, setAct
           {/* ── Search hint ── */}
           <button
             className="dash-nav-search-btn"
-            onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true, bubbles: true }))}
+            onClick={() => setCmdOpen && setCmdOpen(true)}
           >
             <span className="dash-nav-search-icon">🔍</span>
             <span className="dash-nav-label">Search...</span>
@@ -55,6 +55,7 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen, activeTab, setAct
               key={item.id}
               className={`dash-nav-btn${activeTab === item.id ? ' active' : ''}`}
               onClick={() => handleTabClick(item.id)}
+              aria-current={activeTab === item.id ? 'page' : undefined}
             >
               <span className="dash-nav-icon">{item.icon}</span>
               <span className="dash-nav-label">{item.label}</span>
@@ -76,6 +77,7 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen, activeTab, setAct
               key={item.id}
               className={`dash-nav-btn${activeTab === item.id ? ' active' : ''}`}
               onClick={() => handleTabClick(item.id)}
+              aria-current={activeTab === item.id ? 'page' : undefined}
             >
               <span className="dash-nav-icon">{item.icon}</span>
               <span className="dash-nav-label">{item.label}</span>
@@ -118,6 +120,7 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen, activeTab, setAct
               key={item.id}
               className={`dash-nav-btn${activeTab === item.id ? ' active' : ''}`}
               onClick={() => handleTabClick(item.id)}
+              aria-current={activeTab === item.id ? 'page' : undefined}
             >
               <span className="dash-nav-icon">{item.icon}</span>
               <span className="dash-nav-label">{item.label}</span>
@@ -133,6 +136,7 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen, activeTab, setAct
           <button
             className={`dash-nav-btn${activeTab === 'settings' ? ' active' : ''}`}
             onClick={() => handleTabClick('settings')}
+            aria-current={activeTab === 'settings' ? 'page' : undefined}
           >
             <span className="dash-nav-icon">⚙️</span>
             <span className="dash-nav-label">Settings</span>
@@ -143,7 +147,7 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen, activeTab, setAct
             <span className="dash-plan-text">{planName} PLAN</span>
           </div>
 
-          <button className="dash-nav-btn" onClick={handleLogout}>
+          <button className="dash-nav-btn" onClick={() => { if (window.confirm('Are you sure you want to sign out?')) handleLogout(); }}>
             <span className="dash-nav-icon">🚪</span>
             <span className="dash-nav-label">Sign out</span>
           </button>

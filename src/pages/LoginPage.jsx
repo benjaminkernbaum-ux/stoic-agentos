@@ -39,7 +39,7 @@ export default function LoginPage() {
         } else if (authError.message?.includes('Email not confirmed')) {
           setError('Please check your email and confirm your account before signing in.');
         } else {
-          setError(authError.message || 'Sign in failed. Please try again.');
+          setError('Sign in failed. Please try again.');
         }
         return;
       }
@@ -58,12 +58,17 @@ export default function LoginPage() {
   const handleOAuth = async (provider) => {
     setError('');
     setLoading(true);
-    const { error: oauthError } = await signInWithOAuth(provider);
-    if (oauthError) {
+    try {
+      const { error: oauthError } = await signInWithOAuth(provider);
+      if (oauthError) {
+        setLoading(false);
+        setError('Could not sign in with this provider. Please try again.');
+      }
+      // OAuth redirects away — loading stays true until redirect
+    } catch {
       setLoading(false);
-      setError(oauthError.message);
+      setError('Connection error. Please try again.');
     }
-    // OAuth redirects away — loading stays true until redirect
   };
 
   return (
@@ -74,7 +79,7 @@ export default function LoginPage() {
         <h1 className="auth-title">Welcome back</h1>
         <p className="auth-subtitle">Sign in to your AgentOS dashboard</p>
 
-        {error && <div className="auth-error">{error}</div>}
+        {error && <div className="auth-error" role="alert">{error}</div>}
         {success && (
           <div style={{
             padding: '10px 14px',
@@ -113,6 +118,7 @@ export default function LoginPage() {
               onChange={handleChange('email')}
               required
               disabled={loading || success}
+              autoComplete="email"
             />
           </div>
           <div className="auth-field">
@@ -125,6 +131,7 @@ export default function LoginPage() {
               onChange={handleChange('password')}
               required
               disabled={loading || success}
+              autoComplete="current-password"
             />
           </div>
 

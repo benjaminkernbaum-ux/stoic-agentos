@@ -123,18 +123,21 @@ export function BlogPage() {
       title: 'Introducing Stoic AgentOS — The Operating System for AI Agent Fleets',
       excerpt: 'Today we\'re publicly launching Stoic AgentOS, a platform that gives engineering teams full visibility and control over their AI agents. Here\'s why we built it and what\'s next.',
       tag: 'Launch',
+      slug: '/blog/why-traditional-apm-fails-for-ai-agents',
     },
     {
       date: 'May 12, 2026',
       title: 'Why Every AI Team Needs an Agent Observability Layer',
       excerpt: 'Your AI agents are making decisions, writing code, and interacting with production systems — but can you see what they\'re doing? We explore why agent observability is the next critical infrastructure gap.',
       tag: 'Engineering',
+      slug: '/blog/ai-observability-market-consolidation-2026',
     },
     {
       date: 'May 8, 2026',
       title: 'Building a Knowledge Brain for Persistent AI Context',
       excerpt: 'How we designed the Knowledge Items system to give AI agents persistent memory across sessions, eliminating the cold-start problem that plagues every multi-agent setup.',
       tag: 'Architecture',
+      slug: '/blog/langfuse-vs-langsmith-vs-stoic-agentos',
     },
   ];
 
@@ -142,15 +145,17 @@ export function BlogPage() {
     <PageShell title="Blog" subtitle="Engineering insights, product updates, and AI agent best practices">
       <div className="sp-blog-list">
         {posts.map((p, i) => (
-          <article key={i} className="sp-blog-card">
-            <div className="sp-blog-meta">
-              <span className="sp-blog-date">{p.date}</span>
-              <span className="sp-blog-tag">{p.tag}</span>
-            </div>
-            <h2>{p.title}</h2>
-            <p>{p.excerpt}</p>
-            <span className="sp-blog-cta">Read more →</span>
-          </article>
+          <Link key={i} to={p.slug} className="sp-blog-card" style={{ textDecoration: 'none', color: 'inherit' }}>
+            <article>
+              <div className="sp-blog-meta">
+                <span className="sp-blog-date">{p.date}</span>
+                <span className="sp-blog-tag">{p.tag}</span>
+              </div>
+              <h2>{p.title}</h2>
+              <p>{p.excerpt}</p>
+              <span className="sp-blog-cta">Read more →</span>
+            </article>
+          </Link>
         ))}
       </div>
     </PageShell>

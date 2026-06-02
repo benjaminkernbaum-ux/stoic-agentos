@@ -122,7 +122,7 @@ const agent = agentos.wrapAgent('data-processor', async (ctx) => {
 
 ## 📞 Contact
 
-- **Product**: [stoic-agentos.vercel.app](https://stoic-agentos.vercel.app)
+- **Product**: [stoicagentos.com](https://stoicagentos.com)
 - **GitHub**: [github.com/benjaminkernbaum-ux/stoic-agentos](https://github.com/benjaminkernbaum-ux/stoic-agentos)
 - **SDK**: [npmjs.com/package/stoic-agentos-sdk](https://npmjs.com/package/stoic-agentos-sdk)
 - **Email**: benjamin@stoicagentos.com
