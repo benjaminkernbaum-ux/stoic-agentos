@@ -397,6 +397,15 @@ export default function LandingPage() {
               ? <Link key={l} className="nav-link" to="/docs" onClick={() => setMobileMenuOpen(false)}>{l}</Link>
               : <a key={l} className="nav-link" href={`#${l.toLowerCase()}`} onClick={(e) => { if (isMobile) { e.preventDefault(); handleMobileNav(l.toLowerCase()); } }}>{l}</a>
             )}
+            <a
+              href="https://github.com/benjaminkernbaum-ux/stoic-agentos"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="nav-link"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: '#ffb900', fontWeight: 600 }}
+            >
+              ⭐ Star on GitHub
+            </a>
             <Link className="nav-link" to="/login" onClick={() => setMobileMenuOpen(false)}>Sign In</Link>
             <button className="btn btn-primary btn-sm" onClick={() => { setMobileMenuOpen(false); navigate('/signup'); }}>Get Started Free</button>
           </div>

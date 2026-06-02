@@ -31,6 +31,28 @@ export default function Topbar({ activeTab, setActiveTab, setCmdOpen, setCmdQuer
       <span className="dash-time">
         {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
       </span>
+      <a
+        href="https://github.com/benjaminkernbaum-ux/stoic-agentos"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="dash-topbar-star"
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 6,
+          padding: '7px 12px',
+          borderRadius: 6,
+          background: 'rgba(255,185,0,0.1)',
+          border: '1px solid rgba(255,185,0,0.25)',
+          color: '#ffb900',
+          fontWeight: 600,
+          textDecoration: 'none',
+          fontSize: '0.8rem',
+          marginRight: 6,
+        }}
+      >
+        ⭐ <span className="dash-capture-text">Star us</span>
+      </a>
       <button
         className="dash-topbar-capture"
         onClick={() => setActiveTab('overview')}
