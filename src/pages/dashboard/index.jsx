@@ -278,19 +278,19 @@ export default function Dashboard() {
         )}
 
         {activeTab === 'inbox' && (
-          <InboxTab />
+          <InboxTab org={org} />
         )}
 
         {activeTab === 'integrations' && (
-          <IntegrationsTab />
+          <IntegrationsTab org={org} toast={toast} />
         )}
 
         {activeTab === 'templates' && (
-          <TemplatesTab />
+          <TemplatesTab org={org} toast={toast} onAgentCreated={data.fetchData} />
         )}
 
         {activeTab === 'skills' && (
-          <SkillsTab />
+          <SkillsTab agents={data.agents} />
         )}
 
         {activeTab === 'teamhq' && (

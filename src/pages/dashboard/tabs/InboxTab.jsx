@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
+import { supabase, API_BASE } from '../../../lib/supabase';
 
 function timeAgo(ts) {
   if (!ts) return '';
@@ -27,6 +28,8 @@ const DEMO_SIGNALS = [
   { id: 6, agent: 'research-agent', icon: '🔬', type: 'report', title: 'Market research report ready', body: 'Analyzed 47 competitor products across 6 dimensions. Full report with pricing comparison and feature matrix.', priority: 'normal', read: true, ts: Date.now() - 86400000, action: 'Download' },
 ];
 
+const TYPE_ICONS = { alert: '⚠️', report: '📄', digest: '📋', success: '✓' };
+
 const TYPE_STYLES = {
   alert:   { border: '#ef4444', bg: 'rgba(239,68,68,0.06)', icon: '⚠️' },
   report:  { border: '#a78bfa', bg: 'rgba(167,139,250,0.06)', icon: '📄' },
@@ -34,10 +37,53 @@ const TYPE_STYLES = {
   success: { border: '#22c55e', bg: 'rgba(34,197,94,0.06)', icon: '✓' },
 };
 
-export default function InboxTab() {
+/** Transform a backend alert_event into the signal shape the UI expects. */
+function eventToSignal(ev) {
+  const ruleName = ev.alert_rules?.name || '';
+  const ruleType = ev.alert_rules?.type || 'alert';
+  const payload = ev.payload || {};
+  return {
+    id: ev.id,
+    agent: payload.agent || ruleName || 'system',
+    icon: payload.icon || TYPE_ICONS[ruleType] || '📡',
+    type: ruleType,
+    title: payload.title || ev.message || ruleName,
+    body: payload.body || ev.message || '',
+    priority: payload.priority || (ruleType === 'alert' ? 'high' : 'normal'),
+    read: !!ev.acknowledged,
+    ts: new Date(ev.created_at).getTime(),
+    action: payload.action || null,
+  };
+}
+
+async function getAuthHeaders() {
+  const token = (await supabase.auth.getSession()).data.session?.access_token;
+  return { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
+}
+
+export default function InboxTab({ org }) {
   const [signals, setSignals] = useState(DEMO_SIGNALS);
   const [filter, setFilter] = useState('all');
   const [selectedId, setSelectedId] = useState(null);
+
+  // Fetch real alerts on mount
+  const fetchAlerts = useCallback(async () => {
+    if (!org?.id) return;
+    try {
+      const headers = await getAuthHeaders();
+      const res = await fetch(`${API_BASE}/api/v1/alerts?org_id=${org.id}`, { headers });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const { events } = await res.json();
+      if (events && events.length > 0) {
+        setSignals(events.map(eventToSignal));
+      }
+      // If no events, keep DEMO_SIGNALS (already set as initial state)
+    } catch {
+      // Fetch failed — keep DEMO_SIGNALS fallback
+    }
+  }, [org?.id]);
+
+  useEffect(() => { fetchAlerts(); }, [fetchAlerts]);
 
   const filtered = useMemo(() => {
     let result = signals;
@@ -62,12 +108,24 @@ export default function InboxTab() {
   const unreadCount = signals.filter(m => !m.read).length;
   const alertCount = signals.filter(m => m.type === 'alert' && !m.read).length;
 
-  const markRead = (id) => {
+  const markRead = async (id) => {
     setSignals(prev => prev.map(m => m.id === id ? { ...m, read: true } : m));
     setSelectedId(id);
+    // Acknowledge on the backend (fire-and-forget)
+    try {
+      const headers = await getAuthHeaders();
+      await fetch(`${API_BASE}/api/v1/alerts/events/${id}`, { method: 'PATCH', headers });
+    } catch { /* ignore */ }
   };
 
-  const markAllRead = () => setSignals(prev => prev.map(m => ({ ...m, read: true })));
+  const markAllRead = async () => {
+    setSignals(prev => prev.map(m => ({ ...m, read: true })));
+    // Acknowledge all on the backend
+    try {
+      const headers = await getAuthHeaders();
+      await fetch(`${API_BASE}/api/v1/alerts/events/acknowledge-all`, { method: 'POST', headers });
+    } catch { /* ignore */ }
+  };
 
   return (
     <div className="dash-content signal-layout">

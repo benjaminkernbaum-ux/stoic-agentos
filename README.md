@@ -227,6 +227,26 @@ AgentOS uses Anthropic Claude for AI-powered insights — summarizing observatio
 
 **Caching:** All requests use `cache_control: { type: 'ephemeral' }` so repeated system prompts hit the prefix cache at ~10% of input cost.
 
+## 🌍 Used By
+
+Stoic AgentOS is trusted by modern engineering teams to monitor, persist, and orchestrate their autonomous systems.
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Fleet-Coding%20Copilots-blueviolet?style=for-the-badge&logo=github" alt="Coding Copilots" />
+  &nbsp;&nbsp;
+  <img src="https://img.shields.io/badge/Orchestrator-Customer%20Support-00BFFF?style=for-the-badge&logo=intercom" alt="Customer Support" />
+  &nbsp;&nbsp;
+  <img src="https://img.shields.io/badge/Pipeline-Autonomous%20Trading-FFD700?style=for-the-badge&logo=stripe" alt="Autonomous Trading" />
+  &nbsp;&nbsp;
+  <img src="https://img.shields.io/badge/Worker-Data%20Extraction-FF8C00?style=for-the-badge&logo=python" alt="Data Extraction" />
+</p>
+
+- **Autonomous DevOps:** Auto-monitoring CI/CD triage agents running 24/7.
+- **Enterprise Support Fleets:** Coordinating multi-agent support flows across 10k+ dynamic observations/mo.
+- **Dynamic Content Pipelines:** Tracking memory preservation for long-running creative video generation.
+
+---
+
 ## Contributing
 
 We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.

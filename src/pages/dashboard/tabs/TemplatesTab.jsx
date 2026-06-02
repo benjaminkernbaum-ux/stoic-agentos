@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { supabase, API_BASE } from '../../../lib/supabase';
 
 const BLUEPRINTS = [
   { id: 'code-reviewer', name: 'Code Reviewer', icon: '🔍', category: 'DevOps', desc: 'Automatically reviews pull requests, identifies bugs, security vulnerabilities, and suggests improvements.', tags: ['GitHub', 'Code Quality'], popularity: 94, complexity: 'intermediate', setupTime: '5 min', featured: true },
@@ -23,9 +24,37 @@ const COMPLEXITY_STYLES = {
   advanced: { color: '#ef4444', label: '●●● Advanced' },
 };
 
-export default function TemplatesTab() {
+export default function TemplatesTab({ org, toast, onAgentCreated }) {
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('All');
+  const [deploying, setDeploying] = useState(null);
+  const [deployed, setDeployed] = useState(new Set());
+
+  const handleDeploy = async (bp) => {
+    try {
+      setDeploying(bp.id);
+      const token = (await supabase.auth.getSession()).data.session?.access_token;
+      const res = await fetch(`${API_BASE}/api/v1/agents?org_id=${org?.id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          name: bp.name,
+          module: bp.category,
+          description: bp.desc,
+          status: 'idle',
+          metadata: { blueprint_id: bp.id, tags: bp.tags },
+        }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      setDeployed(prev => new Set(prev).add(bp.id));
+      toast?.(`✨ ${bp.name} deployed successfully`, 'success');
+      onAgentCreated?.();
+    } catch (err) {
+      toast?.(`Deploy failed: ${err.message}`, 'error');
+    } finally {
+      setDeploying(null);
+    }
+  };
 
   const filtered = BLUEPRINTS.filter(t => {
     const matchCat = category === 'All' || t.category === category;
@@ -98,7 +127,11 @@ export default function TemplatesTab() {
                     <div className="bp-card-pop-bar"><div className="bp-card-pop-fill" style={{ width: `${bp.popularity}%` }} /></div>
                     <span className="bp-card-pop-val">{bp.popularity}%</span>
                   </div>
-                  <button className="bp-card-deploy">Deploy →</button>
+                  <button
+                    className={`bp-card-deploy${deployed.has(bp.id) ? ' deployed' : ''}`}
+                    disabled={deploying === bp.id || deployed.has(bp.id)}
+                    onClick={() => handleDeploy(bp)}
+                  >{deployed.has(bp.id) ? '✓ Deployed' : deploying === bp.id ? '⏳ Deploying…' : 'Deploy →'}</button>
                 </div>
               </div>
             ))}
@@ -132,7 +165,11 @@ export default function TemplatesTab() {
                     <div className="bp-card-pop-bar"><div className="bp-card-pop-fill" style={{ width: `${bp.popularity}%` }} /></div>
                     <span className="bp-card-pop-val">{bp.popularity}%</span>
                   </div>
-                  <button className="bp-card-deploy">Deploy →</button>
+                  <button
+                    className={`bp-card-deploy${deployed.has(bp.id) ? ' deployed' : ''}`}
+                    disabled={deploying === bp.id || deployed.has(bp.id)}
+                    onClick={() => handleDeploy(bp)}
+                  >{deployed.has(bp.id) ? '✓ Deployed' : deploying === bp.id ? '⏳ Deploying…' : 'Deploy →'}</button>
                 </div>
               </div>
             ))}

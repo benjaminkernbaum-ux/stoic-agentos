@@ -1,7 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '../../../lib/supabase';
-
-const API = import.meta.env.VITE_API_URL || 'https://api.stoicagentos.com';
+import { supabase, API_BASE } from '../../../lib/supabase';
 
 function importanceBadge(imp) {
   if (imp >= 9) return { color: '#ef4444', label: 'Critical' };
@@ -31,11 +29,11 @@ export default function MemoryTab() {
     try {
       const h = await headers();
       const [statsR, workR, epiR, semR, refR] = await Promise.all([
-        fetch(`${API}/api/v1/memory/stats`, { headers: h }).then(r => r.json()).catch(() => ({ working: 0, episodic: 0, semantic: 0 })),
-        fetch(`${API}/api/v1/memory/working`, { headers: h }).then(r => r.json()).catch(() => []),
-        fetch(`${API}/api/v1/memory/episodic`, { headers: h }).then(r => r.json()).catch(() => []),
-        fetch(`${API}/api/v1/memory/semantic`, { headers: h }).then(r => r.json()).catch(() => []),
-        fetch(`${API}/api/v1/reflection/status`, { headers: h }).then(r => r.json()).catch(() => null),
+        fetch(`${API_BASE}/api/v1/memory/stats`, { headers: h }).then(r => r.json()).catch(() => ({ working: 0, episodic: 0, semantic: 0 })),
+        fetch(`${API_BASE}/api/v1/memory/working`, { headers: h }).then(r => r.json()).catch(() => []),
+        fetch(`${API_BASE}/api/v1/memory/episodic`, { headers: h }).then(r => r.json()).catch(() => []),
+        fetch(`${API_BASE}/api/v1/memory/semantic`, { headers: h }).then(r => r.json()).catch(() => []),
+        fetch(`${API_BASE}/api/v1/reflection/status`, { headers: h }).then(r => r.json()).catch(() => null),
       ]);
       setStats(statsR);
       setWorking(Array.isArray(workR) ? workR : []);
@@ -50,7 +48,7 @@ export default function MemoryTab() {
     setReflecting(true);
     try {
       const h = await headers();
-      const res = await fetch(`${API}/api/v1/reflection/run`, { method: 'POST', headers: h });
+      const res = await fetch(`${API_BASE}/api/v1/reflection/run`, { method: 'POST', headers: h });
       const data = await res.json();
       if (data.triplets_extracted !== undefined) {
         await fetchAll();
@@ -63,7 +61,7 @@ export default function MemoryTab() {
     setDecaying(true);
     try {
       const h = await headers();
-      await fetch(`${API}/api/v1/reflection/decay`, { method: 'POST', headers: h });
+      await fetch(`${API_BASE}/api/v1/reflection/decay`, { method: 'POST', headers: h });
       await fetchAll();
     } catch { /* ignore */ }
     setDecaying(false);
@@ -76,14 +74,14 @@ export default function MemoryTab() {
     try {
       const h = await headers();
       await Promise.all([
-        fetch(`${API}/api/v1/memory/working`, { method: 'POST', headers: h, body: JSON.stringify({ session_id: 'demo-session', key: 'current_task', value: { task: 'data-pipeline-v2', step: 3, total: 5 }, ttl_seconds: 3600 }) }),
-        fetch(`${API}/api/v1/memory/working`, { method: 'POST', headers: h, body: JSON.stringify({ session_id: 'demo-session', key: 'user_context', value: { role: 'admin', preferences: { theme: 'dark' } }, ttl_seconds: 7200 }) }),
-        fetch(`${API}/api/v1/memory/episodic`, { method: 'POST', headers: h, body: JSON.stringify({ content: 'Agent data-pipeline completed batch processing of 15,000 records with 99.2% accuracy', event_type: 'completion', importance: 7 }) }),
-        fetch(`${API}/api/v1/memory/episodic`, { method: 'POST', headers: h, body: JSON.stringify({ content: 'Detected anomaly in customer churn predictions - model confidence dropped below 0.6 threshold', event_type: 'anomaly', importance: 9 }) }),
-        fetch(`${API}/api/v1/memory/episodic`, { method: 'POST', headers: h, body: JSON.stringify({ content: 'RAG pipeline indexed 342 new documents from knowledge base update', event_type: 'observation', importance: 5 }) }),
-        fetch(`${API}/api/v1/memory/semantic`, { method: 'POST', headers: h, body: JSON.stringify({ subject: 'data-pipeline', relation: 'depends_on', object: 'PostgreSQL', confidence: 0.95 }) }),
-        fetch(`${API}/api/v1/memory/semantic`, { method: 'POST', headers: h, body: JSON.stringify({ subject: 'churn-predictor', relation: 'uses', object: 'XGBoost model v3', confidence: 0.88 }) }),
-        fetch(`${API}/api/v1/memory/semantic`, { method: 'POST', headers: h, body: JSON.stringify({ subject: 'RAG pipeline', relation: 'produces', object: 'vector embeddings', confidence: 0.92 }) }),
+        fetch(`${API_BASE}/api/v1/memory/working`, { method: 'POST', headers: h, body: JSON.stringify({ session_id: 'demo-session', key: 'current_task', value: { task: 'data-pipeline-v2', step: 3, total: 5 }, ttl_seconds: 3600 }) }),
+        fetch(`${API_BASE}/api/v1/memory/working`, { method: 'POST', headers: h, body: JSON.stringify({ session_id: 'demo-session', key: 'user_context', value: { role: 'admin', preferences: { theme: 'dark' } }, ttl_seconds: 7200 }) }),
+        fetch(`${API_BASE}/api/v1/memory/episodic`, { method: 'POST', headers: h, body: JSON.stringify({ content: 'Agent data-pipeline completed batch processing of 15,000 records with 99.2% accuracy', event_type: 'completion', importance: 7 }) }),
+        fetch(`${API_BASE}/api/v1/memory/episodic`, { method: 'POST', headers: h, body: JSON.stringify({ content: 'Detected anomaly in customer churn predictions - model confidence dropped below 0.6 threshold', event_type: 'anomaly', importance: 9 }) }),
+        fetch(`${API_BASE}/api/v1/memory/episodic`, { method: 'POST', headers: h, body: JSON.stringify({ content: 'RAG pipeline indexed 342 new documents from knowledge base update', event_type: 'observation', importance: 5 }) }),
+        fetch(`${API_BASE}/api/v1/memory/semantic`, { method: 'POST', headers: h, body: JSON.stringify({ subject: 'data-pipeline', relation: 'depends_on', object: 'PostgreSQL', confidence: 0.95 }) }),
+        fetch(`${API_BASE}/api/v1/memory/semantic`, { method: 'POST', headers: h, body: JSON.stringify({ subject: 'churn-predictor', relation: 'uses', object: 'XGBoost model v3', confidence: 0.88 }) }),
+        fetch(`${API_BASE}/api/v1/memory/semantic`, { method: 'POST', headers: h, body: JSON.stringify({ subject: 'RAG pipeline', relation: 'produces', object: 'vector embeddings', confidence: 0.92 }) }),
       ]);
       await fetchAll();
     } catch { /* ignore */ }

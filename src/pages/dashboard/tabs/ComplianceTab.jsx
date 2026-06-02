@@ -1,7 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '../../../lib/supabase';
-
-const API = import.meta.env.VITE_API_URL || 'https://api.stoicagentos.com';
+import { supabase, API_BASE } from '../../../lib/supabase';
 
 const VERDICT_COLORS = { PROCEED: '#22c55e', BLOCK: '#ef4444', WARN: '#eab308' };
 const CIRCUIT_COLORS = { closed: '#22c55e', 'half-open': '#eab308', open: '#ef4444' };
@@ -23,7 +21,7 @@ export default function ComplianceTab() {
   const fetchAll = useCallback(async () => {
     try {
       const h = await headers();
-      let logUrl = `${API}/api/v1/compliance/audit-log`;
+      let logUrl = `${API_BASE}/api/v1/compliance/audit-log`;
       const params = new URLSearchParams();
       if (filters.event_type) params.set('event_type', filters.event_type);
       if (filters.verdict) params.set('verdict', filters.verdict);
@@ -31,8 +29,8 @@ export default function ComplianceTab() {
 
       const [logR, statsR, breakerR] = await Promise.all([
         fetch(logUrl, { headers: h }).then(r => r.json()).catch(() => []),
-        fetch(`${API}/api/v1/compliance/audit-log/stats`, { headers: h }).then(r => r.json()).catch(() => ({ total: 0, by_type: {}, by_verdict: {}, by_day: {} })),
-        fetch(`${API}/api/v1/compliance/circuit-breaker`, { headers: h }).then(r => r.json()).catch(() => []),
+        fetch(`${API_BASE}/api/v1/compliance/audit-log/stats`, { headers: h }).then(r => r.json()).catch(() => ({ total: 0, by_type: {}, by_verdict: {}, by_day: {} })),
+        fetch(`${API_BASE}/api/v1/compliance/circuit-breaker`, { headers: h }).then(r => r.json()).catch(() => []),
       ]);
       setAuditLog(Array.isArray(logR) ? logR : []);
       setStats(statsR);
@@ -57,7 +55,7 @@ export default function ComplianceTab() {
         { event_type: 'deployment', action: 'Agent data-pipeline deployed to production', verdict: 'PROCEED', reasoning: 'All health checks passed' },
         { event_type: 'anomaly', action: 'Unusual spike in error observations detected', verdict: 'WARN', reasoning: 'Error rate 23% exceeds 10% threshold' },
       ];
-      await Promise.all(entries.map(e => fetch(`${API}/api/v1/compliance/audit-log`, { method: 'POST', headers: h, body: JSON.stringify(e) })));
+      await Promise.all(entries.map(e => fetch(`${API_BASE}/api/v1/compliance/audit-log`, { method: 'POST', headers: h, body: JSON.stringify(e) })));
       await fetchAll();
     } catch { /* ignore */ }
     setSeeding(false);
@@ -66,7 +64,7 @@ export default function ComplianceTab() {
   const exportSIEM = async () => {
     try {
       const h = await headers();
-      const res = await fetch(`${API}/api/v1/compliance/audit-log/export`, { headers: h });
+      const res = await fetch(`${API_BASE}/api/v1/compliance/audit-log/export`, { headers: h });
       const data = await res.json();
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);

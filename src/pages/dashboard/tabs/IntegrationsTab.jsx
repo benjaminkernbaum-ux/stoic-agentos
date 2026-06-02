@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
+import { supabase, API_BASE } from '../../../lib/supabase';
 
 const INTEGRATIONS = {
   google: {
@@ -62,18 +63,62 @@ const CATEGORIES = [
   { id: 'comms', label: 'Communication', icon: '💬' },
 ];
 
-export default function IntegrationsTab() {
+async function getAuthHeaders() {
+  const token = (await supabase.auth.getSession()).data.session?.access_token;
+  return { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
+}
+
+export default function IntegrationsTab({ org }) {
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('all');
   const [connected, setConnected] = useState(new Set(['github', 'slack', 'supabase']));
 
-  const toggleConnect = (id) => {
+  // Fetch persisted connected integrations on mount
+  const fetchConnected = useCallback(async () => {
+    if (!org?.id) return;
+    try {
+      const headers = await getAuthHeaders();
+      const res = await fetch(`${API_BASE}/api/v1/integrations?org_id=${org.id}`, { headers });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const { connected: ids } = await res.json();
+      if (Array.isArray(ids)) {
+        setConnected(new Set(ids));
+      }
+    } catch {
+      // API failed — keep default local state
+    }
+  }, [org?.id]);
+
+  useEffect(() => { fetchConnected(); }, [fetchConnected]);
+
+  const toggleConnect = async (id) => {
+    const isConnected = connected.has(id);
+    // Optimistic update
     setConnected(prev => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
+      if (isConnected) next.delete(id); else next.add(id);
       return next;
     });
+    // Persist to backend
+    try {
+      const headers = await getAuthHeaders();
+      if (isConnected) {
+        await fetch(`${API_BASE}/api/v1/integrations/${id}`, { method: 'DELETE', headers });
+      } else {
+        await fetch(`${API_BASE}/api/v1/integrations`, {
+          method: 'POST', headers, body: JSON.stringify({ integration_id: id }),
+        });
+      }
+    } catch {
+      // Revert on failure
+      setConnected(prev => {
+        const next = new Set(prev);
+        if (isConnected) next.add(id); else next.delete(id);
+        return next;
+      });
+    }
   };
+
 
   const totalIntegrations = Object.values(INTEGRATIONS).reduce((s, g) => s + g.items.length, 0);
 

@@ -25,11 +25,21 @@ const TIER_STYLES = {
   experimental: { color: '#fbbf24', bg: 'rgba(251,191,36,0.12)', label: 'EXPERIMENTAL' },
 };
 
-export default function SkillsTab() {
+export default function SkillsTab({ agents = [] }) {
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('All');
 
-  const filtered = CAPABILITIES.filter(s => {
+  // Compute real agent counts per capability
+  const capabilities = CAPABILITIES.map(cap => {
+    const count = agents.filter(a => {
+      const mod = (a.module || '').toLowerCase();
+      const tags = a.metadata?.tags?.map(t => t.toLowerCase()) || [];
+      return mod === cap.category.toLowerCase() || mod === cap.id.toLowerCase() || tags.includes(cap.id.toLowerCase()) || tags.includes(cap.category.toLowerCase());
+    }).length;
+    return { ...cap, agents: count };
+  });
+
+  const filtered = capabilities.filter(s => {
     const matchCat = category === 'All' || s.category === category;
     const matchSearch = !search ||
       s.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -37,8 +47,8 @@ export default function SkillsTab() {
     return matchCat && matchSearch;
   });
 
-  const totalAgents = CAPABILITIES.reduce((sum, s) => sum + s.agents, 0);
-  const avgReliability = Math.round(CAPABILITIES.reduce((sum, s) => sum + s.reliability, 0) / CAPABILITIES.length);
+  const totalAgents = agents.length;
+  const avgReliability = Math.round(capabilities.reduce((sum, s) => sum + s.reliability, 0) / capabilities.length);
 
   return (
     <div className="dash-content">
