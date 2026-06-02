@@ -1427,3 +1427,17 @@
   }
 }
 
+/* ── Topbar and Glowing Button Styles for Product Tour Showcase ── */
+.dp-top-telemetry-bar {
+  border-bottom: 1px solid var(--border);
+}
+.glowing-brief-btn {
+  box-shadow: 0 0 12px rgba(155, 89, 255, 0.4);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+.glowing-brief-btn:hover {
+  transform: scale(1.04);
+  box-shadow: 0 0 20px rgba(155, 89, 255, 0.65), 0 0 2px #fff !important;
+}
+
+

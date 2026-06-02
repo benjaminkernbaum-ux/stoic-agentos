@@ -162,47 +162,108 @@ function LiveDashboardPreview() {
   const [brainSearch, setBrainSearch] = useState('');
   const [selectedGraphNode, setSelectedGraphNode] = useState('lead-scorer');
 
-  // React state for agents to allow dynamic pausing & ticking runs!
-  const [agentsList, setAgentsList] = useState([
-    { name: 'production-monitor', status: 'running', module: 'infra', runs: 1243, role: 'Infrastructure SRE', queue: '0 pending', sla: '99.98%' },
-    { name: 'content-writer', status: 'running', module: 'content', runs: 892, role: 'Launch Content Engine', queue: '1 generating', sla: '99.5%' },
-    { name: 'code-reviewer', status: 'running', module: 'devtools', runs: 567, role: 'Auto PR Auditor', queue: '0 pending', sla: '99.9%' },
-    { name: 'data-pipeline', status: 'running', module: 'pipeline', runs: 334, role: 'Vector DB Aggregator', queue: '12 batching', sla: '98.8%' },
-    { name: 'customer-support', status: 'running', module: 'support', runs: 201, role: 'L1 Helpdesk Agent', queue: '2 in queue', sla: '97.2%' },
-    { name: 'lead-scorer', status: 'running', module: 'sales', runs: 1087, role: 'Sales Intent Scorer', queue: '4 scoring', sla: '99.1%' },
+  // Interactive States
+  const [expandedTrace, setExpandedTrace] = useState(null);
+  const [workflowRunning, setWorkflowRunning] = useState(false);
+  const [workflowStep, setWorkflowStep] = useState(0);
+  const [workflowLogs, setWorkflowLogs] = useState(['[System] Idle. Awaiting trigger...']);
+  const [rateLimit, setRateLimit] = useState(80);
+  const [selfHealing, setSelfHealing] = useState(true);
+  const [vectorSync, setVectorSync] = useState(true);
+  const [chatInput, setChatInput] = useState('');
+  const [chatMessages, setChatMessages] = useState([
+    { sender: 'ai', text: '🤖 **Stoic AgentOS Assistant**\n\nHow can I help you manage your fleet today? Select a shortcut prompt or type a custom query:' }
+  ]);
+  const [chatLoading, setChatLoading] = useState(false);
+  const [memoryConsolidating, setMemoryConsolidating] = useState(false);
+  const [memoriesList, setMemoriesList] = useState([
+    { id: 'episodic-412', type: 'episodic', content: 'Cached client billing tokens in the encrypted vault.', time: '2m ago' },
+    { id: 'semantic-90', type: 'semantic', content: 'Determined lead-scorer works best with Claude 3.5 Sonnet.', time: '12m ago' },
+    { id: 'episodic-389', type: 'episodic', content: 'SRE auto-restarted customer-support after rate limits.', time: '40m ago' },
+  ]);
+  const [complianceAuditing, setComplianceAuditing] = useState(false);
+  const [complianceAuditVerified, setComplianceAuditVerified] = useState(false);
+  const [generatedKey, setGeneratedKey] = useState('');
+  const [keyGenLoading, setKeyGenLoading] = useState(false);
+  const [copiedKey, setCopiedKey] = useState(false);
+  
+  // Thought Capture Note State
+  const [captureNote, setCaptureNote] = useState('');
+
+  // Signal Feed (Inbox) States
+  const [signalsList, setSignalsList] = useState([
+    { id: 1, level: 'CRITICAL', title: 'Supabase rate-limit warning', desc: 'customer-support agent hit 429 Too Many Requests.', time: 'Just now', rule: 'api_protection' },
+    { id: 2, level: 'WARN', title: 'Knowledge persistence latency', desc: 'ephemeral memory pipeline exceeded 800ms threshold.', time: '5m ago', rule: 'memory_latency' },
+    { id: 3, level: 'INFO', title: 'Post-commit hook triggered', desc: 'prod-infra repository branch master pushed v2.4.1.', time: '12m ago', rule: 'git_sync' }
+  ]);
+  const [activeSignalFilter, setActiveSignalFilter] = useState('all');
+
+  // Capabilities (Skills) details inspector
+  const [selectedSkill, setSelectedSkill] = useState('fal_ai_video');
+  const skillsList = {
+    fal_ai_video: { name: 'fal_ai_video', desc: 'Generate high-fidelity cinematic scenes using Flux Pro & Kling Video adapters.', scope: 'read_write_external', usage: 104 },
+    eleven_labs_tts: { name: 'eleven_labs_tts', desc: 'Narrate roteiro audio logs using Portuguese (PT-BR) voice synthesis.', scope: 'read_external', usage: 89 },
+    git_commit_hook: { name: 'git_commit_hook', desc: 'Post-commit brain syncer capturing code changes into the semantic vector plane.', scope: 'read_write_internal', usage: 1204 },
+    web_browser_agent: { name: 'web_browser_agent', desc: 'Interact with target browser pages for analytics gathering and content audits.', scope: 'full_admin_sandbox', usage: 342 }
+  };
+
+  // Connected integrations
+  const [integrations, setIntegrations] = useState({
+    vercel: true,
+    supabase: true,
+    stripe: false,
+    claude: true
+  });
+
+  // Invitation link states
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteRole, setInviteRole] = useState('Developer');
+  const [teamMembers, setTeamMembers] = useState([
+    { name: 'Benjamin Kernbaum', email: 'benjamin@stoicagentos.com', role: 'Owner', status: 'Active' },
+    { name: 'Sarah Connor', email: 'sarah@stoicagentos.com', role: 'Admin', status: 'Active' },
   ]);
 
-  // React state for scrollable logs feed
+  // Dynamic agents
+  const [agentsList, setAgentsList] = useState([
+    { name: 'production-monitor', status: 'running', runs: 1243, role: 'Infrastructure SRE', queue: '0 pending', sla: '99.98%' },
+    { name: 'content-writer', status: 'running', runs: 892, role: 'Launch Content Engine', queue: '1 generating', sla: '99.5%' },
+    { name: 'code-reviewer', status: 'running', runs: 567, role: 'Auto PR Auditor', queue: '0 pending', sla: '99.9%' },
+    { name: 'data-pipeline', status: 'running', runs: 334, role: 'Vector DB Aggregator', queue: '12 batching', sla: '98.8%' },
+    { name: 'customer-support', status: 'running', runs: 201, role: 'L1 Helpdesk Agent', queue: '2 in queue', sla: '97.2%' },
+    { name: 'lead-scorer', status: 'running', runs: 1087, role: 'Sales Intent Scorer', queue: '4 scoring', sla: '99.1%' },
+  ]);
+
   const [logsList, setLogsList] = useState([
     { type: 'decision', title: 'Switched to batch processing for large datasets', time: 'Just now', icon: '🧭' },
     { type: 'deployment', title: 'Deployed v2.4.1 to production', time: '3m ago', icon: '🚀' },
     { type: 'discovery', title: 'Found 23% cost reduction in token usage', time: '8m ago', icon: '💡' },
-    { type: 'git_commit', title: 'feat: add webhook retry logic', time: '15m ago', icon: '📝' },
   ]);
 
-  // Brain Tab - Live Scrolling Memories
   const [brainMemories, setBrainMemories] = useState([
     { agent: 'code-reviewer', action: 'analyse_pr', decision: 'Approved PR #412 after security check', confidence: 0.98, time: 'Just now' },
     { agent: 'production-monitor', action: 'ping_check', decision: 'All health pings returned 200 OK within 12ms', confidence: 0.99, time: '4s ago' },
     { agent: 'content-writer', action: 'generate_draft', decision: 'Created draft for Twitter launch campaign', confidence: 0.95, time: '12s ago' },
     { agent: 'data-pipeline', action: 'sync_supabase', decision: 'Sync completed: 124 records updated', confidence: 1.00, time: '20s ago' },
-    { agent: 'customer-support', action: 'reply_query', decision: 'Resolved billing query via refunds auxiliary agent', confidence: 0.94, time: '45s ago' }
   ]);
 
-  // Autoplay cycle tabs every 8 seconds unless user clicks
+  // Autoplay cycle tabs every 8.5 seconds
   useEffect(() => {
     if (userInteracted) return;
     const tabInterval = setInterval(() => {
-      const tabs = ['Overview', 'Agents', 'Workspaces', 'Brain', 'Graph'];
+      const tabs = [
+        'Overview', 'Mission Comms', 'Signal Feed', 'Agents', 'Blueprints', 
+        'Connect Hub', 'Capabilities', 'Command Center', 'Workspaces', 
+        'Knowledge Brain', 'Knowledge Graph', 'Agent Traces', 'Workflows', 
+        'Memory', 'Compliance', 'Team HQ', 'Settings'
+      ];
       setActiveTab(current => {
         const nextIndex = (tabs.indexOf(current) + 1) % tabs.length;
         return tabs[nextIndex];
       });
-    }, 8000);
+    }, 8500);
     return () => clearInterval(tabInterval);
   }, [userInteracted]);
 
-  // Active agent highlight cycle (Overview tab only)
   useEffect(() => {
     const cycleAgent = setInterval(() => {
       setActiveAgentIndex(i => (i + 1) % agentsList.length);
@@ -212,103 +273,206 @@ function LiveDashboardPreview() {
     return () => clearInterval(cycleAgent);
   }, [agentsList.length]);
 
-  // Ticks runs & CPU/RAM values dynamically
   useEffect(() => {
-    // Fast tick to animate meters
-    const animationFrame = setInterval(() => {
-      setTickTime(t => t + 0.1);
-    }, 150);
-
-    // Runs counter tick
-    const runsInterval = setInterval(() => {
-      setAgentsList(prev =>
-        prev.map(a =>
-          a.status === 'running' && Math.random() > 0.4
-            ? { ...a, runs: a.runs + Math.floor(Math.random() * 2) }
-            : a
-        )
-      );
+    const anim = setInterval(() => setTickTime(t => t + 0.1), 150);
+    const runs = setInterval(() => {
+      const mult = rateLimit > 120 ? 2 : 1;
+      setAgentsList(prev => prev.map(a => a.status === 'running' && Math.random() > 0.4 ? { ...a, runs: a.runs + Math.floor(Math.random() * mult + 1) } : a));
     }, 2500);
-
-    // Dynamic log generator to make feed scroll live!
-    const logInterval = setInterval(() => {
-      const mockLogs = [
-        { type: 'decision', title: 'Optimized routing logic to avoid high latency nodes', icon: '🧭' },
-        { type: 'decision', title: 'Switched LLM provider to Claude 3.5 Sonnet to save 40% tokens', icon: '🧠' },
-        { type: 'decision', title: 'Throttled requests to Stripe API after hitting rate-limit', icon: '🚦' },
-        { type: 'deployment', title: 'Automatic rollback to stable workspace v2.4.0 successful', icon: '🚀' },
-        { type: 'discovery', title: 'Aggregated 15 customer feedback vectors into Vector DB', icon: '💡' },
-        { type: 'discovery', title: 'Identified 3 dead-loop states in scraper agent queue', icon: '🔍' },
-      ];
-      const selected = mockLogs[Math.floor(Math.random() * mockLogs.length)];
-      setLogsList(prev => [
-        { type: selected.type, title: selected.title, time: 'Just now', icon: selected.icon },
-        ...prev.map(log => {
-          if (log.time === 'Just now') return { ...log, time: '1m ago' };
-          if (log.time === '1m ago') return { ...log, time: '4m ago' };
-          if (log.time === '3m ago') return { ...log, time: '8m ago' };
-          if (log.time === '4m ago') return { ...log, time: '12m ago' };
-          if (log.time === '8m ago') return { ...log, time: '15m ago' };
-          return { ...log, time: '20m ago' };
-        }).slice(0, 5)
-      ]);
-    }, 5000);
-
-    // Dynamic brain thought generator
-    const brainInterval = setInterval(() => {
-      const mockMemories = [
-        { agent: 'lead-scorer', action: 'score_lead', decision: 'Flagged high-intent lead from enterprise.com', confidence: 0.97 },
-        { agent: 'customer-support', action: 'answer_chat', decision: 'Dispatched automated webhook status report', confidence: 0.96 },
-        { agent: 'code-reviewer', action: 'audit_git', decision: 'Clean build verified across master branch', confidence: 0.99 },
-        { agent: 'data-pipeline', action: 'flush_queue', decision: 'Sync completed: 124 records verified in index', confidence: 1.00 },
-      ];
-      const selected = mockMemories[Math.floor(Math.random() * mockMemories.length)];
-      setBrainMemories(prev => [
-        { ...selected, time: 'Just now' },
-        ...prev.map(mem => {
-          if (mem.time === 'Just now') return { ...mem, time: '5s ago' };
-          if (mem.time === '4s ago' || mem.time === '5s ago') return { ...mem, time: '15s ago' };
-          if (mem.time === '12s ago' || mem.time === '15s ago') return { ...mem, time: '35s ago' };
-          return { ...mem, time: '1m ago' };
-        }).slice(0, 7)
-      ]);
-    }, 4000);
-
-    return () => {
-      clearInterval(animationFrame);
-      clearInterval(runsInterval);
-      clearInterval(logInterval);
-      clearInterval(brainInterval);
-    };
-  }, []);
+    return () => { clearInterval(anim); clearInterval(runs); };
+  }, [rateLimit]);
 
   const toggleAgentStatus = (index) => {
     setUserInteracted(true);
-    setAgentsList(prev =>
-      prev.map((a, i) =>
-        i === index ? { ...a, status: a.status === 'running' ? 'idle' : 'running' } : a
-      )
-    );
+    setAgentsList(prev => prev.map((a, i) => i === index ? { ...a, status: a.status === 'running' ? 'idle' : 'running' } : a));
   };
 
   const addManualMemory = () => {
     setUserInteracted(true);
     const userMemories = [
       { agent: 'user-override', action: 'manual_trigger', decision: 'Triggered diagnostic check on API gateways', confidence: 1.00 },
-      { agent: 'user-override', action: 'kill_process', decision: 'Forced restart of content-writer agent sub-pool', confidence: 0.99 },
       { agent: 'user-override', action: 'inject_cache', decision: 'Pre-warmed observation prefix cache globally', confidence: 0.98 },
     ];
     const selected = userMemories[Math.floor(Math.random() * userMemories.length)];
-    setBrainMemories(prev => [
-      { ...selected, time: 'Just now' },
-      ...prev
-    ]);
+    setBrainMemories(prev => [{ ...selected, time: 'Just now' }, ...prev]);
   };
 
-  const statusColor = { running: '#00e68a', idle: 'rgba(255,255,255,0.25)', success: '#00d4ff', error: '#ff4757' };
+  const handleCaptureSubmit = (e) => {
+    e.preventDefault();
+    if (!captureNote.trim()) return;
+    setUserInteracted(true);
+    const newLog = {
+      type: 'note',
+      title: captureNote,
+      time: 'Just now',
+      icon: '📌'
+    };
+    setLogsList(prev => [newLog, ...prev]);
+    
+    // Also inject into semantic brain console
+    const newMemory = {
+      agent: 'user-capture',
+      action: 'note_persist',
+      decision: `Persisted note: "${captureNote}"`,
+      confidence: 1.00,
+      time: 'Just now'
+    };
+    setBrainMemories(prev => [newMemory, ...prev]);
+    setCaptureNote('');
+  };
+
+  const startWorkflowRun = () => {
+    if (workflowRunning) return;
+    setUserInteracted(true);
+    setWorkflowRunning(true);
+    setWorkflowStep(1);
+    setWorkflowLogs(['[System] Initializing TikTok pipeline...']);
+    const steps = [
+      { msg: '[Pipeline] Fetching script draft from brain memory...', delay: 1000 },
+      { msg: '[ElevenLabs] Generating narration (PT-BR voice)...', delay: 2400 },
+      { msg: '[Fal.ai] Rendering high-fidelity video scenes...', delay: 4200 },
+      { msg: '[FFmpeg] Merging video, audio, and subtitles...', delay: 6200 },
+      { msg: '[System] Pipeline Complete! Video draft published successfully.', delay: 8000 }
+    ];
+    steps.forEach((step, index) => {
+      setTimeout(() => {
+        setWorkflowStep(index + 2);
+        setWorkflowLogs(prev => [...prev, step.msg]);
+        if (index === steps.length - 1) setWorkflowRunning(false);
+      }, step.delay);
+    });
+  };
+
+  const deployBlueprint = (agentName, roleName) => {
+    setUserInteracted(true);
+    // Avoid duplicates
+    if (agentsList.some(a => a.name === agentName)) {
+      alert(`${agentName} is already deployed!`);
+      return;
+    }
+    const newAgent = {
+      name: agentName,
+      status: 'running',
+      runs: 0,
+      role: roleName,
+      queue: '0 pending',
+      sla: '99.9%'
+    };
+    setAgentsList(prev => [...prev, newAgent]);
+    alert(`🚀 Deployed ${agentName} successfully! Visit the "Agents" tab to inspect telemetry.`);
+  };
+
+  const handleChatPreset = (presetText) => {
+    if (chatLoading) return;
+    setUserInteracted(true);
+    setChatMessages(prev => [...prev, { sender: 'user', text: presetText }]);
+    setChatLoading(true);
+    setTimeout(() => {
+      let reply = '';
+      if (presetText.includes('Failures')) {
+        reply = '🔍 **Fleet Health Audit**\n\nI identified **1 anomaly** inside `customer-support`:\n* **Diagnostic:** `Supabase rate-limit reached` on trace `#tr_9x22`.\n* **Mitigation:** Self-Healing SRE restarted the worker and pre-warmed prefix cache.';
+      } else if (presetText.includes('Cost')) {
+        reply = '💸 **Token Savings Report**\n\nBy routing formatting sub-tasks to **Claude 3.5 Haiku** instead of Sonnet, we achieved:\n* **Billing Reduction:** **-42.5%** ($124.00 ➔ $71.30/day).\n* **Average Latency:** **-180ms**.';
+      } else {
+        reply = '🧬 **Episodic Memory Retrieval**\n\nFound **1 episodic block** for keyword `launch timeline`:\n* **Block ID:** `episodic-412`\n* **Details:** *"Compiled index.html. Custom domain mapping set securely to stoicagentos.com."*\n* **Consolidated Uptime SLA:** `99.98%`';
+      }
+      setChatMessages(prev => [...prev, { sender: 'ai', text: reply }]);
+      setChatLoading(false);
+    }, 1200);
+  };
+
+  const handleCustomChatSubmit = (e) => {
+    e.preventDefault();
+    if (!chatInput.trim() || chatLoading) return;
+    setUserInteracted(true);
+    const query = chatInput;
+    setChatMessages(prev => [...prev, { sender: 'user', text: query }]);
+    setChatInput('');
+    setChatLoading(true);
+    
+    setTimeout(() => {
+      let reply = '';
+      const lowercaseQuery = query.toLowerCase();
+      if (lowercaseQuery.includes('agent') || lowercaseQuery.includes('fleet')) {
+        reply = `🤖 **Fleet Analysis**\n\nYou currently have **${agentsList.filter(a => a.status === 'running').length} running agents** out of **${agentsList.length} total**. Average SLA is **99.2%**. Heartbeats are stable.`;
+      } else if (lowercaseQuery.includes('memory') || lowercaseQuery.includes('persist')) {
+        reply = `🧬 **Memory Plane Status**\n\nWorking memory contains **4 ephemeral blocks**. Ephemeral is consolidated into episodic/semantic plane automatically every 6 hours. Last consolidation was successful.`;
+      } else if (lowercaseQuery.includes('compile') || lowercaseQuery.includes('error') || lowercaseQuery.includes('fail')) {
+        reply = `⚠️ **SIEM Telemetry Logs**\n\nFound **1 recent warnings** in signal feed. customer-support encountered a brief rate limit which was mitigated by our automatic circuit breakers.`;
+      } else {
+        reply = `💡 **Telemetry Report**\n\nI analyzed your query: "${query}". System diagnostics are solid. Telemetry signals are routing securely through API gateways at average **124ms** latency. No action required.`;
+      }
+      setChatMessages(prev => [...prev, { sender: 'ai', text: reply }]);
+      setChatLoading(false);
+    }, 1000);
+  };
+
+  const consolidateMemories = () => {
+    if (memoryConsolidating) return;
+    setUserInteracted(true);
+    setMemoryConsolidating(true);
+    setTimeout(() => {
+      setMemoryConsolidating(false);
+      setMemoriesList(prev => [{ id: `semantic-${Math.floor(Math.random() * 100 + 100)}`, type: 'semantic', content: 'Aggregated recent billing metrics: Identified Stripe endpoints as peak memory consumption peaks.', time: 'Just now' }, ...prev]);
+    }, 1500);
+  };
+
+  const verifyComplianceLogs = () => {
+    if (complianceAuditing) return;
+    setUserInteracted(true);
+    setComplianceAuditing(true);
+    setComplianceAuditVerified(false);
+    setTimeout(() => { setComplianceAuditing(false); setComplianceAuditVerified(true); }, 1800);
+  };
+
+  const handleGenerateKey = () => {
+    setUserInteracted(true);
+    setKeyGenLoading(true);
+    setTimeout(() => {
+      const randHex = Array.from({ length: 24 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
+      setGeneratedKey(`sk_live_${randHex}`);
+      setKeyGenLoading(false);
+      setCopiedKey(false);
+    }, 1000);
+  };
+
+  const copyKeyToClipboard = () => {
+    setCopiedKey(true);
+    navigator.clipboard?.writeText(generatedKey);
+    setTimeout(() => setCopiedKey(false), 2000);
+  };
+
+  const toggleIntegration = (key) => {
+    setUserInteracted(true);
+    setIntegrations(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const handleAddMember = (e) => {
+    e.preventDefault();
+    if (!inviteEmail.trim()) return;
+    setUserInteracted(true);
+    const newMember = {
+      name: inviteEmail.split('@')[0],
+      email: inviteEmail,
+      role: inviteRole,
+      status: 'Pending Invite'
+    };
+    setTeamMembers(prev => [...prev, newMember]);
+    setInviteEmail('');
+    alert(`📧 Invitation sent to ${inviteEmail}!`);
+  };
+
+  const statusColor = { running: '#00e68a', idle: 'rgba(255,255,255,0.25)', success: '#00d4ff', error: '#ff4757', paused: 'rgba(255,255,255,0.25)' };
+
+  // Signals (Inbox) filter logic
+  const filteredSignals = signalsList.filter(s => {
+    if (activeSignalFilter === 'all') return true;
+    return s.level.toLowerCase() === activeSignalFilter;
+  });
 
   return (
     <div className="preview-frame premium-preview-frame">
+      {/* Premium Tool Window URL Bar */}
       <div className="preview-bar">
         <div className="preview-dot red" />
         <div className="preview-dot yellow" />
@@ -325,468 +489,873 @@ function LiveDashboardPreview() {
           )}
         </div>
       </div>
+
       <div className="dashboard-preview">
-        {/* Navigation Sidebar */}
-        <div className="dp-sidebar">
-          <div className="dp-logo">⚡ Stoic OS</div>
-          {['Overview', 'Agents', 'Workspaces', 'Brain', 'Graph'].map((item, i) => (
+        {/* Navigation Sidebar replicating actual Sidebar structure */}
+        <div className="dp-sidebar" style={{ width: '220px', maxHeight: '480px', overflowY: 'auto', background: 'var(--bg-secondary)', borderRight: '1px solid var(--border)' }}>
+          <div className="dp-logo" style={{ fontSize: '13px', display: 'flex', alignItems: 'center', gap: 6, marginBottom: '16px' }}>
+            <span>⚡</span> Stoic AgentOS
+            <span style={{ fontSize: '9px', background: 'rgba(155, 89, 255, 0.2)', padding: '2px 4px', borderRadius: '3px', color: 'var(--accent-purple)', fontFamily: 'var(--font-mono)' }}>v3</span>
+          </div>
+
+          {/* Group: MAIN */}
+          <div style={{ fontSize: '8px', color: 'var(--text-dim)', letterSpacing: '1px', textTransform: 'uppercase', padding: '0 8px 4px', fontWeight: '800' }}>MAIN</div>
+          {[
+            { id: 'Mission Comms', icon: '💬' },
+            { id: 'Signal Feed', icon: '📡' }
+          ].map((item) => (
             <button
-              key={item}
-              className={`dp-nav-item-btn ${activeTab === item ? 'active' : ''}`}
-              onClick={() => {
-                setActiveTab(item);
-                setUserInteracted(true);
-              }}
+              key={item.id}
+              className={`dp-nav-item-btn ${activeTab === item.id ? 'active' : ''}`}
+              onClick={() => { setActiveTab(item.id); setUserInteracted(true); }}
               style={{
-                width: '100%',
-                textAlign: 'left',
-                border: 'none',
-                background: 'transparent',
-                fontFamily: 'inherit',
-                fontSize: '13px',
-                padding: '8px 10px',
-                borderRadius: '6px',
-                color: activeTab === item ? 'var(--text-primary)' : 'var(--text-dim)',
-                background: activeTab === item ? 'rgba(155, 89, 255, 0.12)' : 'transparent',
-                cursor: 'pointer',
-                transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                fontWeight: activeTab === item ? '600' : '500',
-              }}
-              onMouseEnter={(e) => {
-                if (activeTab !== item) e.currentTarget.style.background = 'rgba(255,255,255,0.03)';
-              }}
-              onMouseLeave={(e) => {
-                if (activeTab !== item) e.currentTarget.style.background = 'transparent';
+                width: '100%', textAlign: 'left', border: 'none', background: 'transparent', fontFamily: 'inherit', fontSize: '12px', padding: '6px 8px', borderRadius: '5px',
+                color: activeTab === item.id ? 'var(--text-primary)' : 'var(--text-dim)',
+                background: activeTab === item.id ? 'rgba(155, 89, 255, 0.12)' : 'transparent',
+                cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: activeTab === item.id ? '600' : '500', marginBottom: '2px'
               }}
             >
-              <span style={{ fontSize: '14px' }}>{['📊', '🤖', '📦', '🧠', '🕸️'][i]}</span>
-              {item}
+              <span>{item.icon}</span> {item.id}
             </button>
           ))}
+
+          {/* Group: EXPLORE */}
+          <div style={{ fontSize: '8px', color: 'var(--text-dim)', letterSpacing: '1px', textTransform: 'uppercase', padding: '10px 8px 4px', fontWeight: '800' }}>EXPLORE</div>
+          {[
+            { id: 'Agents', icon: '🤖' },
+            { id: 'Blueprints', icon: '🧬' },
+            { id: 'Connect Hub', icon: '🔌' },
+            { id: 'Capabilities', icon: '🧩' }
+          ].map((item) => (
+            <button
+              key={item.id}
+              className={`dp-nav-item-btn ${activeTab === item.id ? 'active' : ''}`}
+              onClick={() => { setActiveTab(item.id); setUserInteracted(true); }}
+              style={{
+                width: '100%', textAlign: 'left', border: 'none', background: 'transparent', fontFamily: 'inherit', fontSize: '12px', padding: '6px 8px', borderRadius: '5px',
+                color: activeTab === item.id ? 'var(--text-primary)' : 'var(--text-dim)',
+                background: activeTab === item.id ? 'rgba(155, 89, 255, 0.12)' : 'transparent',
+                cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: activeTab === item.id ? '600' : '500', marginBottom: '2px'
+              }}
+            >
+              <span>{item.icon}</span> {item.id}
+            </button>
+          ))}
+
+          {/* Group: OPERATE */}
+          <div style={{ fontSize: '8px', color: 'var(--text-dim)', letterSpacing: '1px', textTransform: 'uppercase', padding: '10px 8px 4px', fontWeight: '800' }}>OPERATE</div>
+          {[
+            { id: 'Command Center', icon: '🎛️' },
+            { id: 'Overview', icon: '📊' },
+            { id: 'Workspaces', icon: '📦' },
+            { id: 'Knowledge Brain', icon: '💡' },
+            { id: 'Knowledge Graph', icon: '🕸️' },
+            { id: 'Agent Traces', icon: '📈' },
+            { id: 'Workflows', icon: '🔗' },
+            { id: 'Memory', icon: '🧠' },
+            { id: 'Compliance', icon: '🛡️' },
+            { id: 'Team HQ', icon: '🏢' }
+          ].map((item) => (
+            <button
+              key={item.id}
+              className={`dp-nav-item-btn ${activeTab === item.id ? 'active' : ''}`}
+              onClick={() => { setActiveTab(item.id); setUserInteracted(true); }}
+              style={{
+                width: '100%', textAlign: 'left', border: 'none', background: 'transparent', fontFamily: 'inherit', fontSize: '12px', padding: '6px 8px', borderRadius: '5px',
+                color: activeTab === item.id ? 'var(--text-primary)' : 'var(--text-dim)',
+                background: activeTab === item.id ? 'rgba(155, 89, 255, 0.12)' : 'transparent',
+                cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: activeTab === item.id ? '600' : '500', marginBottom: '2px'
+              }}
+            >
+              <span>{item.icon}</span> {item.id}
+            </button>
+          ))}
+
+          {/* Group: FOOTER */}
+          <div style={{ fontSize: '8px', color: 'var(--text-dim)', letterSpacing: '1px', textTransform: 'uppercase', padding: '10px 8px 4px', fontWeight: '800' }}>ACCOUNT</div>
+          <button
+            className={`dp-nav-item-btn ${activeTab === 'Settings' ? 'active' : ''}`}
+            onClick={() => { setActiveTab('Settings'); setUserInteracted(true); }}
+            style={{
+              width: '100%', textAlign: 'left', border: 'none', background: 'transparent', fontFamily: 'inherit', fontSize: '12px', padding: '6px 8px', borderRadius: '5px',
+              color: activeTab === 'Settings' ? 'var(--text-primary)' : 'var(--text-dim)',
+              background: activeTab === 'Settings' ? 'rgba(155, 89, 255, 0.12)' : 'transparent',
+              cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: activeTab === 'Settings' ? '600' : '500', marginBottom: '12px'
+            }}
+          >
+            <span>⚙️</span> Settings
+          </button>
         </div>
 
-        {/* Main Content Area */}
-        <div className="dp-main">
-          {/* TAB 1: OVERVIEW */}
-          {activeTab === 'Overview' && (
-            <div className="dp-tab-fade">
-              <div className="dp-header">
-                <div className="dp-title">Fleet Overview</div>
-                <div className="dp-badges">
-                  <span className="dp-badge green">{agentsList.filter(a => a.status === 'running').length} running</span>
-                  <span className="dp-badge purple">{agentsList.length} agents</span>
-                  <span className="dp-badge orange">40+ APIs</span>
-                </div>
+        {/* Dynamic Showcase Dashboard Body */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: 'var(--bg-primary)', overflow: 'hidden' }}>
+          
+          {/* Top Bar matching actual Topbar */}
+          <div className="dp-top-telemetry-bar" style={{ display: 'flex', alignItems: 'center', padding: '8px 16px', background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border)', fontSize: '11px', gap: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontWeight: '700', color: 'var(--text-primary)' }}>
+              <span>📦</span> prod-main
+            </div>
+            <div className="telemetry-bar-divider" style={{ width: '1px', height: '12px', background: 'var(--border)' }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: 'var(--accent-green)', fontWeight: '600' }}>
+              <span style={{ width: 6, height: 6, background: 'var(--accent-green)', borderRadius: '50%', display: 'inline-block' }} />
+              {agentsList.filter(a => a.status === 'running').length} Active
+            </div>
+            <div className="telemetry-bar-divider" style={{ width: '1px', height: '12px', background: 'var(--border)' }} />
+            <div style={{ color: 'var(--text-dim)' }}>
+              Latency: <span style={{ color: 'var(--accent-cyan)', fontFamily: 'var(--font-mono)' }}>124ms avg</span>
+            </div>
+            
+            <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <button 
+                onClick={() => { setActiveTab('Mission Comms'); setUserInteracted(true); }}
+                className="glowing-brief-btn"
+                style={{
+                  background: 'linear-gradient(90deg, var(--accent-purple), var(--accent-pink))', border: 'none', color: 'white', padding: '3px 8px', borderRadius: '4px', fontSize: '9px', fontWeight: '700', cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 0 10px rgba(155, 89, 255, 0.4)'
+                }}
+              >
+                ✨ Brief Agent
+              </button>
+              <div style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border)', borderRadius: '4px', padding: '3px 8px', color: 'var(--text-dim)', fontSize: '9px', display: 'flex', alignItems: 'center', gap: 4 }}>
+                <span>🔍 Search...</span>
+                <span style={{ fontSize: '8px', opacity: 0.5 }}>Ctrl+K</span>
               </div>
-              
-              <div className="dp-stats">
-                {[
-                  { val: agentsList.length, label: 'Agents' },
-                  { val: '5', label: 'Workspaces' },
-                  { val: '40+', label: 'API Endpoints' },
-                  { val: '12', label: 'Dashboard Tabs' },
-                ].map(s => (
-                  <div key={s.label} className="dp-stat premium-dp-stat">
-                    <div className="dp-stat-val">{s.val}</div>
-                    <div className="dp-stat-label">{s.label}</div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="dp-agents-row">
-                {agentsList.map((a, i) => (
-                  <div
-                    key={a.name}
-                    className={`dp-agent ${i === activeAgentIndex ? 'dp-agent-active' : ''}`}
-                    style={{ cursor: 'pointer' }}
-                    onClick={() => {
-                      setActiveTab('Agents');
-                      setUserInteracted(true);
-                    }}
-                  >
-                    <div
-                      className="dp-agent-dot"
-                      style={{
-                        background: statusColor[a.status],
-                        boxShadow: a.status === 'running' ? `0 0 6px ${statusColor[a.status]}` : 'none',
-                      }}
-                    />
-                    {a.name}
-                    <span style={{ marginLeft: 'auto', fontSize: 10, opacity: 0.4 }}>{a.runs}r</span>
-                  </div>
-                ))}
-              </div>
-
-              <div className="dp-activity">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                  <span style={{ fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)' }}>Recent Activity Feed</span>
-                  <span className="dp-live-indicator"><span className="dp-live-dot" /> LIVE</span>
-                </div>
-                {logsList.slice(0, 3).map((a, i) => (
-                  <div key={i} className={`dp-activity-item ${pulse && i === 0 ? 'dp-pulse' : ''}`}>
-                    <span className="dp-activity-icon">{a.icon}</span>
-                    <span className="dp-activity-title">{a.title}</span>
-                    <span className="dp-activity-time">{a.time}</span>
-                  </div>
-                ))}
+              <span style={{ color: 'var(--accent-purple)', fontSize: '10px', fontWeight: '700' }}>🏢 ENTERPRISE</span>
+              <div style={{ width: 18, height: 18, borderRadius: '50%', background: 'var(--accent-purple)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', fontWeight: '800', color: 'white' }}>
+                BK
               </div>
             </div>
-          )}
+          </div>
 
-          {/* TAB 2: AGENTS */}
-          {activeTab === 'Agents' && (
-            <div className="dp-tab-fade">
-              <div className="dp-header">
-                <div className="dp-title">Agent Controllers</div>
-                <div style={{ fontSize: '11px', color: 'var(--text-dim)' }}>Click pause/resume to control agent execution</div>
+          <div className="dp-main" style={{ flex: 1, padding: '16px', maxHeight: '420px', overflowY: 'auto' }}>
+            
+            {/* 1. MISSION COMMS (AI CHAT) */}
+            {activeTab === 'Mission Comms' && (
+              <div className="dp-tab-fade">
+                <div className="dp-header" style={{ marginBottom: '12px' }}>
+                  <div className="dp-title" style={{ fontSize: '14px' }}>💬 Mission Comms — Fleet Command</div>
+                  <span className="dp-live-indicator"><span className="dp-live-dot" style={{ background: 'var(--accent-purple)' }} /> BYOK CLAUDE 3.5</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <div style={{ padding: '8px 12px', background: 'var(--bg-deep)', border: '1px solid var(--border)', borderRadius: '8px', height: '170px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {chatMessages.map((msg, mIdx) => (
+                      <div key={mIdx} style={{ alignSelf: msg.sender === 'user' ? 'flex-end' : 'flex-start', maxWidth: '85%' }}>
+                        <div style={{ padding: '6px 10px', borderRadius: '8px', fontSize: '10px', lineHeight: '1.4', background: msg.sender === 'user' ? 'rgba(155,89,255,0.15)' : 'rgba(255,255,255,0.03)', border: `1px solid ${msg.sender === 'user' ? 'rgba(155,89,255,0.25)' : 'var(--border)'}`, whiteSpace: 'pre-wrap', color: '#fff' }}>
+                          {msg.text}
+                        </div>
+                      </div>
+                    ))}
+                    {chatLoading && <div style={{ fontSize: '10px', color: 'var(--text-dim)' }}>🧠 Reasoning...</div>}
+                  </div>
+                  
+                  {/* Preset triggers & Custom prompt input */}
+                  <div style={{ display: 'flex', gap: 4, overflowX: 'auto', paddingBottom: 2 }}>
+                    {[
+                      { txt: '🤖 Analyze Agent Failures' },
+                      { txt: '💸 Explain Token Cost Savings' },
+                      { txt: '🔍 Retrieve Episodic Memory' }
+                    ].map((p, pIdx) => (
+                      <button key={pIdx} className="dp-autoplay-reset" onClick={() => handleChatPreset(p.txt)} disabled={chatLoading} style={{ fontSize: '9px', whiteSpace: 'nowrap', borderRadius: '12px', padding: '3px 8px' }}>
+                        {p.txt}
+                      </button>
+                    ))}
+                  </div>
+
+                  <form onSubmit={handleCustomChatSubmit} style={{ display: 'flex', gap: 6, marginTop: 2 }}>
+                    <input 
+                      type="text" 
+                      placeholder="Ask the fleet AI (e.g. status of agents, memory status)..." 
+                      value={chatInput}
+                      onChange={(e) => setChatInput(e.target.value)}
+                      style={{ flex: 1, background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border)', borderRadius: '4px', padding: '6px 10px', fontSize: '10px', color: 'white', outline: 'none' }}
+                    />
+                    <button type="submit" className="dp-memory-trigger-btn" style={{ padding: '6px 12px' }}>Send</button>
+                  </form>
+                </div>
               </div>
-              <div className="dp-agents-interactive-list">
-                {agentsList.map((agent, index) => {
-                  const cpuVal = agent.status === 'running'
-                    ? Math.floor(35 + Math.sin(tickTime + index) * 20)
-                    : 0;
-                  const ramVal = agent.status === 'running'
-                    ? Math.floor(55 + Math.cos(tickTime / 1.5 + index) * 12)
-                    : 0;
-                  return (
-                    <div key={agent.name} className="dp-agent-controller-card">
-                      <div className="dp-acc-left">
-                        <div
-                          className="dp-acc-dot"
-                          style={{
-                            background: statusColor[agent.status],
-                            boxShadow: agent.status === 'running' ? `0 0 8px ${statusColor[agent.status]}` : 'none',
-                            animation: agent.status === 'running' ? 'breathe 1.5s ease-in-out infinite' : 'none'
-                          }}
-                        />
-                        <div>
-                          <div className="dp-acc-name">{agent.name}</div>
-                          <div className="dp-acc-role">{agent.role}</div>
-                        </div>
-                      </div>
-                      
-                      <div className="dp-acc-meters">
-                        <div className="dp-acc-meter">
-                          <span className="dp-acc-meter-label">CPU: {cpuVal}%</span>
-                          <div className="dp-acc-meter-bar"><div className="dp-acc-meter-fill-cpu" style={{ width: `${cpuVal}%` }} /></div>
-                        </div>
-                        <div className="dp-acc-meter">
-                          <span className="dp-acc-meter-label">MEM: {ramVal}%</span>
-                          <div className="dp-acc-meter-bar"><div className="dp-acc-meter-fill-mem" style={{ width: `${ramVal}%` }} /></div>
-                        </div>
-                      </div>
+            )}
 
-                      <div className="dp-acc-actions">
-                        <div className="dp-acc-runs-text">{agent.runs} runs</div>
-                        <button
-                          className={`dp-acc-btn ${agent.status === 'running' ? 'btn-pause' : 'btn-resume'}`}
-                          onClick={() => toggleAgentStatus(index)}
+            {/* 2. SIGNAL FEED (INBOX) */}
+            {activeTab === 'Signal Feed' && (
+              <div className="dp-tab-fade">
+                <div className="dp-header" style={{ marginBottom: '12px' }}>
+                  <div className="dp-title" style={{ fontSize: '14px' }}>📡 Signal Feed — Fleet Notifications</div>
+                  <div style={{ display: 'flex', gap: 4 }}>
+                    {['all', 'critical', 'warn', 'info'].map(f => (
+                      <button 
+                        key={f} 
+                        onClick={() => { setActiveSignalFilter(f); setUserInteracted(true); }}
+                        style={{ fontSize: '8px', padding: '2px 6px', borderRadius: '3px', background: activeSignalFilter === f ? 'var(--accent-purple)' : 'rgba(255,255,255,0.02)', border: '1px solid var(--border)', color: '#fff', cursor: 'pointer', textTransform: 'uppercase' }}
+                      >
+                        {f}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: '220px', overflowY: 'auto' }}>
+                  {filteredSignals.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '24px', fontSize: '11px', color: 'var(--text-dim)' }}>No active signals matching filter.</div>
+                  ) : (
+                    filteredSignals.map(sig => (
+                      <div key={sig.id} style={{ display: 'flex', gap: 10, padding: '8px 12px', background: 'var(--bg-card)', border: `1px solid ${sig.level === 'CRITICAL' ? 'rgba(255,71,87,0.2)' : sig.level === 'WARN' ? 'rgba(255,159,67,0.2)' : 'var(--border)'}`, borderRadius: '6px', fontSize: '10px', alignItems: 'center' }}>
+                        <span style={{ fontSize: '9px', fontWeight: '800', padding: '2px 4px', borderRadius: '3px', background: sig.level === 'CRITICAL' ? 'rgba(255,71,87,0.12)' : sig.level === 'WARN' ? 'rgba(255,159,67,0.12)' : 'rgba(0,212,255,0.12)', color: sig.level === 'CRITICAL' ? '#ff4757' : sig.level === 'WARN' ? '#ff9f6b' : '#00d4ff', fontFamily: 'var(--font-mono)' }}>
+                          {sig.level}
+                        </span>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontWeight: '700', color: '#fff' }}>{sig.title}</div>
+                          <div style={{ color: 'var(--text-secondary)', fontSize: '9px', marginTop: 2 }}>{sig.desc}</div>
+                        </div>
+                        <span style={{ color: 'var(--text-dim)', fontSize: '9px', fontFamily: 'var(--font-mono)' }}>{sig.time}</span>
+                        <button 
+                          onClick={() => {
+                            setUserInteracted(true);
+                            setSignalsList(prev => prev.filter(s => s.id !== sig.id));
+                          }}
+                          style={{ border: 'none', background: 'transparent', color: 'var(--text-dim)', cursor: 'pointer', padding: '0 4px' }}
+                          title="Dismiss"
                         >
-                          {agent.status === 'running' ? '⏸' : '▶'}
+                          ✕
                         </button>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* TAB 3: WORKSPACES */}
-          {activeTab === 'Workspaces' && (
-            <div className="dp-tab-fade">
-              <div className="dp-header">
-                <div className="dp-title">Isolated Workspaces</div>
-                <span className="dp-badge purple">Active Isolation Mode</span>
-              </div>
-              <div className="dp-workspaces-grid">
-                {[
-                  { name: 'prod-infra', agents: '7 active', SLA: '99.98%', events: '4.2k/hr', usage: 68, color: 'var(--accent-blue)' },
-                  { name: 'content-funnel', agents: '12 active', SLA: '99.50%', events: '12.8k/hr', usage: 84, color: 'var(--accent-purple)' },
-                  { name: 'dev-sandbox', agents: '7 active', SLA: '98.85%', events: '342/hr', usage: 22, color: 'var(--accent-cyan)' },
-                ].map((ws, i) => {
-                  const dynLoad = ws.usage + Math.floor(Math.sin(tickTime + i) * 6);
-                  return (
-                    <div key={ws.name} className="dp-workspace-card">
-                      <div className="dp-ws-header">
-                        <div className="dp-ws-title">📦 {ws.name}</div>
-                        <div className="dp-ws-uptime" style={{ color: ws.color }}>{ws.SLA}</div>
-                      </div>
-                      <div className="dp-ws-row">
-                        <div>
-                          <div className="dp-ws-label">DEPLOYED AGENTS</div>
-                          <div className="dp-ws-val">{ws.agents}</div>
-                        </div>
-                        <div style={{ textAlign: 'right' }}>
-                          <div className="dp-ws-label">EVENT FREQUENCY</div>
-                          <div className="dp-ws-val">{ws.events}</div>
-                        </div>
-                      </div>
-                      <div style={{ marginTop: '12px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: 'var(--text-dim)', marginBottom: '4px' }}>
-                          <span>BANDWIDTH ALLOCATION</span>
-                          <span>{dynLoad}%</span>
-                        </div>
-                        <div className="dp-ws-bandwidth-bar">
-                          <div className="dp-ws-bandwidth-fill" style={{ width: `${dynLoad}%`, background: `linear-gradient(90deg, ${ws.color}, var(--accent-pink))` }} />
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* TAB 4: BRAIN MEMORY PLANE */}
-          {activeTab === 'Brain' && (
-            <div className="dp-tab-fade">
-              <div className="dp-header">
-                <div className="dp-title">🧠 Decision Memory Stream</div>
-                <button className="dp-memory-trigger-btn" onClick={addManualMemory}>⚡ Inject Memory</button>
-              </div>
-
-              {/* Memory search filter */}
-              <div className="dp-brain-search-wrap">
-                <span className="dp-brain-search-icon">🔍</span>
-                <input
-                  type="text"
-                  placeholder="Filter real-time thought memories..."
-                  value={brainSearch}
-                  onChange={(e) => {
-                    setBrainSearch(e.target.value);
-                    setUserInteracted(true);
-                  }}
-                  className="dp-brain-search"
-                />
-              </div>
-
-              {/* JSON console logs */}
-              <div className="dp-brain-console">
-                {brainMemories
-                  .filter(m =>
-                    m.agent.toLowerCase().includes(brainSearch.toLowerCase()) ||
-                    m.decision.toLowerCase().includes(brainSearch.toLowerCase()) ||
-                    m.action.toLowerCase().includes(brainSearch.toLowerCase())
-                  )
-                  .map((mem, i) => (
-                    <div key={i} className="dp-console-log-item animate-in">
-                      <div className="dp-cli-meta">
-                        <span className="dp-cli-agent">@{mem.agent}</span>
-                        <span className="dp-cli-action">{mem.action}</span>
-                        <span className="dp-cli-confidence">conf: {(mem.confidence * 100).toFixed(0)}%</span>
-                        <span style={{ marginLeft: 'auto', color: 'var(--text-dim)' }}>{mem.time}</span>
-                      </div>
-                      <div className="dp-cli-json">
-                        <span className="json-key">"decision":</span> <span className="json-val">"{mem.decision}"</span>
-                      </div>
-                    </div>
-                  ))}
-              </div>
-            </div>
-          )}
-
-          {/* TAB 5: GRAPH */}
-          {activeTab === 'Graph' && (
-            <div className="dp-tab-fade">
-              <div className="dp-header">
-                <div className="dp-title">🕸️ Agent Dependency Topology</div>
-                <span className="dp-live-indicator"><span className="dp-live-dot" /> REAL-TIME PACKETS</span>
-              </div>
-              <div className="dp-graph-split">
-                {/* SVG Graph rendering */}
-                <div className="dp-graph-canvas-wrap">
-                  <svg viewBox="0 0 450 350" className="dp-graph-svg">
-                    {/* Define gradients */}
-                    <defs>
-                      <linearGradient id="cyan-purple" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stopColor="var(--accent-cyan)" />
-                        <stop offset="100%" stopColor="var(--accent-purple)" />
-                      </linearGradient>
-                      <filter id="glow-effect" x="-20%" y="-20%" width="140%" height="140%">
-                        <feGaussianBlur stdDeviation="5" result="blur" />
-                        <feComposite in="SourceGraphic" in2="blur" operator="over" />
-                      </filter>
-                    </defs>
-
-                    {/* Network Lines */}
-                    {[
-                      { from: [80, 150], to: [320, 120] }, // code-reviewer -> content-writer
-                      { from: [320, 120], to: [180, 220] }, // content-writer -> data-pipeline
-                      { from: [180, 220], to: [360, 250] }, // data-pipeline -> customer-support
-                      { from: [200, 40], to: [180, 220] },  // production-monitor -> data-pipeline
-                      { from: [80, 150], to: [180, 220] },  // code-reviewer -> data-pipeline
-                      { from: [80, 300], to: [180, 220] },  // lead-scorer -> data-pipeline
-                    ].map((line, i) => (
-                      <line
-                        key={i}
-                        x1={line.from[0]}
-                        y1={line.from[1]}
-                        x2={line.to[0]}
-                        y2={line.to[1]}
-                        stroke="rgba(255,255,255,0.06)"
-                        strokeWidth="1.5"
-                      />
-                    ))}
-
-                    {/* Telemetry pulsing particles traveling along links */}
-                    <path id="path-cr-cw" d="M 80 150 L 320 120" fill="none" />
-                    <path id="path-cw-dp" d="M 320 120 L 180 220" fill="none" />
-                    <path id="path-dp-cs" d="M 180 220 L 360 250" fill="none" />
-                    <path id="path-pm-dp" d="M 200 40 L 180 220" fill="none" />
-                    <path id="path-ls-dp" d="M 80 300 L 180 220" fill="none" />
-
-                    <circle r="3.5" fill="var(--accent-cyan)">
-                      <animateMotion dur="2.8s" repeatCount="indefinite">
-                        <mpath href="#path-cr-cw" />
-                      </animateMotion>
-                    </circle>
-
-                    <circle r="3" fill="var(--accent-purple)">
-                      <animateMotion dur="3.5s" repeatCount="indefinite">
-                        <mpath href="#path-cw-dp" />
-                      </animateMotion>
-                    </circle>
-
-                    <circle r="3.5" fill="var(--accent-green)">
-                      <animateMotion dur="2.2s" repeatCount="indefinite">
-                        <mpath href="#path-dp-cs" />
-                      </animateMotion>
-                    </circle>
-
-                    <circle r="3" fill="var(--accent-pink)">
-                      <animateMotion dur="4.2s" repeatCount="indefinite">
-                        <mpath href="#path-pm-dp" />
-                      </animateMotion>
-                    </circle>
-
-                    <circle r="3" fill="var(--accent-orange)">
-                      <animateMotion dur="3.0s" repeatCount="indefinite">
-                        <mpath href="#path-ls-dp" />
-                      </animateMotion>
-                    </circle>
-
-                    {/* Nodes */}
-                    {[
-                      { x: 200, y: 40, name: 'production-monitor', icon: '🖥️' },
-                      { x: 80, y: 150, name: 'code-reviewer', icon: '🛡️' },
-                      { x: 320, y: 120, name: 'content-writer', icon: '📝' },
-                      { x: 180, y: 220, name: 'data-pipeline', icon: '🔌' },
-                      { x: 360, y: 250, name: 'customer-support', icon: '💬' },
-                      { x: 80, y: 300, name: 'lead-scorer', icon: '🎯' },
-                    ].map((node) => {
-                      const isSelected = selectedGraphNode === node.name;
-                      return (
-                        <g
-                          key={node.name}
-                          transform={`translate(${node.x},${node.y})`}
-                          style={{ cursor: 'pointer' }}
-                          onClick={() => {
-                            setSelectedGraphNode(node.name);
-                            setUserInteracted(true);
-                          }}
-                        >
-                          {/* Glow background on selected */}
-                          {isSelected && (
-                            <circle r="22" fill="none" stroke="var(--accent-cyan)" strokeWidth="1.5" strokeDasharray="3 3" style={{ animation: 'spin 12s linear infinite' }} />
-                          )}
-                          
-                          {/* Standard node body */}
-                          <circle
-                            r="16"
-                            fill="var(--bg-card)"
-                            stroke={isSelected ? 'var(--accent-cyan)' : 'var(--border-glow)'}
-                            strokeWidth="2"
-                            filter={isSelected ? 'url(#glow-effect)' : 'none'}
-                          />
-                          <text
-                            textAnchor="middle"
-                            dy="5"
-                            fontSize="13"
-                            style={{ userSelect: 'none' }}
-                          >
-                            {node.icon}
-                          </text>
-                          {/* Hover tag label */}
-                          <text
-                            textAnchor="middle"
-                            y="-22"
-                            fontSize="8"
-                            fill={isSelected ? '#fff' : 'var(--text-dim)'}
-                            fontFamily="var(--font-mono)"
-                            fontWeight={isSelected ? '700' : '400'}
-                          >
-                            {node.name}
-                          </text>
-                        </g>
-                      );
-                    })}
-                  </svg>
+                    ))
+                  )}
                 </div>
+              </div>
+            )}
 
-                {/* Node details panel */}
-                <div className="dp-graph-details-panel">
-                  {(() => {
-                    const agent = agentsList.find(a => a.name === selectedGraphNode);
-                    if (!agent) return null;
+            {/* 3. AGENTS */}
+            {activeTab === 'Agents' && (
+              <div className="dp-tab-fade">
+                <div className="dp-header" style={{ marginBottom: '12px' }}>
+                  <div className="dp-title" style={{ fontSize: '14px' }}>🤖 Fleet Registry & Telemetry</div>
+                  <span className="dp-live-indicator"><span className="dp-live-dot" /> LIVE CONTROLLERS</span>
+                </div>
+                <div className="dp-agents-interactive-list" style={{ maxHeight: '230px', overflowY: 'auto' }}>
+                  {agentsList.map((agent, index) => {
+                    const cpuVal = agent.status === 'running' ? Math.floor(35 + Math.sin(tickTime + index) * 20) : 0;
+                    const ramVal = agent.status === 'running' ? Math.floor(55 + Math.cos(tickTime / 1.5 + index) * 12) : 0;
                     return (
-                      <div className="dp-gdp-card animate-in">
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-                          <span style={{ fontSize: '16px' }}>🤖</span>
-                          <span style={{ fontWeight: '700', fontSize: '13px', color: 'var(--text-primary)' }}>{agent.name}</span>
+                      <div key={agent.name} className="dp-agent-controller-card" style={{ padding: '6px 12px', fontSize: '11px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '6px', marginBottom: '6px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, width: '130px' }}>
+                          <div className="dp-acc-dot" style={{ background: statusColor[agent.status], width: 6, height: 6, borderRadius: '50%' }} />
+                          <div>
+                            <div style={{ fontWeight: '700', color: '#fff', fontFamily: 'var(--font-mono)' }}>{agent.name}</div>
+                            <div style={{ fontSize: '8px', color: 'var(--text-dim)' }}>{agent.role}</div>
+                          </div>
                         </div>
-                        <div className="dp-gdp-row">
-                          <span className="dp-gdp-lbl">ROLE:</span>
-                          <span className="dp-gdp-val">{agent.role}</span>
+                        <div style={{ display: 'flex', gap: 10, flex: 1, alignItems: 'center' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', flex: 1, gap: 2 }}>
+                            <span style={{ fontSize: '8px', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>CPU: {cpuVal}%</span>
+                            <div style={{ height: 3, background: 'rgba(255,255,255,0.06)', borderRadius: 2, overflow: 'hidden' }}>
+                              <div style={{ height: '100%', background: 'var(--accent-cyan)', width: `${cpuVal}%` }} />
+                            </div>
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', flex: 1, gap: 2 }}>
+                            <span style={{ fontSize: '8px', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>MEM: {ramVal}%</span>
+                            <div style={{ height: 3, background: 'rgba(255,255,255,0.06)', borderRadius: 2, overflow: 'hidden' }}>
+                              <div style={{ height: '100%', background: 'var(--accent-purple)', width: `${ramVal}%` }} />
+                            </div>
+                          </div>
                         </div>
-                        <div className="dp-gdp-row">
-                          <span className="dp-gdp-lbl">STATUS:</span>
-                          <span
-                            className="dp-gdp-val"
-                            style={{
-                              color: agent.status === 'running' ? 'var(--accent-green)' : 'var(--text-dim)',
-                              fontWeight: '600',
-                            }}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, width: '90px', justifyContent: 'flex-end' }}>
+                          <span style={{ fontSize: '9px', color: 'var(--text-dim)', fontFamily: 'var(--font-mono)' }}>{agent.runs} runs</span>
+                          <button 
+                            className={`dp-acc-btn ${agent.status === 'running' ? 'btn-pause' : 'btn-resume'}`} 
+                            onClick={() => toggleAgentStatus(index)}
+                            style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '50%', width: 20, height: 20, cursor: 'pointer', color: '#fff', fontSize: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                           >
-                            ● {agent.status.toUpperCase()}
-                          </span>
-                        </div>
-                        <div className="dp-gdp-row">
-                          <span className="dp-gdp-lbl">ACC SLA:</span>
-                          <span className="dp-gdp-val" style={{ color: 'var(--accent-cyan)' }}>{agent.sla}</span>
-                        </div>
-                        <div className="dp-gdp-row">
-                          <span className="dp-gdp-lbl">QUEUE:</span>
-                          <span className="dp-gdp-val" style={{ fontFamily: 'var(--font-mono)' }}>{agent.queue}</span>
-                        </div>
-                        <div style={{ marginTop: 10, display: 'flex', gap: 8 }}>
-                          <button
-                            className="dp-gdp-btn"
-                            style={{ flex: 1, padding: '6px', fontSize: '10px', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)', borderRadius: '4px', cursor: 'pointer', color: 'var(--text-secondary)', transition: 'all 0.2s' }}
-                            onClick={() => {
-                              setActiveTab('Agents');
-                            }}
-                            onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
-                            onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.04)'}
-                          >
-                            Inspect Telemetry
+                            {agent.status === 'running' ? '⏸' : '▶'}
                           </button>
                         </div>
                       </div>
                     );
-                  })()}
+                  })}
                 </div>
               </div>
-            </div>
-          )}
+            )}
+
+            {/* 4. BLUEPRINTS (TEMPLATES) */}
+            {activeTab === 'Blueprints' && (
+              <div className="dp-tab-fade">
+                <div className="dp-header" style={{ marginBottom: '12px' }}>
+                  <div className="dp-title" style={{ fontSize: '14px' }}>🧬 Blueprints Gallery — Deploy Blueprint</div>
+                  <span style={{ fontSize: '10px', color: 'var(--text-dim)' }}>Select to instantly instantiate</span>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
+                  {[
+                    { id: 'bible-tiktok-engine', name: 'Bible TikTok engine', role: 'Autonomous Video Pipeline', desc: 'Narrates scripture roteiro + renders Flux Pro images & Kling videos stitched in FFmpeg.' },
+                    { id: 'sales-lead-scorer', name: 'sales-lead-scorer', role: 'Lead Intent Profiler', desc: 'Analyzes target signup emails & scores intent, routing leads into CRM sequence.' },
+                    { id: 'github-star-growth', name: 'github-star-growth', role: 'Dev Community Optimizer', desc: 'Tracks star progression, submits security audit templates, drafts launch materials.' },
+                    { id: 'devops-sre-agent', name: 'devops-sre-agent', role: 'Cluster Healing Monitor', desc: 'Pings microservices, auto-reloads broken Supabase queries, pre-warms observations cache.' }
+                  ].map(b => {
+                    const alreadyDeployed = agentsList.some(a => a.name === b.name);
+                    return (
+                      <div key={b.id} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', padding: '8px 10px', borderRadius: '6px', fontSize: '10px', display: 'flex', flexDirection: 'column', justifycontent: 'space-between' }}>
+                        <div>
+                          <div style={{ fontWeight: '700', color: '#fff', fontSize: '11px', fontFamily: 'var(--font-mono)' }}>{b.name}</div>
+                          <div style={{ fontSize: '8px', color: 'var(--accent-purple)', fontWeight: '600', textTransform: 'uppercase', margin: '2px 0 6px' }}>{b.role}</div>
+                          <p style={{ color: 'var(--text-secondary)', fontSize: '9px', lineHeight: '1.3' }}>{b.desc}</p>
+                        </div>
+                        <button 
+                          onClick={() => deployBlueprint(b.name, b.role)}
+                          disabled={alreadyDeployed}
+                          style={{
+                            background: alreadyDeployed ? 'rgba(255,255,255,0.02)' : 'rgba(155, 89, 255, 0.1)',
+                            border: `1px solid ${alreadyDeployed ? 'var(--border)' : 'var(--accent-purple)'}`,
+                            color: alreadyDeployed ? 'var(--text-dim)' : 'var(--accent-purple)',
+                            borderRadius: '4px', padding: '4px', fontSize: '9px', fontWeight: '700', cursor: alreadyDeployed ? 'not-allowed' : 'pointer', marginTop: 8, transition: 'all 0.2s'
+                          }}
+                        >
+                          {alreadyDeployed ? '✓ Deployed Active' : 'Deploy Blueprint →'}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* 5. CONNECT HUB (INTEGRATIONS) */}
+            {activeTab === 'Connect Hub' && (
+              <div className="dp-tab-fade">
+                <div className="dp-header" style={{ marginBottom: '12px' }}>
+                  <div className="dp-title" style={{ fontSize: '14px' }}>🔌 Connect Hub — Synced Integrations</div>
+                  <span style={{ fontSize: '9px', color: 'var(--text-dim)' }}>Manage dynamic sync endpoints</span>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
+                  {[
+                    { key: 'vercel', name: 'Vercel Deployment', icon: '▲', desc: 'Auto-sync code updates & domains mapping securely.' },
+                    { key: 'supabase', name: 'Supabase Vector DB', icon: '⚡', desc: 'Episodic memory chunks sync in PostgreSQL vector.' },
+                    { key: 'stripe', name: 'Stripe Billing System', icon: '💳', desc: 'Telemetry checks for user licensing constraints.' },
+                    { key: 'claude', name: 'Claude BYOK API', icon: '🧠', desc: 'Routing fleet agent prompts securely.' }
+                  ].map(intg => (
+                    <div key={intg.key} style={{ display: 'flex', gap: 8, padding: '8px 12px', background: 'var(--bg-card)', border: `1px solid ${integrations[intg.key] ? 'rgba(0,230,138,0.2)' : 'var(--border)'}`, borderRadius: '6px', fontSize: '10px', alignItems: 'center' }}>
+                      <span style={{ fontSize: '18px' }}>{intg.icon}</span>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: '700', color: '#fff' }}>{intg.name}</div>
+                        <div style={{ fontSize: '8px', color: 'var(--text-dim)', marginTop: 2 }}>{intg.desc}</div>
+                      </div>
+                      <button 
+                        onClick={() => toggleIntegration(intg.key)}
+                        style={{
+                          background: integrations[intg.key] ? 'var(--accent-green)' : 'rgba(255,255,255,0.05)',
+                          border: 'none', width: '36px', height: '16px', borderRadius: '10px', position: 'relative', cursor: 'pointer', transition: 'background 0.2s'
+                        }}
+                      >
+                        <div style={{ width: '12px', height: '12px', background: 'white', borderRadius: '50%', position: 'absolute', top: '2px', left: integrations[intg.key] ? '22px' : '2px', transition: 'left 0.2s' }} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 6. CAPABILITIES (SKILLS) */}
+            {activeTab === 'Capabilities' && (
+              <div className="dp-tab-fade">
+                <div className="dp-header" style={{ marginBottom: '12px' }}>
+                  <div className="dp-title" style={{ fontSize: '14px' }}>🧩 Capabilities & Tool Definitions</div>
+                  <span style={{ fontSize: '9px', color: 'var(--text-dim)' }}>Sandbox permission scopes</span>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.3fr', gap: 12, height: '220px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4, overflowY: 'auto' }}>
+                    {Object.keys(skillsList).map(key => (
+                      <button 
+                        key={key} 
+                        onClick={() => { setSelectedSkill(key); setUserInteracted(true); }}
+                        style={{
+                          textAlign: 'left', background: selectedSkill === key ? 'rgba(0, 212, 255, 0.1)' : 'transparent', border: `1px solid ${selectedSkill === key ? 'var(--accent-cyan)' : 'var(--border)'}`, padding: '6px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '10px', color: '#fff', fontFamily: 'var(--font-mono)'
+                        }}
+                      >
+                        🧩 {skillsList[key].name}
+                      </button>
+                    ))}
+                  </div>
+                  <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', padding: '12px', borderRadius: '6px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <div style={{ fontSize: '12px', fontWeight: '700', color: 'var(--accent-cyan)', fontFamily: 'var(--font-mono)' }}>{skillsList[selectedSkill].name}()</div>
+                    <div style={{ fontSize: '10px', color: 'var(--text-secondary)', lineHeight: '1.4' }}>{skillsList[selectedSkill].desc}</div>
+                    
+                    <div style={{ borderTop: '1px solid rgba(255,255,255,0.04)', paddingTop: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      <div style={{ display: 'flex', justifycontent: 'space-between', fontSize: '9px' }}>
+                        <span style={{ color: 'var(--text-dim)' }}>Sandbox Scope:</span>
+                        <span style={{ color: 'var(--accent-purple)', fontFamily: 'var(--font-mono)' }}>{skillsList[selectedSkill].scope}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifycontent: 'space-between', fontSize: '9px' }}>
+                        <span style={{ color: 'var(--text-dim)' }}>Total Runs wrapped:</span>
+                        <span style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-mono)' }}>{skillsList[selectedSkill].usage} calls</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 7. COMMAND CENTER */}
+            {activeTab === 'Command Center' && (
+              <div className="dp-tab-fade">
+                <div className="dp-header" style={{ marginBottom: '12px' }}>
+                  <div className="dp-title" style={{ fontSize: '14px' }}>📡 CommandCenter Fleet Control</div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 12 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <div style={{ padding: '8px 12px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '6px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', fontWeight: '700', marginBottom: 4 }}>
+                        <span>🚀 Fleet Rate Limit</span><span style={{ color: 'var(--accent-cyan)' }}>{rateLimit} RPM</span>
+                      </div>
+                      <input type="range" min="10" max="180" value={rateLimit} onChange={(e) => { setRateLimit(Number(e.target.value)); setUserInteracted(true); }} style={{ width: '100%', accentColor: 'var(--accent-cyan)', cursor: 'pointer' }} />
+                    </div>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <div style={{ flex: 1, padding: '8px', background: 'var(--bg-card)', border: `1px solid ${selfHealing ? 'var(--accent-green)' : 'var(--border)'}`, borderRadius: '6px', cursor: 'pointer', textAlign: 'center' }} onClick={() => { setSelfHealing(!selfHealing); setUserInteracted(true); }}>
+                        <div style={{ fontSize: '10px', fontWeight: '700', color: '#fff' }}>🛡️ SELF-HEALING</div>
+                        <div style={{ fontSize: '8px', color: 'var(--text-dim)', marginTop: 2 }}>{selfHealing ? 'ACTIVE' : 'OFF'}</div>
+                      </div>
+                      <div style={{ flex: 1, padding: '8px', background: 'var(--bg-card)', border: `1px solid ${vectorSync ? 'var(--accent-purple)' : 'var(--border)'}`, borderRadius: '6px', cursor: 'pointer', textAlign: 'center' }} onClick={() => { setVectorSync(!vectorSync); setUserInteracted(true); }}>
+                        <div style={{ fontSize: '10px', fontWeight: '700', color: '#fff' }}>🧬 VECTOR SYNC</div>
+                        <div style={{ fontSize: '8px', color: 'var(--text-dim)', marginTop: 2 }}>{vectorSync ? 'REAL-TIME' : 'OFF'}</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '6px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '12px' }}>
+                    <div style={{ position: 'relative', width: '80px', height: '80px' }}>
+                      <svg viewBox="0 0 36 36" style={{ width: '100%', height: '100%' }}>
+                        <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="rgba(255,255,255,0.03)" strokeWidth="3" />
+                        <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="url(#g-purple)" strokeWidth="3" strokeDasharray={`${Math.min(95, 20 + rateLimit / 2.2)}, 100`} strokeLinecap="round" />
+                      </svg>
+                      <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center' }}>
+                        <div style={{ fontSize: '13px', fontWeight: '800', fontFamily: 'var(--font-mono)', color: '#fff' }}>{Math.floor(20 + rateLimit / 2.2)}%</div>
+                        <div style={{ fontSize: '7px', color: 'var(--text-dim)' }}>LOAD</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 8. OVERVIEW */}
+            {activeTab === 'Overview' && (
+              <div className="dp-tab-fade">
+                <div className="dp-header" style={{ marginBottom: '12px' }}>
+                  <div className="dp-title" style={{ fontSize: '14px' }}>Overview — Fleet Telemetry</div>
+                  <div className="dp-badges">
+                    <span className="dp-badge green">{agentsList.filter(a => a.status === 'running').length} running</span>
+                    <span className="dp-badge purple">{agentsList.length} agents</span>
+                  </div>
+                </div>
+                <div className="dp-stats" style={{ gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 12 }}>
+                  {[
+                    { val: agentsList.length, label: 'Agents' },
+                    { val: '3', label: 'Workspaces' },
+                    { val: '40+', label: 'API Endpoints' },
+                    { val: '17', label: 'Dashboard Tabs' },
+                  ].map(s => (
+                    <div key={s.label} className="dp-stat premium-dp-stat" style={{ padding: '8px' }}>
+                      <div className="dp-stat-val" style={{ fontSize: '18px' }}>{s.val}</div>
+                      <div className="dp-stat-label" style={{ fontSize: '8px' }}>{s.label}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Live Capture Form */}
+                <form onSubmit={handleCaptureSubmit} style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+                  <input 
+                    type="text" 
+                    placeholder="Capture current thought/event (e.g. drafting sales copy)..."
+                    value={captureNote}
+                    onChange={(e) => setCaptureNote(e.target.value)}
+                    style={{ flex: 1, background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border)', borderRadius: '4px', padding: '6px 8px', fontSize: '10px', color: '#fff', outline: 'none' }}
+                  />
+                  <button type="submit" className="dp-memory-trigger-btn">Capture</button>
+                </form>
+
+                <div className="dp-activity">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                    <span style={{ fontSize: '9px', fontWeight: '700', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Recent Activity Feed</span>
+                    <span className="dp-live-indicator"><span className="dp-live-dot" /> LIVE</span>
+                  </div>
+                  <div style={{ maxHeight: '100px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    {logsList.map((a, i) => (
+                      <div key={i} className={`dp-activity-item ${pulse && i === 0 ? 'dp-pulse' : ''}`} style={{ padding: '4px 8px', fontSize: '10px' }}>
+                        <span>{a.icon}</span>
+                        <span className="dp-activity-title" style={{ color: '#fff' }}>{a.title}</span>
+                        <span className="dp-activity-time">{a.time}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 9. WORKSPACES */}
+            {activeTab === 'Workspaces' && (
+              <div className="dp-tab-fade">
+                <div className="dp-header" style={{ marginBottom: '12px' }}>
+                  <div className="dp-title" style={{ fontSize: '14px' }}>Connected Repositories</div>
+                </div>
+                <div className="dp-workspaces-grid" style={{ gap: 8 }}>
+                  {[
+                    { name: 'prod-infra', agents: '2 active', SLA: '99.98%', hook: 'POST-COMMIT', usage: 68, color: 'var(--accent-blue)' },
+                    { name: 'content-funnel', agents: '3 active', SLA: '99.50%', hook: 'POST-COMMIT', usage: 84, color: 'var(--accent-purple)' },
+                    { name: 'dev-sandbox', agents: '1 active', SLA: '98.85%', hook: 'OFF', usage: 22, color: 'var(--accent-cyan)' },
+                  ].map((ws, i) => {
+                    const dynLoad = ws.usage + Math.floor(Math.sin(tickTime + i) * 6);
+                    return (
+                      <div key={ws.name} className="dp-workspace-card" style={{ padding: '8px 12px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '6px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                          <div style={{ fontSize: '11px', fontWeight: '700', color: '#fff' }}>📦 {ws.name}</div>
+                          <span style={{ fontSize: '8px', color: ws.color, fontWeight: '800', fontFamily: 'var(--font-mono)' }}>{ws.SLA} SLA</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9px', color: 'var(--text-secondary)', marginBottom: 6 }}>
+                          <span>{ws.agents}</span>
+                          <span style={{ color: 'var(--text-dim)' }}>Hook: {ws.hook}</span>
+                        </div>
+                        <div style={{ height: 3, background: 'rgba(255,255,255,0.06)', borderRadius: 2, overflow: 'hidden' }}>
+                          <div style={{ height: '100%', width: `${dynLoad}%`, background: `linear-gradient(90deg, ${ws.color}, var(--accent-pink))` }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* 10. KNOWLEDGE BRAIN */}
+            {activeTab === 'Knowledge Brain' && (
+              <div className="dp-tab-fade">
+                <div className="dp-header" style={{ marginBottom: '12px' }}>
+                  <div className="dp-title" style={{ fontSize: '14px' }}>💡 Semantic Thought console</div>
+                  <button className="dp-memory-trigger-btn" onClick={addManualMemory}>⚡ Inject Thought</button>
+                </div>
+                <div className="dp-brain-search-wrap" style={{ padding: '3px 8px', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border)', borderRadius: '4px' }}>
+                  <span>🔍</span>
+                  <input
+                    type="text"
+                    placeholder="Search formatted brain console..."
+                    value={brainSearch}
+                    onChange={(e) => { setBrainSearch(e.target.value); setUserInteracted(true); }}
+                    style={{ background: 'transparent', border: 'none', outline: 'none', color: '#fff', fontSize: '10px', width: '100%' }}
+                  />
+                </div>
+                <div className="dp-brain-console" style={{ height: '160px', overflowY: 'auto' }}>
+                  {brainMemories
+                    .filter(m => m.agent.includes(brainSearch) || m.decision.includes(brainSearch))
+                    .map((mem, i) => (
+                      <div key={i} className="dp-console-log-item" style={{ marginBottom: '4px' }}>
+                        <div className="dp-cli-meta" style={{ fontSize: '9px', display: 'flex', gap: 6, marginBottom: 2 }}>
+                          <span style={{ color: 'var(--accent-purple)', fontWeight: '700' }}>@{mem.agent}</span>
+                          <span style={{ color: 'var(--accent-cyan)', background: 'rgba(0, 212, 255, 0.06)', padding: '1px 3px', borderRadius: 2 }}>{mem.action}</span>
+                          <span style={{ color: 'var(--accent-green)', marginLeft: 'auto' }}>{(mem.confidence * 100).toFixed(0)}% conf</span>
+                          <span style={{ color: 'var(--text-dim)' }}>{mem.time}</span>
+                        </div>
+                        <div style={{ fontSize: '9.5px', color: '#e8e8f0', fontFamily: 'var(--font-mono)' }}>
+                          <span style={{ color: '#ff9f43' }}>"decision":</span> <span style={{ color: '#00e68a' }}>"{mem.decision}"</span>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
+
+            {/* 11. KNOWLEDGE GRAPH */}
+            {activeTab === 'Knowledge Graph' && (
+              <div className="dp-tab-fade">
+                <div className="dp-header" style={{ marginBottom: '12px' }}>
+                  <div className="dp-title" style={{ fontSize: '14px' }}>🕸️ Force-Directed Fleet Topology</div>
+                  <span className="dp-live-indicator"><span className="dp-live-dot" /> LIVE SVG FLOWS</span>
+                </div>
+                <div className="dp-graph-split" style={{ height: '220px', display: 'flex', gap: 12 }}>
+                  <div className="dp-graph-canvas-wrap" style={{ flex: 1.3, background: 'rgba(0,0,0,0.15)', border: '1px solid var(--border)', borderRadius: '6px', padding: 4 }}>
+                    <svg viewBox="0 0 450 350" style={{ width: '100%', height: '100%' }}>
+                      <defs>
+                        <linearGradient id="g-purple" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#9b59ff"/><stop offset="100%" stopColor="#00d4ff"/></linearGradient>
+                      </defs>
+                      {[
+                        { from: [80, 150], to: [320, 120] },
+                        { from: [320, 120], to: [180, 220] },
+                        { from: [180, 220], to: [360, 250] },
+                        { from: [200, 40], to: [180, 220] },
+                        { from: [80, 150], to: [180, 220] },
+                        { from: [80, 300], to: [180, 220] },
+                      ].map((line, i) => <line key={i} x1={line.from[0]} y1={line.from[1]} x2={line.to[0]} y2={line.to[1]} stroke="rgba(255,255,255,0.06)" strokeWidth="1.5"/>)}
+                      
+                      <path id="pth-1" d="M 80 150 L 320 120" fill="none" />
+                      <path id="pth-2" d="M 320 120 L 180 220" fill="none" />
+                      <path id="pth-3" d="M 180 220 L 360 250" fill="none" />
+                      
+                      <circle r="3.5" fill="var(--accent-cyan)"><animateMotion dur="2.5s" repeatCount="indefinite"><mpath href="#pth-1" /></animateMotion></circle>
+                      <circle r="3.5" fill="var(--accent-purple)"><animateMotion dur="3.0s" repeatCount="indefinite"><mpath href="#pth-2" /></animateMotion></circle>
+                      <circle r="3.5" fill="var(--accent-green)"><animateMotion dur="2.0s" repeatCount="indefinite"><mpath href="#pth-3" /></animateMotion></circle>
+                      
+                      {[
+                        { x: 200, y: 40, name: 'production-monitor', icon: '🖥️' },
+                        { x: 80, y: 150, name: 'code-reviewer', icon: '🛡️' },
+                        { x: 320, y: 120, name: 'content-writer', icon: '📝' },
+                        { x: 180, y: 220, name: 'data-pipeline', icon: '🔌' },
+                        { x: 360, y: 250, name: 'customer-support', icon: '💬' },
+                        { x: 80, y: 300, name: 'lead-scorer', icon: '🎯' },
+                      ].map((node) => {
+                        const isSel = selectedGraphNode === node.name;
+                        return (
+                          <g key={node.name} transform={`translate(${node.x},${node.y})`} style={{ cursor: 'pointer' }} onClick={() => { setSelectedGraphNode(node.name); setUserInteracted(true); }}>
+                            {isSel && <circle r="22" fill="none" stroke="var(--accent-cyan)" strokeWidth="1.5" strokeDasharray="3 3" style={{ animation: 'spin 12s linear infinite' }} />}
+                            <circle r="16" fill="var(--bg-card)" stroke={isSel ? 'var(--accent-cyan)' : 'var(--border)'} strokeWidth="2"/>
+                            <text textAnchor="middle" dy="4" fontSize="13">{node.icon}</text>
+                            <text textAnchor="middle" y="-20" fontSize="8" fill={isSel ? '#fff' : 'var(--text-dim)'} fontFamily="var(--font-mono)">{node.name}</text>
+                          </g>
+                        );
+                      })}
+                    </svg>
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    {(() => {
+                      const agent = agentsList.find(a => a.name === selectedGraphNode);
+                      if (!agent) return <div style={{ fontSize: '10px', color: 'var(--text-dim)' }}>Select node to audit.</div>;
+                      return (
+                        <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '6px', padding: '10px', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 6 }}>
+                          <div style={{ fontWeight: '700', fontSize: '11px', color: '#fff', fontFamily: 'var(--font-mono)' }}>🤖 {agent.name}</div>
+                          <div style={{ display: 'flex', justifycontent: 'space-between', fontSize: '9px' }}><span style={{ color: 'var(--text-dim)' }}>ROLE:</span><span style={{ color: '#fff' }}>{agent.role}</span></div>
+                          <div style={{ display: 'flex', justifycontent: 'space-between', fontSize: '9px' }}><span style={{ color: 'var(--text-dim)' }}>STATUS:</span><span style={{ color: 'var(--accent-green)', fontWeight: '700' }}>● {agent.status.toUpperCase()}</span></div>
+                          <div style={{ display: 'flex', justifycontent: 'space-between', fontSize: '9px' }}><span style={{ color: 'var(--text-dim)' }}>SLA:</span><span style={{ color: 'var(--accent-cyan)', fontFamily: 'var(--font-mono)' }}>{agent.sla}</span></div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 12. AGENT TRACES */}
+            {activeTab === 'Agent Traces' && (
+              <div className="dp-tab-fade">
+                <div className="dp-header" style={{ marginBottom: '12px' }}>
+                  <div className="dp-title" style={{ fontSize: '14px' }}>🔍 execution latency traces</div>
+                  <span className="dp-live-indicator"><span className="dp-live-dot" /> 124ms AVG</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {[
+                    { id: 'tr_9x1', type: 'POST', path: '/api/v1/observations', status: 200, latency: '1,240ms', tokens: '2.4k', spans: [{ name: 'auth', time: '5ms' }, { name: 'agent:production-monitor', time: '415ms' }, { name: 'llm:claude-3-5', time: '740ms' }] },
+                    { id: 'tr_9x2', type: 'POST', path: '/api/v1/chat/stream', status: 200, latency: '2,800ms', tokens: '8.1k', spans: [{ name: 'auth', time: '4ms' }, { name: 'llm:claude-3-5', time: '2,650ms' }] }
+                  ].map((trace, idx) => {
+                    const isExp = expandedTrace === idx;
+                    return (
+                      <div key={trace.id} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '6px', overflow: 'hidden' }}>
+                        <div 
+                          style={{ display: 'flex', alignItems: 'center', justifycontent: 'space-between', padding: '8px 12px', cursor: 'pointer' }}
+                          onClick={() => { setExpandedTrace(isExp ? null : idx); setUserInteracted(true); }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '10px', fontFamily: 'var(--font-mono)' }}>
+                            <span style={{ color: '#00ff88', fontWeight: '700' }}>{trace.type}</span>
+                            <span style={{ color: '#fff', fontWeight: '600' }}>{trace.path}</span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: '10px', color: 'var(--text-secondary)' }}>
+                            <span>⏱️ {trace.latency}</span>
+                            <span>🔤 {trace.tokens}</span>
+                            <span style={{ fontSize: '9px' }}>{isExp ? '▼' : '▶'}</span>
+                          </div>
+                        </div>
+                        {isExp && (
+                          <div style={{ padding: '6px 12px', background: 'rgba(0,0,0,0.2)', borderTop: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                            {trace.spans.map((s, sIdx) => (
+                              <div key={sIdx} style={{ display: 'flex', alignItems: 'center', justifycontent: 'space-between', fontSize: '9px', fontFamily: 'var(--font-mono)' }}>
+                                <span style={{ color: 'var(--accent-purple)' }}>└─ {s.name}</span>
+                                <span style={{ color: 'var(--accent-cyan)' }}>{s.time}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* 13. WORKFLOWS */}
+            {activeTab === 'Workflows' && (
+              <div className="dp-tab-fade">
+                <div className="dp-header" style={{ marginBottom: '12px' }}>
+                  <div className="dp-title" style={{ fontSize: '14px' }}>🔗 Content Pipeline Automation</div>
+                  <button className="dp-memory-trigger-btn" onClick={startWorkflowRun} disabled={workflowRunning}>
+                    {workflowRunning ? '⚡ Running...' : '🚀 Trigger Run'}
+                  </button>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <div style={{ display: 'flex', justifycontent: 'space-between', padding: '8px 12px', background: 'rgba(255,255,255,0.01)', border: '1px solid var(--border)', borderRadius: '6px', fontSize: '11px' }}>
+                    <span style={{ fontWeight: '700', color: '#fff' }}>TikTok Bible Content Pipeline</span>
+                    <span style={{ color: workflowRunning ? 'var(--accent-cyan)' : 'var(--accent-green)', fontWeight: '700' }}>{workflowRunning ? 'EXECUTING' : 'ACTIVE'}</span>
+                  </div>
+                  <div style={{ display: 'flex', gap: 4, overflowX: 'auto', padding: '4px 0', justifycontent: 'center' }}>
+                    {['Webhook', 'Script', 'Audio', 'Video', 'FFmpeg', 'Publish'].map((s, i) => {
+                      const active = workflowStep === (i + 1);
+                      const passed = workflowStep > (i + 1);
+                      return (
+                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <div style={{ padding: '4px 6px', borderRadius: '4px', fontSize: '9px', background: active ? 'rgba(0,212,255,0.1)' : passed ? 'rgba(0,230,138,0.06)' : 'rgba(255,255,255,0.02)', border: `1px solid ${active ? 'var(--accent-cyan)' : passed ? 'var(--accent-green)' : 'var(--border)'}`, color: active ? '#fff' : 'var(--text-secondary)', textAlign: 'center', minWidth: '46px' }}>
+                            {s}
+                          </div>
+                          {i < 5 && <span style={{ color: passed ? 'var(--accent-green)' : 'var(--text-dim)', fontSize: '8px' }}>→</span>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div style={{ padding: '6px 10px', background: 'var(--bg-deep)', border: '1px solid var(--border)', borderRadius: '6px', fontFamily: 'var(--font-mono)', fontSize: '9px', height: '80px', overflowY: 'auto' }}>
+                    {workflowLogs.map((log, lIdx) => <div key={lIdx} style={{ color: log.startsWith('[System]') ? 'var(--accent-purple)' : log.includes('Complete') ? 'var(--accent-green)' : 'var(--text-secondary)' }}>{log}</div>)}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 14. MEMORY */}
+            {activeTab === 'Memory' && (
+              <div className="dp-tab-fade">
+                <div className="dp-header" style={{ marginBottom: '12px' }}>
+                  <div className="dp-title" style={{ fontSize: '14px' }}>🧬 3-Tier Memory consolidation</div>
+                  <button className="dp-memory-trigger-btn" onClick={consolidateMemories} disabled={memoryConsolidating}>
+                    {memoryConsolidating ? 'Consolidating...' : '🧬 Consolidate'}
+                  </button>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, height: '180px', overflowY: 'auto' }}>
+                  {memoriesList.map((mem) => (
+                    <div key={mem.id} style={{ display: 'flex', gap: 8, padding: '6px 8px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '4px', fontSize: '10px', alignItems: 'center' }}>
+                      <span style={{ fontWeight: '700', fontFamily: 'var(--font-mono)', color: mem.type === 'semantic' ? 'var(--accent-purple)' : 'var(--accent-cyan)', background: mem.type === 'semantic' ? 'rgba(155,89,255,0.04)' : 'rgba(0,212,255,0.04)', padding: '2px 4px', borderRadius: '3px', fontSize: '9px' }}>{mem.id}</span>
+                      <span style={{ flex: 1, color: 'var(--text-secondary)' }}>{mem.content}</span>
+                      <span style={{ color: 'var(--text-dim)', fontSize: '9px' }}>{mem.time}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 15. COMPLIANCE */}
+            {activeTab === 'Compliance' && (
+              <div className="dp-tab-fade">
+                <div className="dp-header" style={{ marginBottom: '12px' }}>
+                  <div className="dp-title" style={{ fontSize: '14px' }}>🛡️ Cryptographic SIEM Audit Ledger</div>
+                  <button className="dp-memory-trigger-btn" onClick={verifyComplianceLogs} disabled={complianceAuditing}>
+                    {complianceAuditing ? '🔒 Auditing...' : '🔒 Audit logs'}
+                  </button>
+                </div>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '9.5px' }}>
+                  <thead>
+                    <tr style={{ color: 'var(--text-dim)', borderBottom: '1px solid var(--border)', textAlign: 'left' }}>
+                      <th style={{ padding: '4px' }}>Timestamp</th>
+                      <th style={{ padding: '4px' }}>Agent</th>
+                      <th style={{ padding: '4px' }}>Payload Hash Signature</th>
+                      <th style={{ padding: '4px', textAlign: 'right' }}>Audit Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[
+                      { time: '10:24:12 AM', agent: 'lead-scorer', hash: '5f9a2d8b4e1c7a6f9c8d5b4a...' },
+                      { time: '10:23:45 AM', agent: 'code-reviewer', hash: '8c9d4e5f6a7b8c9d0a1b2c3d...' },
+                    ].map((row, rIdx) => (
+                      <tr key={rIdx} style={{ borderBottom: '1px solid rgba(255,255,255,0.02)' }}>
+                        <td style={{ padding: '6px 4px', color: 'var(--text-dim)' }}>{row.time}</td>
+                        <td style={{ padding: '6px 4px', fontWeight: '600', color: '#fff' }}>{row.agent}</td>
+                        <td style={{ padding: '6px 4px', color: 'var(--accent-purple)', fontFamily: 'var(--font-mono)' }}>{row.hash}</td>
+                        <td style={{ padding: '6px 4px', textAlign: 'right', fontWeight: '700' }}>
+                          {complianceAuditing ? <span style={{ color: 'var(--accent-cyan)' }}>⏳ auditing</span> : complianceAuditVerified ? <span style={{ color: 'var(--accent-green)' }}>✅ VERIFIED</span> : <span style={{ color: 'var(--accent-orange)' }}>● SECURE</span>}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* 16. TEAM HQ */}
+            {activeTab === 'Team HQ' && (
+              <div className="dp-tab-fade">
+                <div className="dp-header" style={{ marginBottom: '12px' }}>
+                  <div className="dp-title" style={{ fontSize: '14px' }}>🏢 Team HQ — Collaboration Panel</div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <div>
+                    <div style={{ fontSize: '10px', color: 'var(--text-dim)', textTransform: 'uppercase', marginBottom: 6, fontWeight: '700' }}>Fleet Invite</div>
+                    <form onSubmit={handleAddMember} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      <input 
+                        type="email" 
+                        placeholder="Invite email address..." 
+                        value={inviteEmail}
+                        onChange={(e) => setInviteEmail(e.target.value)}
+                        style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border)', borderRadius: '4px', padding: '5px 8px', fontSize: '10px', color: '#fff', outline: 'none' }}
+                      />
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <select 
+                          value={inviteRole}
+                          onChange={(e) => setInviteRole(e.target.value)}
+                          style={{ flex: 1, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '4px', color: '#fff', padding: '5px', fontSize: '9px', outline: 'none' }}
+                        >
+                          <option>Developer</option>
+                          <option>Admin</option>
+                          <option>Auditor</option>
+                        </select>
+                        <button type="submit" className="dp-memory-trigger-btn" style={{ padding: '5px 12px' }}>Send Invite</button>
+                      </div>
+                    </form>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '10px', color: 'var(--text-dim)', textTransform: 'uppercase', marginBottom: 6, fontWeight: '700' }}>Active Members</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: '120px', overflowY: 'auto' }}>
+                      {teamMembers.map((member, mIdx) => (
+                        <div key={mIdx} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 6px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '4px', fontSize: '9.5px', alignItems: 'center' }}>
+                          <div>
+                            <div style={{ fontWeight: '700', color: '#fff' }}>{member.name}</div>
+                            <div style={{ fontSize: '8px', color: 'var(--text-dim)' }}>{member.email}</div>
+                          </div>
+                          <span style={{ fontSize: '8px', padding: '1px 4px', borderRadius: '3px', background: 'rgba(155,89,255,0.1)', color: 'var(--accent-purple)', fontWeight: '600' }}>
+                            {member.role}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 17. SETTINGS */}
+            {activeTab === 'Settings' && (
+              <div className="dp-tab-fade">
+                <div className="dp-header" style={{ marginBottom: '12px' }}>
+                  <div className="dp-title" style={{ fontSize: '14px' }}>⚙️ Global Fleet Settings</div>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <div style={{ padding: '8px 12px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '6px' }}>
+                    <div style={{ fontSize: '10px', fontWeight: '700', marginBottom: 6, color: '#fff' }}>Telemetry API Key</div>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <input 
+                        type="text" 
+                        readOnly 
+                        value={keyGenLoading ? 'Generating sk_live...' : generatedKey || 'Click generate key below...'} 
+                        style={{ fontSize: '9.5px', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border)', padding: '5px 8px', borderRadius: '4px', flex: 1, fontFamily: 'var(--font-mono)', color: 'var(--text-primary)', outline: 'none' }} 
+                      />
+                      {generatedKey ? (
+                        <button className="dp-memory-trigger-btn" onClick={copyKeyToClipboard}>{copiedKey ? '✅ Copied' : 'Copy Key'}</button>
+                      ) : (
+                        <button className="dp-memory-trigger-btn" onClick={handleGenerateKey} disabled={keyGenLoading}>{keyGenLoading ? '...' : 'Generate'}</button>
+                      )}
+                    </div>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                    <div style={{ padding: '6px 10px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '6px' }}>
+                      <div style={{ fontSize: '8px', color: 'var(--text-dim)', textTransform: 'uppercase' }}>Claude API integration</div>
+                      <div style={{ fontSize: '10px', fontWeight: '600', color: 'var(--accent-green)', marginTop: 2 }}>🔒 ACTIVE BYOK SECURE</div>
+                    </div>
+                    <div style={{ padding: '6px 10px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '6px' }}>
+                      <div style={{ fontSize: '8px', color: 'var(--text-dim)', textTransform: 'uppercase' }}>License Tier</div>
+                      <div style={{ fontSize: '10px', fontWeight: '600', color: 'var(--accent-purple)', marginTop: 2 }}>✨ ENTERPRISE LICENSE</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+          </div>
         </div>
       </div>
     </div>
   );
 }
+
 
 /* ═══════════════════════════════════════════
    INTERACTIVE CODE PLAYGROUND
