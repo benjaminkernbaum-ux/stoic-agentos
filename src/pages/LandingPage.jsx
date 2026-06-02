@@ -154,87 +154,634 @@ function useScrollReveal() {
    LIVE DASHBOARD PREVIEW COMPONENT
    ═══════════════════════════════════════════ */
 function LiveDashboardPreview() {
-  const [activeAgent, setActiveAgent] = useState(0);
+  const [activeTab, setActiveTab] = useState('Overview');
+  const [userInteracted, setUserInteracted] = useState(false);
+  const [activeAgentIndex, setActiveAgentIndex] = useState(0);
   const [pulse, setPulse] = useState(false);
+  const [tickTime, setTickTime] = useState(0);
+  const [brainSearch, setBrainSearch] = useState('');
+  const [selectedGraphNode, setSelectedGraphNode] = useState('lead-scorer');
 
+  // React state for agents to allow dynamic pausing & ticking runs!
+  const [agentsList, setAgentsList] = useState([
+    { name: 'production-monitor', status: 'running', module: 'infra', runs: 1243, role: 'Infrastructure SRE', queue: '0 pending', sla: '99.98%' },
+    { name: 'content-writer', status: 'running', module: 'content', runs: 892, role: 'Launch Content Engine', queue: '1 generating', sla: '99.5%' },
+    { name: 'code-reviewer', status: 'running', module: 'devtools', runs: 567, role: 'Auto PR Auditor', queue: '0 pending', sla: '99.9%' },
+    { name: 'data-pipeline', status: 'running', module: 'pipeline', runs: 334, role: 'Vector DB Aggregator', queue: '12 batching', sla: '98.8%' },
+    { name: 'customer-support', status: 'running', module: 'support', runs: 201, role: 'L1 Helpdesk Agent', queue: '2 in queue', sla: '97.2%' },
+    { name: 'lead-scorer', status: 'running', module: 'sales', runs: 1087, role: 'Sales Intent Scorer', queue: '4 scoring', sla: '99.1%' },
+  ]);
+
+  // React state for scrollable logs feed
+  const [logsList, setLogsList] = useState([
+    { type: 'decision', title: 'Switched to batch processing for large datasets', time: 'Just now', icon: '🧭' },
+    { type: 'deployment', title: 'Deployed v2.4.1 to production', time: '3m ago', icon: '🚀' },
+    { type: 'discovery', title: 'Found 23% cost reduction in token usage', time: '8m ago', icon: '💡' },
+    { type: 'git_commit', title: 'feat: add webhook retry logic', time: '15m ago', icon: '📝' },
+  ]);
+
+  // Brain Tab - Live Scrolling Memories
+  const [brainMemories, setBrainMemories] = useState([
+    { agent: 'code-reviewer', action: 'analyse_pr', decision: 'Approved PR #412 after security check', confidence: 0.98, time: 'Just now' },
+    { agent: 'production-monitor', action: 'ping_check', decision: 'All health pings returned 200 OK within 12ms', confidence: 0.99, time: '4s ago' },
+    { agent: 'content-writer', action: 'generate_draft', decision: 'Created draft for Twitter launch campaign', confidence: 0.95, time: '12s ago' },
+    { agent: 'data-pipeline', action: 'sync_supabase', decision: 'Sync completed: 124 records updated', confidence: 1.00, time: '20s ago' },
+    { agent: 'customer-support', action: 'reply_query', decision: 'Resolved billing query via refunds auxiliary agent', confidence: 0.94, time: '45s ago' }
+  ]);
+
+  // Autoplay cycle tabs every 8 seconds unless user clicks
   useEffect(() => {
-    const t = setInterval(() => {
-      setActiveAgent(i => (i + 1) % DEMO_AGENTS.length);
+    if (userInteracted) return;
+    const tabInterval = setInterval(() => {
+      const tabs = ['Overview', 'Agents', 'Workspaces', 'Brain', 'Graph'];
+      setActiveTab(current => {
+        const nextIndex = (tabs.indexOf(current) + 1) % tabs.length;
+        return tabs[nextIndex];
+      });
+    }, 8000);
+    return () => clearInterval(tabInterval);
+  }, [userInteracted]);
+
+  // Active agent highlight cycle (Overview tab only)
+  useEffect(() => {
+    const cycleAgent = setInterval(() => {
+      setActiveAgentIndex(i => (i + 1) % agentsList.length);
       setPulse(true);
-      setTimeout(() => setPulse(false), 600);
+      setTimeout(() => setPulse(false), 500);
     }, 3000);
-    return () => clearInterval(t);
+    return () => clearInterval(cycleAgent);
+  }, [agentsList.length]);
+
+  // Ticks runs & CPU/RAM values dynamically
+  useEffect(() => {
+    // Fast tick to animate meters
+    const animationFrame = setInterval(() => {
+      setTickTime(t => t + 0.1);
+    }, 150);
+
+    // Runs counter tick
+    const runsInterval = setInterval(() => {
+      setAgentsList(prev =>
+        prev.map(a =>
+          a.status === 'running' && Math.random() > 0.4
+            ? { ...a, runs: a.runs + Math.floor(Math.random() * 2) }
+            : a
+        )
+      );
+    }, 2500);
+
+    // Dynamic log generator to make feed scroll live!
+    const logInterval = setInterval(() => {
+      const mockLogs = [
+        { type: 'decision', title: 'Optimized routing logic to avoid high latency nodes', icon: '🧭' },
+        { type: 'decision', title: 'Switched LLM provider to Claude 3.5 Sonnet to save 40% tokens', icon: '🧠' },
+        { type: 'decision', title: 'Throttled requests to Stripe API after hitting rate-limit', icon: '🚦' },
+        { type: 'deployment', title: 'Automatic rollback to stable workspace v2.4.0 successful', icon: '🚀' },
+        { type: 'discovery', title: 'Aggregated 15 customer feedback vectors into Vector DB', icon: '💡' },
+        { type: 'discovery', title: 'Identified 3 dead-loop states in scraper agent queue', icon: '🔍' },
+      ];
+      const selected = mockLogs[Math.floor(Math.random() * mockLogs.length)];
+      setLogsList(prev => [
+        { type: selected.type, title: selected.title, time: 'Just now', icon: selected.icon },
+        ...prev.map(log => {
+          if (log.time === 'Just now') return { ...log, time: '1m ago' };
+          if (log.time === '1m ago') return { ...log, time: '4m ago' };
+          if (log.time === '3m ago') return { ...log, time: '8m ago' };
+          if (log.time === '4m ago') return { ...log, time: '12m ago' };
+          if (log.time === '8m ago') return { ...log, time: '15m ago' };
+          return { ...log, time: '20m ago' };
+        }).slice(0, 5)
+      ]);
+    }, 5000);
+
+    // Dynamic brain thought generator
+    const brainInterval = setInterval(() => {
+      const mockMemories = [
+        { agent: 'lead-scorer', action: 'score_lead', decision: 'Flagged high-intent lead from enterprise.com', confidence: 0.97 },
+        { agent: 'customer-support', action: 'answer_chat', decision: 'Dispatched automated webhook status report', confidence: 0.96 },
+        { agent: 'code-reviewer', action: 'audit_git', decision: 'Clean build verified across master branch', confidence: 0.99 },
+        { agent: 'data-pipeline', action: 'flush_queue', decision: 'Sync completed: 124 records verified in index', confidence: 1.00 },
+      ];
+      const selected = mockMemories[Math.floor(Math.random() * mockMemories.length)];
+      setBrainMemories(prev => [
+        { ...selected, time: 'Just now' },
+        ...prev.map(mem => {
+          if (mem.time === 'Just now') return { ...mem, time: '5s ago' };
+          if (mem.time === '4s ago' || mem.time === '5s ago') return { ...mem, time: '15s ago' };
+          if (mem.time === '12s ago' || mem.time === '15s ago') return { ...mem, time: '35s ago' };
+          return { ...mem, time: '1m ago' };
+        }).slice(0, 7)
+      ]);
+    }, 4000);
+
+    return () => {
+      clearInterval(animationFrame);
+      clearInterval(runsInterval);
+      clearInterval(logInterval);
+      clearInterval(brainInterval);
+    };
   }, []);
 
-  const statusColor = { running: '#00e68a', idle: 'rgba(255,255,255,0.3)', success: '#00d4ff', error: '#ff4757' };
+  const toggleAgentStatus = (index) => {
+    setUserInteracted(true);
+    setAgentsList(prev =>
+      prev.map((a, i) =>
+        i === index ? { ...a, status: a.status === 'running' ? 'idle' : 'running' } : a
+      )
+    );
+  };
+
+  const addManualMemory = () => {
+    setUserInteracted(true);
+    const userMemories = [
+      { agent: 'user-override', action: 'manual_trigger', decision: 'Triggered diagnostic check on API gateways', confidence: 1.00 },
+      { agent: 'user-override', action: 'kill_process', decision: 'Forced restart of content-writer agent sub-pool', confidence: 0.99 },
+      { agent: 'user-override', action: 'inject_cache', decision: 'Pre-warmed observation prefix cache globally', confidence: 0.98 },
+    ];
+    const selected = userMemories[Math.floor(Math.random() * userMemories.length)];
+    setBrainMemories(prev => [
+      { ...selected, time: 'Just now' },
+      ...prev
+    ]);
+  };
+
+  const statusColor = { running: '#00e68a', idle: 'rgba(255,255,255,0.25)', success: '#00d4ff', error: '#ff4757' };
 
   return (
-    <div className="preview-frame">
+    <div className="preview-frame premium-preview-frame">
       <div className="preview-bar">
         <div className="preview-dot red" />
         <div className="preview-dot yellow" />
         <div className="preview-dot green" />
-        <div className="preview-url">stoicagentos.com/dashboard</div>
+        <div className="preview-url">
+          <span style={{ color: 'var(--accent-purple)', opacity: 0.6 }}>https://</span>
+          stoicagentos.com/dashboard
+        </div>
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
+          {!userInteracted ? (
+            <span className="dp-autoplay-badge">⏱️ Autoplay Mode</span>
+          ) : (
+            <button className="dp-autoplay-reset" onClick={() => setUserInteracted(false)}>▶ Autoplay</button>
+          )}
+        </div>
       </div>
       <div className="dashboard-preview">
+        {/* Navigation Sidebar */}
         <div className="dp-sidebar">
-          <div className="dp-logo">⚡ AgentOS</div>
+          <div className="dp-logo">⚡ Stoic OS</div>
           {['Overview', 'Agents', 'Workspaces', 'Brain', 'Graph'].map((item, i) => (
-            <div key={item} className={`dp-nav-item ${i === 0 ? 'active' : ''}`}>
-              {['📊', '🤖', '📦', '🧠', '🕸️'][i]} {item}
-            </div>
+            <button
+              key={item}
+              className={`dp-nav-item-btn ${activeTab === item ? 'active' : ''}`}
+              onClick={() => {
+                setActiveTab(item);
+                setUserInteracted(true);
+              }}
+              style={{
+                width: '100%',
+                textAlign: 'left',
+                border: 'none',
+                background: 'transparent',
+                fontFamily: 'inherit',
+                fontSize: '13px',
+                padding: '8px 10px',
+                borderRadius: '6px',
+                color: activeTab === item ? 'var(--text-primary)' : 'var(--text-dim)',
+                background: activeTab === item ? 'rgba(155, 89, 255, 0.12)' : 'transparent',
+                cursor: 'pointer',
+                transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                fontWeight: activeTab === item ? '600' : '500',
+              }}
+              onMouseEnter={(e) => {
+                if (activeTab !== item) e.currentTarget.style.background = 'rgba(255,255,255,0.03)';
+              }}
+              onMouseLeave={(e) => {
+                if (activeTab !== item) e.currentTarget.style.background = 'transparent';
+              }}
+            >
+              <span style={{ fontSize: '14px' }}>{['📊', '🤖', '📦', '🧠', '🕸️'][i]}</span>
+              {item}
+            </button>
           ))}
         </div>
+
+        {/* Main Content Area */}
         <div className="dp-main">
-          <div className="dp-header">
-            <div className="dp-title">Fleet Overview</div>
-            <div className="dp-badges">
-              <span className="dp-badge green">5 running</span>
-              <span className="dp-badge purple">26 agents</span>
-              <span className="dp-badge orange">40+ APIs</span>
+          {/* TAB 1: OVERVIEW */}
+          {activeTab === 'Overview' && (
+            <div className="dp-tab-fade">
+              <div className="dp-header">
+                <div className="dp-title">Fleet Overview</div>
+                <div className="dp-badges">
+                  <span className="dp-badge green">{agentsList.filter(a => a.status === 'running').length} running</span>
+                  <span className="dp-badge purple">{agentsList.length} agents</span>
+                  <span className="dp-badge orange">40+ APIs</span>
+                </div>
+              </div>
+              
+              <div className="dp-stats">
+                {[
+                  { val: agentsList.length, label: 'Agents' },
+                  { val: '5', label: 'Workspaces' },
+                  { val: '40+', label: 'API Endpoints' },
+                  { val: '12', label: 'Dashboard Tabs' },
+                ].map(s => (
+                  <div key={s.label} className="dp-stat premium-dp-stat">
+                    <div className="dp-stat-val">{s.val}</div>
+                    <div className="dp-stat-label">{s.label}</div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="dp-agents-row">
+                {agentsList.map((a, i) => (
+                  <div
+                    key={a.name}
+                    className={`dp-agent ${i === activeAgentIndex ? 'dp-agent-active' : ''}`}
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => {
+                      setActiveTab('Agents');
+                      setUserInteracted(true);
+                    }}
+                  >
+                    <div
+                      className="dp-agent-dot"
+                      style={{
+                        background: statusColor[a.status],
+                        boxShadow: a.status === 'running' ? `0 0 6px ${statusColor[a.status]}` : 'none',
+                      }}
+                    />
+                    {a.name}
+                    <span style={{ marginLeft: 'auto', fontSize: 10, opacity: 0.4 }}>{a.runs}r</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="dp-activity">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                  <span style={{ fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)' }}>Recent Activity Feed</span>
+                  <span className="dp-live-indicator"><span className="dp-live-dot" /> LIVE</span>
+                </div>
+                {logsList.slice(0, 3).map((a, i) => (
+                  <div key={i} className={`dp-activity-item ${pulse && i === 0 ? 'dp-pulse' : ''}`}>
+                    <span className="dp-activity-icon">{a.icon}</span>
+                    <span className="dp-activity-title">{a.title}</span>
+                    <span className="dp-activity-time">{a.time}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
-          <div className="dp-stats">
-            {[
-              { val: '26', label: 'Agents' },
-              { val: '5', label: 'Workspaces' },
-              { val: '40+', label: 'API Endpoints' },
-              { val: '12', label: 'Dashboard Tabs' },
-            ].map(s => (
-              <div key={s.label} className="dp-stat">
-                <div className="dp-stat-val">{s.val}</div>
-                <div className="dp-stat-label">{s.label}</div>
+          )}
+
+          {/* TAB 2: AGENTS */}
+          {activeTab === 'Agents' && (
+            <div className="dp-tab-fade">
+              <div className="dp-header">
+                <div className="dp-title">Agent Controllers</div>
+                <div style={{ fontSize: '11px', color: 'var(--text-dim)' }}>Click pause/resume to control agent execution</div>
               </div>
-            ))}
-          </div>
-          <div className="dp-agents-row">
-            {DEMO_AGENTS.map((a, i) => (
-              <div
-                key={a.name}
-                className={`dp-agent ${i === activeAgent ? 'dp-agent-active' : ''}`}
-              >
-                <div
-                  className="dp-agent-dot"
-                  style={{
-                    background: statusColor[a.status],
-                    boxShadow: a.status === 'running' ? `0 0 6px ${statusColor[a.status]}` : 'none',
+              <div className="dp-agents-interactive-list">
+                {agentsList.map((agent, index) => {
+                  const cpuVal = agent.status === 'running'
+                    ? Math.floor(35 + Math.sin(tickTime + index) * 20)
+                    : 0;
+                  const ramVal = agent.status === 'running'
+                    ? Math.floor(55 + Math.cos(tickTime / 1.5 + index) * 12)
+                    : 0;
+                  return (
+                    <div key={agent.name} className="dp-agent-controller-card">
+                      <div className="dp-acc-left">
+                        <div
+                          className="dp-acc-dot"
+                          style={{
+                            background: statusColor[agent.status],
+                            boxShadow: agent.status === 'running' ? `0 0 8px ${statusColor[agent.status]}` : 'none',
+                            animation: agent.status === 'running' ? 'breathe 1.5s ease-in-out infinite' : 'none'
+                          }}
+                        />
+                        <div>
+                          <div className="dp-acc-name">{agent.name}</div>
+                          <div className="dp-acc-role">{agent.role}</div>
+                        </div>
+                      </div>
+                      
+                      <div className="dp-acc-meters">
+                        <div className="dp-acc-meter">
+                          <span className="dp-acc-meter-label">CPU: {cpuVal}%</span>
+                          <div className="dp-acc-meter-bar"><div className="dp-acc-meter-fill-cpu" style={{ width: `${cpuVal}%` }} /></div>
+                        </div>
+                        <div className="dp-acc-meter">
+                          <span className="dp-acc-meter-label">MEM: {ramVal}%</span>
+                          <div className="dp-acc-meter-bar"><div className="dp-acc-meter-fill-mem" style={{ width: `${ramVal}%` }} /></div>
+                        </div>
+                      </div>
+
+                      <div className="dp-acc-actions">
+                        <div className="dp-acc-runs-text">{agent.runs} runs</div>
+                        <button
+                          className={`dp-acc-btn ${agent.status === 'running' ? 'btn-pause' : 'btn-resume'}`}
+                          onClick={() => toggleAgentStatus(index)}
+                        >
+                          {agent.status === 'running' ? '⏸' : '▶'}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* TAB 3: WORKSPACES */}
+          {activeTab === 'Workspaces' && (
+            <div className="dp-tab-fade">
+              <div className="dp-header">
+                <div className="dp-title">Isolated Workspaces</div>
+                <span className="dp-badge purple">Active Isolation Mode</span>
+              </div>
+              <div className="dp-workspaces-grid">
+                {[
+                  { name: 'prod-infra', agents: '7 active', SLA: '99.98%', events: '4.2k/hr', usage: 68, color: 'var(--accent-blue)' },
+                  { name: 'content-funnel', agents: '12 active', SLA: '99.50%', events: '12.8k/hr', usage: 84, color: 'var(--accent-purple)' },
+                  { name: 'dev-sandbox', agents: '7 active', SLA: '98.85%', events: '342/hr', usage: 22, color: 'var(--accent-cyan)' },
+                ].map((ws, i) => {
+                  const dynLoad = ws.usage + Math.floor(Math.sin(tickTime + i) * 6);
+                  return (
+                    <div key={ws.name} className="dp-workspace-card">
+                      <div className="dp-ws-header">
+                        <div className="dp-ws-title">📦 {ws.name}</div>
+                        <div className="dp-ws-uptime" style={{ color: ws.color }}>{ws.SLA}</div>
+                      </div>
+                      <div className="dp-ws-row">
+                        <div>
+                          <div className="dp-ws-label">DEPLOYED AGENTS</div>
+                          <div className="dp-ws-val">{ws.agents}</div>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                          <div className="dp-ws-label">EVENT FREQUENCY</div>
+                          <div className="dp-ws-val">{ws.events}</div>
+                        </div>
+                      </div>
+                      <div style={{ marginTop: '12px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: 'var(--text-dim)', marginBottom: '4px' }}>
+                          <span>BANDWIDTH ALLOCATION</span>
+                          <span>{dynLoad}%</span>
+                        </div>
+                        <div className="dp-ws-bandwidth-bar">
+                          <div className="dp-ws-bandwidth-fill" style={{ width: `${dynLoad}%`, background: `linear-gradient(90deg, ${ws.color}, var(--accent-pink))` }} />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* TAB 4: BRAIN MEMORY PLANE */}
+          {activeTab === 'Brain' && (
+            <div className="dp-tab-fade">
+              <div className="dp-header">
+                <div className="dp-title">🧠 Decision Memory Stream</div>
+                <button className="dp-memory-trigger-btn" onClick={addManualMemory}>⚡ Inject Memory</button>
+              </div>
+
+              {/* Memory search filter */}
+              <div className="dp-brain-search-wrap">
+                <span className="dp-brain-search-icon">🔍</span>
+                <input
+                  type="text"
+                  placeholder="Filter real-time thought memories..."
+                  value={brainSearch}
+                  onChange={(e) => {
+                    setBrainSearch(e.target.value);
+                    setUserInteracted(true);
                   }}
+                  className="dp-brain-search"
                 />
-                {a.name}
-                <span style={{ marginLeft: 'auto', fontSize: 10, opacity: 0.4 }}>{a.runs}r</span>
               </div>
-            ))}
-          </div>
-          {/* Mini activity feed */}
-          <div className="dp-activity">
-            {DEMO_ACTIVITY.slice(0, 3).map((a, i) => (
-              <div key={i} className={`dp-activity-item ${pulse && i === 0 ? 'dp-pulse' : ''}`}>
-                <span className="dp-activity-icon">{a.icon}</span>
-                <span className="dp-activity-title">{a.title}</span>
-                <span className="dp-activity-time">{a.time}</span>
+
+              {/* JSON console logs */}
+              <div className="dp-brain-console">
+                {brainMemories
+                  .filter(m =>
+                    m.agent.toLowerCase().includes(brainSearch.toLowerCase()) ||
+                    m.decision.toLowerCase().includes(brainSearch.toLowerCase()) ||
+                    m.action.toLowerCase().includes(brainSearch.toLowerCase())
+                  )
+                  .map((mem, i) => (
+                    <div key={i} className="dp-console-log-item animate-in">
+                      <div className="dp-cli-meta">
+                        <span className="dp-cli-agent">@{mem.agent}</span>
+                        <span className="dp-cli-action">{mem.action}</span>
+                        <span className="dp-cli-confidence">conf: {(mem.confidence * 100).toFixed(0)}%</span>
+                        <span style={{ marginLeft: 'auto', color: 'var(--text-dim)' }}>{mem.time}</span>
+                      </div>
+                      <div className="dp-cli-json">
+                        <span className="json-key">"decision":</span> <span className="json-val">"{mem.decision}"</span>
+                      </div>
+                    </div>
+                  ))}
               </div>
-            ))}
-          </div>
+            </div>
+          )}
+
+          {/* TAB 5: GRAPH */}
+          {activeTab === 'Graph' && (
+            <div className="dp-tab-fade">
+              <div className="dp-header">
+                <div className="dp-title">🕸️ Agent Dependency Topology</div>
+                <span className="dp-live-indicator"><span className="dp-live-dot" /> REAL-TIME PACKETS</span>
+              </div>
+              <div className="dp-graph-split">
+                {/* SVG Graph rendering */}
+                <div className="dp-graph-canvas-wrap">
+                  <svg viewBox="0 0 450 350" className="dp-graph-svg">
+                    {/* Define gradients */}
+                    <defs>
+                      <linearGradient id="cyan-purple" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor="var(--accent-cyan)" />
+                        <stop offset="100%" stopColor="var(--accent-purple)" />
+                      </linearGradient>
+                      <filter id="glow-effect" x="-20%" y="-20%" width="140%" height="140%">
+                        <feGaussianBlur stdDeviation="5" result="blur" />
+                        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                      </filter>
+                    </defs>
+
+                    {/* Network Lines */}
+                    {[
+                      { from: [80, 150], to: [320, 120] }, // code-reviewer -> content-writer
+                      { from: [320, 120], to: [180, 220] }, // content-writer -> data-pipeline
+                      { from: [180, 220], to: [360, 250] }, // data-pipeline -> customer-support
+                      { from: [200, 40], to: [180, 220] },  // production-monitor -> data-pipeline
+                      { from: [80, 150], to: [180, 220] },  // code-reviewer -> data-pipeline
+                      { from: [80, 300], to: [180, 220] },  // lead-scorer -> data-pipeline
+                    ].map((line, i) => (
+                      <line
+                        key={i}
+                        x1={line.from[0]}
+                        y1={line.from[1]}
+                        x2={line.to[0]}
+                        y2={line.to[1]}
+                        stroke="rgba(255,255,255,0.06)"
+                        strokeWidth="1.5"
+                      />
+                    ))}
+
+                    {/* Telemetry pulsing particles traveling along links */}
+                    <path id="path-cr-cw" d="M 80 150 L 320 120" fill="none" />
+                    <path id="path-cw-dp" d="M 320 120 L 180 220" fill="none" />
+                    <path id="path-dp-cs" d="M 180 220 L 360 250" fill="none" />
+                    <path id="path-pm-dp" d="M 200 40 L 180 220" fill="none" />
+                    <path id="path-ls-dp" d="M 80 300 L 180 220" fill="none" />
+
+                    <circle r="3.5" fill="var(--accent-cyan)">
+                      <animateMotion dur="2.8s" repeatCount="indefinite">
+                        <mpath href="#path-cr-cw" />
+                      </animateMotion>
+                    </circle>
+
+                    <circle r="3" fill="var(--accent-purple)">
+                      <animateMotion dur="3.5s" repeatCount="indefinite">
+                        <mpath href="#path-cw-dp" />
+                      </animateMotion>
+                    </circle>
+
+                    <circle r="3.5" fill="var(--accent-green)">
+                      <animateMotion dur="2.2s" repeatCount="indefinite">
+                        <mpath href="#path-dp-cs" />
+                      </animateMotion>
+                    </circle>
+
+                    <circle r="3" fill="var(--accent-pink)">
+                      <animateMotion dur="4.2s" repeatCount="indefinite">
+                        <mpath href="#path-pm-dp" />
+                      </animateMotion>
+                    </circle>
+
+                    <circle r="3" fill="var(--accent-orange)">
+                      <animateMotion dur="3.0s" repeatCount="indefinite">
+                        <mpath href="#path-ls-dp" />
+                      </animateMotion>
+                    </circle>
+
+                    {/* Nodes */}
+                    {[
+                      { x: 200, y: 40, name: 'production-monitor', icon: '🖥️' },
+                      { x: 80, y: 150, name: 'code-reviewer', icon: '🛡️' },
+                      { x: 320, y: 120, name: 'content-writer', icon: '📝' },
+                      { x: 180, y: 220, name: 'data-pipeline', icon: '🔌' },
+                      { x: 360, y: 250, name: 'customer-support', icon: '💬' },
+                      { x: 80, y: 300, name: 'lead-scorer', icon: '🎯' },
+                    ].map((node) => {
+                      const isSelected = selectedGraphNode === node.name;
+                      return (
+                        <g
+                          key={node.name}
+                          transform={`translate(${node.x},${node.y})`}
+                          style={{ cursor: 'pointer' }}
+                          onClick={() => {
+                            setSelectedGraphNode(node.name);
+                            setUserInteracted(true);
+                          }}
+                        >
+                          {/* Glow background on selected */}
+                          {isSelected && (
+                            <circle r="22" fill="none" stroke="var(--accent-cyan)" strokeWidth="1.5" strokeDasharray="3 3" style={{ animation: 'spin 12s linear infinite' }} />
+                          )}
+                          
+                          {/* Standard node body */}
+                          <circle
+                            r="16"
+                            fill="var(--bg-card)"
+                            stroke={isSelected ? 'var(--accent-cyan)' : 'var(--border-glow)'}
+                            strokeWidth="2"
+                            filter={isSelected ? 'url(#glow-effect)' : 'none'}
+                          />
+                          <text
+                            textAnchor="middle"
+                            dy="5"
+                            fontSize="13"
+                            style={{ userSelect: 'none' }}
+                          >
+                            {node.icon}
+                          </text>
+                          {/* Hover tag label */}
+                          <text
+                            textAnchor="middle"
+                            y="-22"
+                            fontSize="8"
+                            fill={isSelected ? '#fff' : 'var(--text-dim)'}
+                            fontFamily="var(--font-mono)"
+                            fontWeight={isSelected ? '700' : '400'}
+                          >
+                            {node.name}
+                          </text>
+                        </g>
+                      );
+                    })}
+                  </svg>
+                </div>
+
+                {/* Node details panel */}
+                <div className="dp-graph-details-panel">
+                  {(() => {
+                    const agent = agentsList.find(a => a.name === selectedGraphNode);
+                    if (!agent) return null;
+                    return (
+                      <div className="dp-gdp-card animate-in">
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                          <span style={{ fontSize: '16px' }}>🤖</span>
+                          <span style={{ fontWeight: '700', fontSize: '13px', color: 'var(--text-primary)' }}>{agent.name}</span>
+                        </div>
+                        <div className="dp-gdp-row">
+                          <span className="dp-gdp-lbl">ROLE:</span>
+                          <span className="dp-gdp-val">{agent.role}</span>
+                        </div>
+                        <div className="dp-gdp-row">
+                          <span className="dp-gdp-lbl">STATUS:</span>
+                          <span
+                            className="dp-gdp-val"
+                            style={{
+                              color: agent.status === 'running' ? 'var(--accent-green)' : 'var(--text-dim)',
+                              fontWeight: '600',
+                            }}
+                          >
+                            ● {agent.status.toUpperCase()}
+                          </span>
+                        </div>
+                        <div className="dp-gdp-row">
+                          <span className="dp-gdp-lbl">ACC SLA:</span>
+                          <span className="dp-gdp-val" style={{ color: 'var(--accent-cyan)' }}>{agent.sla}</span>
+                        </div>
+                        <div className="dp-gdp-row">
+                          <span className="dp-gdp-lbl">QUEUE:</span>
+                          <span className="dp-gdp-val" style={{ fontFamily: 'var(--font-mono)' }}>{agent.queue}</span>
+                        </div>
+                        <div style={{ marginTop: 10, display: 'flex', gap: 8 }}>
+                          <button
+                            className="dp-gdp-btn"
+                            style={{ flex: 1, padding: '6px', fontSize: '10px', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)', borderRadius: '4px', cursor: 'pointer', color: 'var(--text-secondary)', transition: 'all 0.2s' }}
+                            onClick={() => {
+                              setActiveTab('Agents');
+                            }}
+                            onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
+                            onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.04)'}
+                          >
+                            Inspect Telemetry
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
