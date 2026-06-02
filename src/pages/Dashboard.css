@@ -4623,3 +4623,262 @@
   to { transform: rotate(360deg); }
 }
 
+/* ══════════════════════════════════════════════════════════
+   FLEET FEATURES — Chat, Inbox, Integrations, Templates, Skills
+   ══════════════════════════════════════════════════════════ */
+
+/* ── Sidebar search button ── */
+.dash-nav-search-btn {
+  display: flex; align-items: center; gap: 8px;
+  width: 100%; padding: 8px 12px; margin-bottom: 8px;
+  background: var(--surface-3); border: 1px solid var(--line-mid);
+  border-radius: 8px; color: var(--gray-3); font-size: 12px;
+  cursor: pointer; transition: all 0.15s; font-family: inherit;
+}
+.dash-nav-search-btn:hover { background: var(--surface-4); border-color: var(--line-hi); }
+.dash-nav-search-icon { font-size: 11px; opacity: 0.6; }
+.dash-nav-kbd { margin-left: auto; font-size: 10px; padding: 1px 5px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 4px; color: var(--gray-4); }
+
+/* ── Sidebar action buttons ── */
+.dash-nav-action { opacity: 0.7; }
+.dash-nav-action:hover { opacity: 1; }
+.dash-nav-action .dash-nav-icon { font-size: 12px; }
+
+/* ══════════════════════════════════
+   CHAT TAB
+   ══════════════════════════════════ */
+.fleet-chat-layout { display: flex; gap: 0; height: calc(100vh - var(--topbar-h) - 24px); padding: 0 !important; }
+
+.fleet-thread-sidebar {
+  width: 220px; min-width: 220px;
+  background: var(--surface-1); border-right: 1px solid var(--line);
+  display: flex; flex-direction: column;
+}
+.fleet-thread-header { display: flex; justify-content: space-between; align-items: center; padding: 14px 14px 8px; }
+.fleet-thread-title { font-size: 12px; font-weight: 700; color: var(--gray-2); text-transform: uppercase; letter-spacing: 0.06em; }
+.fleet-thread-new { font-size: 11px; padding: 3px 10px; border-radius: 6px; background: var(--accent-deep); color: #fff; border: none; cursor: pointer; font-weight: 600; }
+.fleet-thread-new:hover { background: var(--accent); }
+.fleet-thread-list { flex: 1; overflow-y: auto; padding: 0 8px; }
+.fleet-thread-item { display: flex; align-items: center; gap: 8px; width: 100%; padding: 8px 10px; border: none; background: transparent; color: var(--gray-2); font-size: 12px; border-radius: 6px; cursor: pointer; text-align: left; font-family: inherit; transition: background 0.12s; }
+.fleet-thread-item:hover { background: var(--surface-3); }
+.fleet-thread-item.active { background: var(--accent-glow); color: var(--accent-bright); }
+.fleet-thread-icon { font-size: 13px; }
+.fleet-thread-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.fleet-chat-main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.fleet-chat-topbar { display: flex; align-items: center; gap: 10px; padding: 10px 18px; border-bottom: 1px solid var(--line); }
+.fleet-chat-toggle { background: none; border: none; color: var(--gray-3); font-size: 16px; cursor: pointer; padding: 4px 8px; }
+.fleet-chat-thread-name { font-size: 13px; font-weight: 600; color: var(--white); }
+.fleet-chat-new-thread { font-size: 11px; padding: 5px 14px; border-radius: 6px; background: var(--accent-deep); color: #fff; border: none; cursor: pointer; font-weight: 600; }
+
+.fleet-chat-messages { flex: 1; overflow-y: auto; padding: 24px 48px; display: flex; flex-direction: column; gap: 12px; }
+.fleet-chat-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; }
+.fleet-chat-hero { font-size: 28px; font-weight: 800; color: var(--white); margin: 0 0 8px; }
+.fleet-chat-hero-sub { font-size: 14px; color: var(--gray-3); margin: 0; }
+
+.fleet-msg { display: flex; gap: 10px; max-width: 70%; }
+.fleet-msg-user { margin-left: auto; flex-direction: row-reverse; }
+.fleet-msg-avatar { width: 28px; height: 28px; border-radius: 50%; background: var(--accent-deep); display: flex; align-items: center; justify-content: center; font-size: 12px; flex-shrink: 0; }
+.fleet-msg-bubble { padding: 10px 16px; border-radius: 14px; font-size: 13px; line-height: 1.5; }
+.fleet-msg-bubble.user { background: var(--accent-deep); color: #fff; border-bottom-right-radius: 4px; }
+.fleet-msg-bubble.agent { background: var(--surface-3); color: var(--white); border-bottom-left-radius: 4px; }
+.fleet-msg-time { font-size: 10px; color: var(--gray-4); margin-top: 4px; }
+
+.fleet-chat-input-area { padding: 16px 48px 24px; }
+.fleet-chat-input-box { background: var(--surface-2); border: 1px solid var(--line-mid); border-radius: 14px; padding: 14px 18px; transition: border-color 0.2s; }
+.fleet-chat-input-box:focus-within { border-color: var(--accent); }
+.fleet-chat-input { width: 100%; background: transparent; border: none; color: var(--white); font-size: 14px; outline: none; font-family: inherit; margin-bottom: 10px; }
+.fleet-chat-input::placeholder { color: var(--gray-4); }
+.fleet-chat-input-controls { display: flex; align-items: center; gap: 8px; }
+.fleet-chat-attach { width: 28px; height: 28px; border-radius: 50%; background: var(--surface-4); border: 1px solid var(--line); color: var(--gray-2); font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.fleet-model-picker-wrap { position: relative; }
+.fleet-model-btn { display: flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 8px; background: var(--surface-3); border: 1px solid var(--line); color: var(--gray-2); font-size: 12px; cursor: pointer; font-family: inherit; }
+.fleet-model-btn:hover { border-color: var(--accent); }
+.fleet-model-icon { color: var(--accent); }
+.fleet-model-chevron { font-size: 10px; opacity: 0.5; }
+.fleet-model-dropdown { position: absolute; bottom: calc(100% + 6px); left: 0; width: 200px; background: var(--surface-2); border: 1px solid var(--line-mid); border-radius: 10px; padding: 4px; z-index: 50; box-shadow: 0 12px 36px rgba(0,0,0,0.5); }
+.fleet-model-option { display: flex; flex-direction: column; width: 100%; padding: 8px 12px; background: transparent; border: none; color: var(--white); text-align: left; border-radius: 6px; cursor: pointer; font-family: inherit; }
+.fleet-model-option:hover { background: var(--surface-4); }
+.fleet-model-option.active { background: var(--accent-glow); }
+.fleet-model-opt-name { font-size: 12px; font-weight: 600; }
+.fleet-model-opt-desc { font-size: 10px; color: var(--gray-3); }
+.fleet-chat-send { width: 32px; height: 32px; border-radius: 50%; background: var(--accent-deep); border: none; color: #fff; font-size: 14px; cursor: pointer; margin-left: auto; display: flex; align-items: center; justify-content: center; transition: background 0.15s; }
+.fleet-chat-send:hover:not(:disabled) { background: var(--accent); }
+.fleet-chat-send:disabled { opacity: 0.3; cursor: not-allowed; }
+
+/* ══════════════════════════════════
+   INBOX TAB
+   ══════════════════════════════════ */
+.fleet-inbox-layout { display: flex; gap: 0; height: calc(100vh - var(--topbar-h) - 24px); padding: 0 !important; }
+.fleet-inbox-list { width: 380px; min-width: 320px; border-right: 1px solid var(--line); display: flex; flex-direction: column; background: var(--surface-1); }
+.fleet-inbox-list-header { display: flex; justify-content: space-between; align-items: center; padding: 16px 18px 8px; }
+.fleet-inbox-title { font-size: 16px; font-weight: 700; color: var(--white); margin: 0; display: flex; align-items: center; gap: 8px; }
+.fleet-inbox-badge { font-size: 10px; padding: 2px 7px; border-radius: 10px; background: var(--accent-deep); color: #fff; font-weight: 700; }
+.fleet-inbox-mark-all { font-size: 11px; color: var(--accent); background: none; border: none; cursor: pointer; font-family: inherit; }
+.fleet-inbox-filters { display: flex; gap: 4px; padding: 0 14px; margin-bottom: 8px; }
+.fleet-inbox-filter { padding: 4px 12px; border-radius: 6px; border: 1px solid var(--line); background: transparent; color: var(--gray-2); font-size: 11px; cursor: pointer; font-family: inherit; }
+.fleet-inbox-filter.active { background: var(--accent-glow); border-color: var(--accent); color: var(--accent-bright); }
+.fleet-inbox-search { margin: 0 14px 8px; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface-3); color: var(--white); font-size: 12px; outline: none; font-family: inherit; }
+.fleet-inbox-search:focus { border-color: var(--accent); }
+.fleet-inbox-items { flex: 1; overflow-y: auto; }
+.fleet-inbox-item { display: flex; align-items: flex-start; gap: 10px; padding: 12px 18px; cursor: pointer; border-bottom: 1px solid var(--line); transition: background 0.12s; position: relative; }
+.fleet-inbox-item:hover { background: rgba(255,255,255,0.02); }
+.fleet-inbox-item.selected { background: var(--accent-glow); }
+.fleet-inbox-item.unread { border-left: 3px solid var(--accent); }
+.fleet-inbox-item-icon { font-size: 20px; flex-shrink: 0; margin-top: 2px; }
+.fleet-inbox-item-body { flex: 1; min-width: 0; }
+.fleet-inbox-item-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px; }
+.fleet-inbox-item-agent { font-size: 11px; color: var(--accent); font-weight: 600; font-family: 'JetBrains Mono', monospace; }
+.fleet-inbox-item-time { font-size: 10px; color: var(--gray-4); }
+.fleet-inbox-item-title { font-size: 13px; font-weight: 600; color: var(--white); margin-bottom: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fleet-inbox-item-preview { font-size: 11px; color: var(--gray-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fleet-inbox-unread-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); flex-shrink: 0; margin-top: 6px; }
+.fleet-inbox-empty { padding: 60px 20px; text-align: center; color: var(--gray-3); }
+
+.fleet-inbox-detail { flex: 1; display: flex; flex-direction: column; background: var(--surface-2); }
+.fleet-inbox-detail-header { display: flex; align-items: flex-start; gap: 14px; padding: 24px; border-bottom: 1px solid var(--line); }
+.fleet-inbox-detail-icon { font-size: 32px; }
+.fleet-inbox-detail-title { font-size: 18px; font-weight: 700; color: var(--white); margin: 0 0 6px; }
+.fleet-inbox-detail-meta { display: flex; align-items: center; gap: 10px; }
+.fleet-inbox-detail-agent { font-size: 11px; color: var(--accent); font-weight: 600; font-family: 'JetBrains Mono', monospace; }
+.fleet-inbox-priority-badge { font-size: 10px; padding: 2px 8px; border-radius: 4px; font-weight: 600; }
+.fleet-inbox-detail-time { font-size: 11px; color: var(--gray-4); }
+.fleet-inbox-detail-body { padding: 24px; flex: 1; font-size: 14px; color: var(--gray-1); line-height: 1.7; }
+.fleet-inbox-detail-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; color: var(--gray-3); gap: 8px; }
+.fleet-inbox-detail-empty h3 { color: var(--white); margin: 0; }
+.fleet-inbox-detail-empty p { margin: 0; font-size: 13px; }
+
+/* ══════════════════════════════════
+   INTEGRATIONS TAB
+   ══════════════════════════════════ */
+.fleet-integrations-layout { display: flex; gap: 0; height: calc(100vh - var(--topbar-h) - 24px); padding: 0 !important; }
+.fleet-integ-sidebar { width: 200px; min-width: 180px; background: var(--surface-1); border-right: 1px solid var(--line); padding: 14px; display: flex; flex-direction: column; gap: 4px; }
+.fleet-integ-search { width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface-3); color: var(--white); font-size: 12px; outline: none; font-family: inherit; margin-bottom: 8px; }
+.fleet-integ-search:focus { border-color: var(--accent); }
+.fleet-integ-cats { display: flex; flex-direction: column; gap: 2px; }
+.fleet-integ-cat { display: flex; align-items: center; gap: 8px; width: 100%; padding: 7px 10px; border: none; background: transparent; color: var(--gray-2); font-size: 12px; border-radius: 6px; cursor: pointer; text-align: left; font-family: inherit; transition: background 0.12s; }
+.fleet-integ-cat:hover { background: var(--surface-3); }
+.fleet-integ-cat.active { background: var(--accent-glow); color: var(--accent-bright); }
+.fleet-integ-cat-icon { font-size: 13px; }
+.fleet-integ-section-label { font-size: 10px; font-weight: 700; color: var(--gray-4); text-transform: uppercase; letter-spacing: 0.08em; padding: 12px 10px 4px; }
+
+.fleet-integ-main { flex: 1; overflow-y: auto; padding: 20px 28px; }
+.fleet-integ-group { margin-bottom: 28px; }
+.fleet-integ-group-header { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+.fleet-integ-group-icon { font-size: 14px; }
+.fleet-integ-group-label { font-size: 11px; font-weight: 700; color: var(--gray-2); text-transform: uppercase; letter-spacing: 0.08em; }
+.fleet-integ-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.fleet-integ-card { display: flex; align-items: center; gap: 12px; padding: 14px 16px; background: var(--surface-2); border: 1px solid var(--line-mid); border-radius: var(--radius); transition: all 0.15s; }
+.fleet-integ-card:hover { border-color: var(--line-hi); background: var(--surface-3); }
+.fleet-integ-card-icon { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+.fleet-integ-card-info { flex: 1; min-width: 0; }
+.fleet-integ-card-name { font-size: 13px; font-weight: 600; color: var(--white); }
+.fleet-integ-card-desc { font-size: 11px; color: var(--gray-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 1px; }
+.fleet-integ-connect { padding: 5px 14px; border-radius: 6px; border: 1px solid var(--accent); background: transparent; color: var(--accent); font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.15s; flex-shrink: 0; font-family: inherit; }
+.fleet-integ-connect:hover { background: var(--accent-glow); }
+.fleet-integ-connect.connected { background: var(--accent-deep); border-color: var(--accent); color: #fff; }
+.fleet-integ-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 80px; color: var(--gray-3); gap: 8px; }
+.fleet-integ-empty h3 { color: var(--white); margin: 0; }
+.fleet-integ-custom-mcp { display: flex; align-items: center; width: 100%; padding: 12px 16px; background: var(--surface-2); border: 1px dashed var(--line-mid); border-radius: var(--radius); color: var(--gray-3); font-size: 13px; cursor: pointer; font-family: inherit; margin-top: 16px; transition: all 0.15s; }
+.fleet-integ-custom-mcp:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ══════════════════════════════════
+   SHARED: SECTION HEADERS & FILTERS
+   ══════════════════════════════════ */
+.fleet-section-header { margin-bottom: 20px; }
+.fleet-section-title { font-size: 22px; font-weight: 800; color: var(--white); margin: 0 0 4px; }
+.fleet-section-sub { font-size: 13px; color: var(--gray-3); margin: 0; }
+.fleet-filter-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+.fleet-filter-search { padding: 8px 14px; border-radius: 8px; border: 1px solid var(--line-mid); background: var(--surface-2); color: var(--white); font-size: 12px; outline: none; font-family: inherit; min-width: 200px; }
+.fleet-filter-search:focus { border-color: var(--accent); }
+.fleet-filter-chips { display: flex; gap: 4px; flex-wrap: wrap; }
+.fleet-filter-chip { padding: 5px 14px; border-radius: 20px; border: 1px solid var(--line); background: transparent; color: var(--gray-2); font-size: 11px; cursor: pointer; font-family: inherit; transition: all 0.12s; font-weight: 500; }
+.fleet-filter-chip:hover { background: var(--surface-4); }
+.fleet-filter-chip.active { background: var(--accent-glow); border-color: var(--accent); color: var(--accent-bright); font-weight: 600; }
+.fleet-empty-center { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 80px; color: var(--gray-3); gap: 8px; }
+.fleet-empty-center h3 { color: var(--white); margin: 0; }
+.fleet-empty-center p { margin: 0; font-size: 13px; }
+
+/* ══════════════════════════════════
+   TEMPLATES TAB
+   ══════════════════════════════════ */
+.fleet-template-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
+.fleet-template-card {
+  background: var(--surface-2); border: 1px solid var(--line-mid); border-radius: var(--radius-lg);
+  padding: 18px 20px; cursor: pointer; transition: all 0.2s; position: relative; overflow: hidden;
+}
+.fleet-template-card:hover { border-color: var(--line-hi); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.25); }
+.fleet-template-card.selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), 0 8px 24px rgba(124,58,237,0.15); }
+.fleet-template-card-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.fleet-template-icon { font-size: 26px; }
+.fleet-template-popularity { display: flex; align-items: center; gap: 6px; }
+.fleet-template-pop-bar { width: 50px; height: 4px; border-radius: 2px; background: var(--surface-4); overflow: hidden; }
+.fleet-template-pop-fill { height: 100%; border-radius: 2px; background: var(--accent); }
+.fleet-template-pop-val { font-size: 10px; color: var(--gray-3); font-weight: 600; }
+.fleet-template-name { font-size: 15px; font-weight: 700; color: var(--white); margin: 0 0 6px; }
+.fleet-template-desc { font-size: 12px; color: var(--gray-3); line-height: 1.5; margin: 0 0 10px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.fleet-template-tags { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 12px; }
+.fleet-template-tag { font-size: 10px; padding: 2px 8px; border-radius: 4px; background: var(--surface-4); color: var(--gray-2); }
+.fleet-template-footer { display: flex; justify-content: space-between; align-items: center; }
+.fleet-template-cat { font-size: 10px; color: var(--gray-4); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
+.fleet-template-use { padding: 5px 14px; border-radius: 6px; background: var(--accent-deep); border: none; color: #fff; font-size: 11px; font-weight: 600; cursor: pointer; transition: background 0.15s; font-family: inherit; }
+.fleet-template-use:hover { background: var(--accent); }
+
+/* ══════════════════════════════════
+   SKILLS TAB
+   ══════════════════════════════════ */
+.fleet-skills-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+.fleet-skill-card {
+  background: var(--surface-2); border: 1px solid var(--line-mid); border-radius: var(--radius-lg);
+  padding: 18px 20px; transition: all 0.2s; position: relative;
+}
+.fleet-skill-card:hover { border-color: var(--line-hi); transform: translateY(-1px); }
+.fleet-skill-card-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.fleet-skill-icon { font-size: 24px; }
+.fleet-skill-beta { font-size: 9px; padding: 2px 6px; border-radius: 4px; background: rgba(251,191,36,0.15); color: #fbbf24; font-weight: 700; letter-spacing: 0.06em; }
+.fleet-skill-name { font-size: 14px; font-weight: 700; color: var(--white); margin: 0 0 6px; }
+.fleet-skill-desc { font-size: 12px; color: var(--gray-3); line-height: 1.5; margin: 0 0 12px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.fleet-skill-footer { display: flex; justify-content: space-between; align-items: center; }
+.fleet-skill-cat { font-size: 10px; color: var(--gray-4); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
+.fleet-skill-agents { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--gray-3); }
+.fleet-skill-agent-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--status-live); }
+
+/* ══════════════════════════════════
+   WELCOME MODAL
+   ══════════════════════════════════ */
+.fleet-welcome-backdrop { position: fixed; inset: 0; z-index: 9999; background: rgba(0,0,0,0.7); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; animation: fadeIn 0.2s ease; }
+.fleet-welcome-modal {
+  background: var(--surface-2); border: 1px solid var(--line-mid); border-radius: 16px;
+  padding: 36px 40px; max-width: 620px; width: 90%; position: relative;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.6);
+  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.fleet-welcome-close { position: absolute; top: 16px; right: 16px; background: none; border: none; color: var(--gray-3); font-size: 18px; cursor: pointer; }
+.fleet-welcome-close:hover { color: var(--white); }
+.fleet-welcome-title { font-size: 24px; font-weight: 800; color: var(--white); margin: 0 0 8px; }
+.fleet-welcome-sub { font-size: 14px; color: var(--gray-3); margin: 0 0 24px; line-height: 1.5; }
+.fleet-welcome-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 28px; }
+.fleet-welcome-card { display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px; background: var(--surface-3); border: 1px solid var(--line); border-radius: var(--radius); transition: border-color 0.15s; }
+.fleet-welcome-card:hover { border-color: var(--line-hi); }
+.fleet-welcome-card-icon { font-size: 20px; margin-top: 2px; }
+.fleet-welcome-card-title { font-size: 13px; font-weight: 700; color: var(--white); margin-bottom: 2px; }
+.fleet-welcome-card-desc { font-size: 11px; color: var(--gray-3); line-height: 1.4; }
+.fleet-welcome-actions { display: flex; justify-content: flex-end; gap: 12px; }
+.fleet-welcome-skip { background: none; border: none; color: var(--gray-3); font-size: 13px; cursor: pointer; font-family: inherit; padding: 8px 16px; }
+.fleet-welcome-skip:hover { color: var(--white); }
+.fleet-welcome-go { padding: 10px 24px; border-radius: 8px; background: var(--accent-deep); border: none; color: #fff; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; transition: background 0.15s; }
+.fleet-welcome-go:hover { background: var(--accent); }
+
+@keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+/* ── Fleet responsive ── */
+@media (max-width: 768px) {
+  .fleet-chat-layout, .fleet-inbox-layout, .fleet-integrations-layout { flex-direction: column; height: auto; }
+  .fleet-thread-sidebar, .fleet-inbox-list, .fleet-integ-sidebar { width: 100%; min-width: auto; border-right: none; border-bottom: 1px solid var(--line); max-height: 200px; }
+  .fleet-chat-messages { padding: 16px; }
+  .fleet-chat-input-area { padding: 12px 16px 16px; }
+  .fleet-integ-grid { grid-template-columns: 1fr; }
+  .fleet-template-grid, .fleet-skills-grid { grid-template-columns: 1fr; }
+  .fleet-welcome-grid { grid-template-columns: 1fr; }
+}

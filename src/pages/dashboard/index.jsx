@@ -27,6 +27,12 @@ import SettingsTab from './tabs/SettingsTab';
 import MemoryTab from './tabs/MemoryTab';
 import ComplianceTab from './tabs/ComplianceTab';
 import TeamHQTab from './tabs/TeamHQTab';
+import ChatTab from './tabs/ChatTab';
+import InboxTab from './tabs/InboxTab';
+import IntegrationsTab from './tabs/IntegrationsTab';
+import TemplatesTab from './tabs/TemplatesTab';
+import SkillsTab from './tabs/SkillsTab';
+import WelcomeModal from './components/WelcomeModal';
 
 import '../Dashboard.css';
 
@@ -61,6 +67,7 @@ export default function Dashboard() {
   const [obsSearch, setObsSearch] = useState('');
   const [selectedAgent, setSelectedAgent] = useState(null);
   const [placeholderIdx, setPlaceholderIdx] = useState(0);
+  const [showWelcome, setShowWelcome] = useState(false);
 
   const onCaptureRef = useRef(null);
   const cmdInputRef = useRef(null);
@@ -158,6 +165,7 @@ export default function Dashboard() {
         liveAgents={liveAgents} errorAgents={errorAgents}
         planName={planName} handleLogout={handleLogout}
         mobileSidebarOpen={mobileSidebarOpen} setMobileSidebarOpen={setMobileSidebarOpen}
+        setShowAgentModal={setShowAgentModal}
       />
 
       <div className="dash-body">
@@ -265,6 +273,26 @@ export default function Dashboard() {
           <ComplianceTab />
         )}
 
+        {activeTab === 'chat' && (
+          <ChatTab agents={data.agents} />
+        )}
+
+        {activeTab === 'inbox' && (
+          <InboxTab />
+        )}
+
+        {activeTab === 'integrations' && (
+          <IntegrationsTab />
+        )}
+
+        {activeTab === 'templates' && (
+          <TemplatesTab setActiveTab={setActiveTab} />
+        )}
+
+        {activeTab === 'skills' && (
+          <SkillsTab />
+        )}
+
         {activeTab === 'teamhq' && (
           <TeamHQTab
             planName={planName}
@@ -297,6 +325,12 @@ export default function Dashboard() {
         planName={org?.plan || 'free'}
         setActiveTab={setActiveTab}
         onCaptureRef={onCaptureRef}
+      />
+
+      <WelcomeModal
+        show={isNewUser && !showWelcome}
+        onClose={() => setShowWelcome(true)}
+        onGetStarted={() => { setShowWelcome(true); setActiveTab('chat'); }}
       />
 
       <ChatAssistant />

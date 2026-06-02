@@ -1,14 +1,12 @@
-export default function Sidebar({ sidebarOpen, setSidebarOpen, activeTab, setActiveTab, liveAgents, errorAgents, planName, handleLogout, mobileSidebarOpen, setMobileSidebarOpen }) {
+export default function Sidebar({ sidebarOpen, setSidebarOpen, activeTab, setActiveTab, liveAgents, errorAgents, planName, handleLogout, mobileSidebarOpen, setMobileSidebarOpen, setShowAgentModal }) {
 
   const handleTabClick = (id) => {
     setActiveTab(id);
-    // Close mobile sidebar on tab selection
     if (setMobileSidebarOpen) setMobileSidebarOpen(false);
   };
 
   return (
     <>
-      {/* Mobile backdrop overlay */}
       {mobileSidebarOpen && (
         <div
           className="dash-sidebar-backdrop"
@@ -22,10 +20,9 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen, activeTab, setAct
           {(sidebarOpen || mobileSidebarOpen) && (
             <>
               <span className="dash-brand-name">AgentOS</span>
-              <span className="dash-brand-version">v2</span>
+              <span className="dash-brand-version">v3</span>
             </>
           )}
-          {/* Mobile close button */}
           {mobileSidebarOpen && (
             <button
               className="dash-mobile-close"
@@ -38,20 +35,20 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen, activeTab, setAct
         </div>
 
         <nav className="dash-nav">
-          <div className="dash-nav-section">Main</div>
+          {/* ── Search hint ── */}
+          <button
+            className="dash-nav-search-btn"
+            onClick={() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }))}
+          >
+            <span className="dash-nav-search-icon">🔍</span>
+            <span className="dash-nav-label">Search...</span>
+            <span className="dash-nav-kbd">⌘K</span>
+          </button>
 
+          {/* ── Main ── */}
           {[
-            { id: 'commandcenter', icon: '🎛️', label: 'Command Center', badge: { text: 'HQ', color: 'purple' } },
-            { id: 'overview',   icon: '📊', label: 'Overview',   badge: errorAgents > 0 ? { text: errorAgents, color: 'red' } : null },
-            { id: 'agents',     icon: '🤖', label: 'Agents',     badge: liveAgents > 0 ? { text: liveAgents, color: 'green' } : null },
-            { id: 'workspaces', icon: '📦', label: 'Workspaces', badge: null },
-            { id: 'brain',      icon: '💡', label: 'Brain',      badge: null },
-            { id: 'graph',      icon: '🕸️', label: 'Graph',      badge: null },
-            { id: 'traces',     icon: '📈', label: 'Traces',     badge: null },
-            { id: 'workflows',  icon: '🔗', label: 'Workflows',  badge: null },
-            { id: 'memory',     icon: '🧠', label: 'Memory',     badge: null },
-            { id: 'compliance', icon: '🛡️', label: 'Compliance', badge: null },
-            { id: 'teamhq',     icon: '🏢', label: 'Team HQ',    badge: { text: 'NEW', color: 'purple' } },
+            { id: 'chat',    icon: '💬', label: 'Chat',    badge: null },
+            { id: 'inbox',   icon: '📬', label: 'Inbox',   badge: null },
           ].map(item => (
             <button
               key={item.id}
@@ -66,32 +63,90 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen, activeTab, setAct
             </button>
           ))}
 
-          <div className="dash-nav-section" style={{ marginTop: 8 }}>System</div>
+          {/* ── Explore ── */}
+          <div className="dash-nav-section">EXPLORE</div>
+          {[
+            { id: 'agents',       icon: '🤖', label: 'Workspace Agents', badge: liveAgents > 0 ? { text: liveAgents, color: 'green' } : null },
+            { id: 'templates',    icon: '📋', label: 'Templates',        badge: null },
+            { id: 'integrations', icon: '🔌', label: 'Integrations',     badge: null },
+            { id: 'skills',       icon: '🧩', label: 'Skills',           badge: null },
+          ].map(item => (
+            <button
+              key={item.id}
+              className={`dash-nav-btn${activeTab === item.id ? ' active' : ''}`}
+              onClick={() => handleTabClick(item.id)}
+            >
+              <span className="dash-nav-icon">{item.icon}</span>
+              <span className="dash-nav-label">{item.label}</span>
+              {item.badge && (
+                <span className={`dash-nav-badge ${item.badge.color}`}>{item.badge.text}</span>
+              )}
+            </button>
+          ))}
 
+          {/* ── Get Started ── */}
+          <div className="dash-nav-section">GET STARTED</div>
+          <button className="dash-nav-btn dash-nav-action" onClick={() => handleTabClick('chat')}>
+            <span className="dash-nav-icon">✨</span>
+            <span className="dash-nav-label">Create agent with AI</span>
+          </button>
+          <button className="dash-nav-btn dash-nav-action" onClick={() => handleTabClick('templates')}>
+            <span className="dash-nav-icon">📦</span>
+            <span className="dash-nav-label">Start from a template</span>
+          </button>
+          <button className="dash-nav-btn dash-nav-action" onClick={() => { if (setShowAgentModal) setShowAgentModal(true); }}>
+            <span className="dash-nav-icon">✏️</span>
+            <span className="dash-nav-label">Create agent manually</span>
+          </button>
+
+          {/* ── Operate ── */}
+          <div className="dash-nav-section">OPERATE</div>
+          {[
+            { id: 'commandcenter', icon: '🎛️', label: 'Command Center', badge: { text: 'HQ', color: 'purple' } },
+            { id: 'overview',   icon: '📊', label: 'Overview',   badge: errorAgents > 0 ? { text: errorAgents, color: 'red' } : null },
+            { id: 'workspaces', icon: '📦', label: 'Workspaces', badge: null },
+            { id: 'brain',      icon: '💡', label: 'Brain',      badge: null },
+            { id: 'graph',      icon: '🕸️', label: 'Graph',      badge: null },
+            { id: 'traces',     icon: '📈', label: 'Traces',     badge: null },
+            { id: 'workflows',  icon: '🔗', label: 'Workflows',  badge: null },
+            { id: 'memory',     icon: '🧠', label: 'Memory',     badge: null },
+            { id: 'compliance', icon: '🛡️', label: 'Compliance', badge: null },
+            { id: 'teamhq',     icon: '🏢', label: 'Team HQ',    badge: null },
+          ].map(item => (
+            <button
+              key={item.id}
+              className={`dash-nav-btn${activeTab === item.id ? ' active' : ''}`}
+              onClick={() => handleTabClick(item.id)}
+            >
+              <span className="dash-nav-icon">{item.icon}</span>
+              <span className="dash-nav-label">{item.label}</span>
+              {item.badge && (
+                <span className={`dash-nav-badge ${item.badge.color}`}>{item.badge.text}</span>
+              )}
+            </button>
+          ))}
+        </nav>
+
+        <div className="dash-sidebar-foot">
+          {/* Usage & Settings */}
           <button
-            id="ob-nav-settings"
             className={`dash-nav-btn${activeTab === 'settings' ? ' active' : ''}`}
             onClick={() => handleTabClick('settings')}
           >
             <span className="dash-nav-icon">⚙️</span>
             <span className="dash-nav-label">Settings</span>
           </button>
-        </nav>
 
-        <div className="dash-sidebar-foot">
           <div className="dash-plan-chip">
             <div className="dash-plan-dot" />
             <span className="dash-plan-text">{planName} PLAN</span>
           </div>
-          <div className="dash-kbd-hint">
-            <span className="dash-kbd">⌘</span>
-            <span className="dash-kbd">K</span>
-            <span style={{ marginLeft: 4 }}>Command palette</span>
-          </div>
+
           <button className="dash-nav-btn" onClick={handleLogout}>
             <span className="dash-nav-icon">🚪</span>
             <span className="dash-nav-label">Sign out</span>
           </button>
+
           <button
             className="dash-collapse-btn"
             onClick={() => setSidebarOpen(!sidebarOpen)}
