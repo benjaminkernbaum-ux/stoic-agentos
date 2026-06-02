@@ -68,7 +68,7 @@ async function getAuthHeaders() {
   return { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
 }
 
-export default function IntegrationsTab({ org }) {
+export default function IntegrationsTab({ org, toast }) {
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('all');
   const [connected, setConnected] = useState(new Set(['github', 'slack', 'supabase']));
@@ -116,6 +116,7 @@ export default function IntegrationsTab({ org }) {
         if (isConnected) next.add(id); else next.delete(id);
         return next;
       });
+      toast?.(`Connection update failed — reverted`, 'error');
     }
   };
 

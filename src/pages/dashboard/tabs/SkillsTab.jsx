@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 
 const CAPABILITIES = [
   { id: 'web-search', name: 'Web Search', icon: '🔍', category: 'Perception', desc: 'Real-time web search with semantic ranking and source validation.', agents: 5, reliability: 98, tier: 'core' },
@@ -29,15 +29,15 @@ export default function SkillsTab({ agents = [] }) {
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('All');
 
-  // Compute real agent counts per capability
-  const capabilities = CAPABILITIES.map(cap => {
+  // Compute real agent counts per capability (memoized)
+  const capabilities = useMemo(() => CAPABILITIES.map(cap => {
     const count = agents.filter(a => {
       const mod = (a.module || '').toLowerCase();
       const tags = a.metadata?.tags?.map(t => t.toLowerCase()) || [];
-      return mod === cap.category.toLowerCase() || mod === cap.id.toLowerCase() || tags.includes(cap.id.toLowerCase()) || tags.includes(cap.category.toLowerCase());
+      return mod === cap.id.toLowerCase() || tags.includes(cap.id.toLowerCase());
     }).length;
     return { ...cap, agents: count };
-  });
+  }), [agents]);
 
   const filtered = capabilities.filter(s => {
     const matchCat = category === 'All' || s.category === category;
