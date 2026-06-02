@@ -3,6 +3,7 @@
    Neutral zinc Â· precision layout Â· Vercel/Linear grade
    â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â• â•  */
 
+/* Dashboard-specific vars scoped to .dash to avoid :root collisions with index.css */
 .dash {
   --sidebar-w: 248px;
   --topbar-h: 56px;
@@ -37,9 +38,8 @@
   --status-error: #ef4444;
   --status-idle:  rgba(113,113,122,0.3);
   --status-warn:  #f59e0b;
-}
 
-.dash {
+  /* Layout */
   display: flex;
   min-height: 100vh;
   background: var(--black);

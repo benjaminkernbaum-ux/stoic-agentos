@@ -68,7 +68,7 @@ export default function Dashboard() {
   const [obsSearch, setObsSearch] = useState('');
   const [selectedAgent, setSelectedAgent] = useState(null);
   const [placeholderIdx, setPlaceholderIdx] = useState(0);
-  const [showWelcome, setShowWelcome] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(() => localStorage.getItem('stoic_welcome_done') === 'true');
 
   const onCaptureRef = useRef(null);
   const cmdInputRef = useRef(null);
@@ -342,8 +342,8 @@ export default function Dashboard() {
 
       <WelcomeModal
         show={isNewUser && !showWelcome}
-        onClose={() => setShowWelcome(true)}
-        onGetStarted={() => { setShowWelcome(true); setActiveTab('chat'); }}
+        onClose={() => { setShowWelcome(true); localStorage.setItem('stoic_welcome_done', 'true'); }}
+        onGetStarted={() => { setShowWelcome(true); localStorage.setItem('stoic_welcome_done', 'true'); setActiveTab('chat'); }}
       />
 
       <ChatAssistant />
