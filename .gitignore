@@ -36,3 +36,8 @@ run-migrations-*.mjs
 # Python SDK build artifacts
 sdk-python/dist/
 sdk-python/*.egg-info/
+
+# Internal Investor/GTM docs (keep local-only)
+INVESTOR_PITCH_DECK.md
+INVESTOR_PITCH_PRESENTATION_SCRIPT.md
+INVESTOR_OUTREACH_TEMPLATES.md
