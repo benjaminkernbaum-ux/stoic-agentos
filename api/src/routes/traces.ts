@@ -365,7 +365,20 @@ router.get(`/api/${API_VERSION}/traces/:traceId`, authenticate, async (req: Auth
 
     if (spanErr) throw spanErr;
 
-    res.json({ ...trace, spans: spans || [] });
+    // Fetch evaluations for this trace (optional/graceful fallback if none exist)
+    let evaluations: any[] = [];
+    try {
+      const { data: evals } = await supabase!
+        .from('evaluations')
+        .select('*')
+        .eq('trace_id', trace.id)
+        .order('created_at', { ascending: false });
+      if (evals) evaluations = evals;
+    } catch (err) {
+      console.warn('Could not load evaluations for trace:', (err as Error).message);
+    }
+
+    res.json({ ...trace, spans: spans || [], evaluations });
   } catch (err: unknown) {
     safeError(res, err);
   }

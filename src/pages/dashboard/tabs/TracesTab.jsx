@@ -313,6 +313,50 @@ function TraceRow({ trace, expanded, onToggle }) {
             </div>
           )}
 
+          {/* Quality Evaluations */}
+          {trace.evaluations && trace.evaluations.length > 0 && (
+            <div style={{
+              marginTop: 10, padding: '10px 14px',
+              background: 'rgba(52,199,89,0.04)',
+              border: '1px solid rgba(52,199,89,0.15)',
+              borderRadius: 8,
+              marginBottom: 10
+            }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: '#34c759', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Quality Evaluations
+              </div>
+              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                {trace.evaluations.map((e, idx) => (
+                  <div key={e.id || idx} style={{
+                    background: 'var(--surface-3)', border: '1px solid var(--line-mid)',
+                    borderRadius: 6, padding: '6px 10px', display: 'flex', flexDirection: 'column', gap: 2,
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--white)' }}>{e.name}</span>
+                      {e.score !== null && (
+                        <span style={{
+                          fontSize: 10, fontWeight: 800, color: e.score >= 0.8 ? '#34c759' : e.score >= 0.5 ? '#fbbf24' : '#ff3b30'
+                        }}>{(e.score * 100).toFixed(0)}%</span>
+                      )}
+                      {e.value && (
+                        <span style={{
+                          fontSize: 9, padding: '1px 5px', borderRadius: 3, fontWeight: 700,
+                          background: e.value === 'good' ? 'rgba(52,199,89,0.1)' : e.value === 'bad' ? 'rgba(255,59,48,0.1)' : 'rgba(251,191,36,0.1)',
+                          color: e.value === 'good' ? '#34c759' : e.value === 'bad' ? '#ff3b30' : '#fbbf24',
+                          textTransform: 'uppercase',
+                        }}>{e.value}</span>
+                      )}
+                    </div>
+                    {e.comment && <div style={{ fontSize: 10, color: 'var(--gray-3)', marginTop: 2 }}>{e.comment}</div>}
+                    <div style={{ fontSize: 8, color: 'var(--gray-4)', marginTop: 4 }}>
+                      Source: {e.source} {e.model ? `(${e.model})` : ''}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Metadata footer */}
           <div style={{
             marginTop: 10, padding: '8px 12px',
@@ -370,7 +414,7 @@ export default function TracesTab({ traces: initialTraces, traceStats: initialSt
       if (res.ok) {
         const detail = await res.json();
         setTraces(prev => prev.map(t =>
-          (t.id === traceId || t.trace_id === traceId) ? { ...t, spans: detail.spans || [] } : t
+          (t.id === traceId || t.trace_id === traceId) ? { ...t, spans: detail.spans || [], evaluations: detail.evaluations || [] } : t
         ));
       }
     } catch (err) {
