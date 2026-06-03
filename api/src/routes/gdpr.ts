@@ -10,30 +10,37 @@
  */
 
 import { Router } from 'express';
-import type { Response } from 'express';
+import type { Request, Response, NextFunction } from 'express';
 import { authenticate } from '../middleware/auth.js';
 import { requireMinRole } from '../middleware/rbac.js';
 import { supabase } from '../middleware/db.js';
 import { safeError } from '../lib/safeError.js';
 import type { AuthenticatedRequest } from '../types.js';
-import rateLimit from 'express-rate-limit';
 
 const router = Router();
 const V = 'v1';
 
-// Rate limit: 1 export per hour per IP
-const exportLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000,
-  max: 2,
-  message: { error: 'Export rate limit exceeded. Try again in 1 hour.' },
-});
+// Simple in-memory rate limiter (per-IP)
+function simpleRateLimit(windowMs: number, max: number, errorMsg: string) {
+  const hits = new Map<string, { count: number; resetAt: number }>();
+  return (req: Request, res: Response, next: NextFunction) => {
+    const ip = req.ip || 'unknown';
+    const now = Date.now();
+    const entry = hits.get(ip);
+    if (!entry || now > entry.resetAt) {
+      hits.set(ip, { count: 1, resetAt: now + windowMs });
+      return next();
+    }
+    if (entry.count >= max) {
+      return res.status(429).json({ error: errorMsg });
+    }
+    entry.count++;
+    next();
+  };
+}
 
-// Rate limit: 1 deletion per hour per IP (safety)
-const deletionLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000,
-  max: 1,
-  message: { error: 'Deletion rate limit exceeded. Try again in 1 hour.' },
-});
+const exportLimiter = simpleRateLimit(60 * 60 * 1000, 2, 'Export rate limit exceeded. Try again in 1 hour.');
+const deletionLimiter = simpleRateLimit(60 * 60 * 1000, 1, 'Deletion rate limit exceeded. Try again in 1 hour.');
 
 // ══════════════════════════════════════
 // HELPER: safely query a table (returns [] if table doesn't exist)
@@ -100,7 +107,7 @@ router.get(`/api/${V}/gdpr/export`, authenticate, requireMinRole('admin'), expor
       safeQuery('traces', orgId),
       // Spans need to join through traces
       (async () => {
-        const traceIds = (await safeQuery('traces', orgId, 'id')).map((t: Record<string, unknown>) => t.id);
+        const traceIds = (await safeQuery('traces', orgId, 'id')).map((t: any) => t.id);
         if (traceIds.length === 0) return [];
         const { data } = await supabase!.from('spans').select('*').in('trace_id', traceIds).limit(10000);
         return data || [];
@@ -186,7 +193,7 @@ router.delete(`/api/${V}/gdpr/delete-org`, authenticate, requireMinRole('owner')
     const { confirm, org_slug } = req.body;
 
     // Safety: require explicit double confirmation
-    if (confirm !== 'DELETE MY DATA' || org_slug !== req.org.slug) {
+    if (confirm !== 'DELETE MY DATA' || org_slug !== (req.org as any).slug) {
       return res.status(400).json({
         error: 'Confirmation required',
         hint: 'Send { "confirm": "DELETE MY DATA", "org_slug": "<your-org-slug>" }',
@@ -239,7 +246,7 @@ router.delete(`/api/${V}/gdpr/delete-org`, authenticate, requireMinRole('owner')
 
     // Delete spans via trace_id (spans don't have org_id directly)
     try {
-      const traceIds = (await safeQuery('traces', orgId, 'id')).map((t: Record<string, unknown>) => t.id);
+      const traceIds = (await safeQuery('traces', orgId, 'id')).map((t: any) => t.id);
       if (traceIds.length > 0) {
         await supabase!.from('spans').delete().in('trace_id', traceIds);
         deleted.push('spans');
@@ -329,8 +336,8 @@ router.delete(`/api/${V}/gdpr/delete-account`, authenticate, deletionLimiter, as
       .select('user_id, role')
       .eq('org_id', orgId);
 
-    const owners = (members || []).filter((m: Record<string, unknown>) => m.role === 'owner');
-    const isSoleOwner = owners.length === 1 && (owners[0] as Record<string, unknown>).user_id === userId;
+    const owners = (members || []).filter((m: any) => m.role === 'owner');
+    const isSoleOwner = owners.length === 1 && (owners[0] as any).user_id === userId;
 
     if (isSoleOwner && (members || []).length > 1) {
       return res.status(409).json({
@@ -368,7 +375,7 @@ router.delete(`/api/${V}/gdpr/delete-account`, authenticate, deletionLimiter, as
           'api_keys', 'workspaces'];
 
         // Delete spans via trace_id
-        const traceIds = (await safeQuery('traces', orgId, 'id')).map((t: Record<string, unknown>) => t.id);
+        const traceIds = (await safeQuery('traces', orgId, 'id')).map((t: any) => t.id);
         if (traceIds.length > 0) {
           await supabase!.from('spans').delete().in('trace_id', traceIds);
         }
