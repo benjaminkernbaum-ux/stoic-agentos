@@ -1,7 +1,7 @@
 # ⚡ Stoic AgentOS — Claude Code Context
 
 > **Owner**: Benjamin Kernbaum (`benjaminkernbaum-ux`)
-> **Product**: AI Agent Operations Platform — SaaS for monitoring, orchestrating, and persisting knowledge across AI agent fleets
+> **Product**: AI Agent Memory & Intelligence Platform — SaaS for persistent memory, knowledge, reflection, and compliance across AI agent fleets
 > **Live URL**: https://stoicagentos.com
 > **API**: https://api.stoicagentos.com
 > **Repo**: https://github.com/benjaminkernbaum-ux/stoic-agentos

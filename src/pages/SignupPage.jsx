@@ -12,6 +12,7 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState(null);
+  const [consent, setConsent] = useState(false);
 
   if (isAuthenticated) return <Navigate to="/dashboard" replace />;
 
@@ -22,6 +23,7 @@ export default function SignupPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!consent) { setError('Please accept the Privacy Policy and Terms of Service'); return; }
     setError('');
 
     if (!turnstileToken) {
@@ -36,7 +38,7 @@ export default function SignupPage() {
 
     setLoading(true);
     try {
-      const { error: authError } = await signUp(form.email, form.password, form.name);
+      const { error: authError } = await signUp(form.email, form.password, form.name, new Date().toISOString());
       setLoading(false);
 
       if (authError) {
@@ -51,6 +53,7 @@ export default function SignupPage() {
   };
 
   const handleOAuth = async (provider) => {
+    if (!consent) { setError('Please accept the Privacy Policy and Terms of Service'); return; }
     setError('');
     setLoading(true);
     try {
@@ -153,6 +156,16 @@ export default function SignupPage() {
             onExpire={() => setTurnstileToken(null)}
             onError={() => setTurnstileToken(null)}
           />
+
+          <label className="signup-consent">
+            <input
+              type="checkbox"
+              checked={consent}
+              onChange={e => setConsent(e.target.checked)}
+              required
+            />
+            <span>I agree to the <a href="/privacy" target="_blank" rel="noopener">Privacy Policy</a> and <a href="/terms" target="_blank" rel="noopener">Terms of Service</a></span>
+          </label>
 
           <button type="submit" className="auth-btn primary" disabled={loading || !turnstileToken}>
             {loading ? 'Creating account...' : !turnstileToken ? 'Complete verification above' : 'Create Account — Free'}

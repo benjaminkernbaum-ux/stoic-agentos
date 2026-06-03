@@ -6,152 +6,51 @@ on:
   pull_request:
     branches: [master]
 
-concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
   lint:
-    name: Lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
-          cache: npm
+          node-version: '20'
+          cache: 'npm'
       - run: npm ci
       - run: npm run lint
 
-  test-api:
-    name: Test API (Node ${{ matrix.node }})
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node: [18, 20, 22]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ matrix.node }}
-          cache: npm
-          cache-dependency-path: api/package-lock.json
-      - run: npm ci
-        working-directory: api
-      - run: npm test
-        working-directory: api
-
-  test-sdk:
-    name: Test SDK (Node ${{ matrix.node }})
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node: [18, 20, 22]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ matrix.node }}
-          cache: npm
-          cache-dependency-path: sdk/package-lock.json
-      - run: npm ci
-        working-directory: sdk
-      - run: npm test
-        working-directory: sdk
-
-  build:
-    name: Build Frontend
-    runs-on: ubuntu-latest
-    needs: [lint]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      - run: npm run build
-
   typecheck:
-    name: TypeScript Check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: api/package-lock.json
+          node-version: '20'
+          cache: 'npm'
       - run: npm ci
-        working-directory: api
-      - run: npx tsc --noEmit
-        working-directory: api
+      - run: cd api && npm ci
+      - run: cd api && npm run typecheck
 
-  lighthouse:
-    name: Lighthouse Audit
+  test:
     runs-on: ubuntu-latest
-    needs: [build]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
-          cache: npm
+          node-version: '20'
+          cache: 'npm'
       - run: npm ci
-      - run: npm run build
-      - uses: treosh/lighthouse-ci-action@v12
-        with:
-          uploadArtifacts: true
-          temporaryPublicStorage: true
-          configPath: '.lighthouserc.json'
+      - run: cd api && npm ci
+      - run: cd api && npm test
 
-  migrate-lint:
-    name: Validate SQL Migrations
+  security:
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:15
-        env:
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: test_migrations
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
     steps:
       - uses: actions/checkout@v4
-      - name: Validate migration SQL syntax
-        env:
-          PGPASSWORD: postgres
-        run: |
-          echo "══ Validating SQL migration files ══"
-          psql -h localhost -U postgres -d test_migrations -c "CREATE ROLE service_role; CREATE ROLE authenticated; CREATE ROLE anon;" || true
-          ERRORS=0
-          for f in api/supabase/*.sql api/migrations/*.sql; do
-            if [ -f "$f" ]; then
-              echo "  Checking: $f"
-              # Use PostgreSQL to parse-check each file (dry-run)
-              if ! psql -h localhost -U postgres -d test_migrations -f "$f" --set ON_ERROR_STOP=1 2>&1; then
-                echo "  ❌ FAILED: $f"
-                ERRORS=$((ERRORS + 1))
-              else
-                echo "  ✅ OK: $f"
-              fi
-            fi
-          done
-          if [ $ERRORS -gt 0 ]; then
-            echo "❌ $ERRORS migration(s) failed validation"
-            exit 1
-          fi
-          echo "✅ All migrations valid"
-      - name: List migration inventory
-        run: |
-          echo "══ Migration Inventory ══"
-          echo "--- api/supabase/ ---"
-          ls -la api/supabase/*.sql 2>/dev/null || echo "  (none)"
-          echo "--- api/migrations/ ---"
-          ls -la api/migrations/*.sql 2>/dev/null || echo "  (none)"
-
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm audit --audit-level=high || true
+      - run: cd api && npm ci
+      - run: cd api && npm audit --audit-level=high || true

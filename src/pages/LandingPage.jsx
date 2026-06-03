@@ -509,7 +509,7 @@ function LiveDashboardPreview() {
               className={`dp-nav-item-btn ${activeTab === item.id ? 'active' : ''}`}
               onClick={() => { setActiveTab(item.id); setUserInteracted(true); }}
               style={{
-                width: '100%', textAlign: 'left', border: 'none', background: 'transparent', fontFamily: 'inherit', fontSize: '12px', padding: '6px 8px', borderRadius: '5px',
+                width: '100%', textAlign: 'left', border: 'none', fontFamily: 'inherit', fontSize: '12px', padding: '6px 8px', borderRadius: '5px',
                 color: activeTab === item.id ? 'var(--text-primary)' : 'var(--text-dim)',
                 background: activeTab === item.id ? 'rgba(155, 89, 255, 0.12)' : 'transparent',
                 cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: activeTab === item.id ? '600' : '500', marginBottom: '2px'
@@ -532,7 +532,7 @@ function LiveDashboardPreview() {
               className={`dp-nav-item-btn ${activeTab === item.id ? 'active' : ''}`}
               onClick={() => { setActiveTab(item.id); setUserInteracted(true); }}
               style={{
-                width: '100%', textAlign: 'left', border: 'none', background: 'transparent', fontFamily: 'inherit', fontSize: '12px', padding: '6px 8px', borderRadius: '5px',
+                width: '100%', textAlign: 'left', border: 'none', fontFamily: 'inherit', fontSize: '12px', padding: '6px 8px', borderRadius: '5px',
                 color: activeTab === item.id ? 'var(--text-primary)' : 'var(--text-dim)',
                 background: activeTab === item.id ? 'rgba(155, 89, 255, 0.12)' : 'transparent',
                 cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: activeTab === item.id ? '600' : '500', marginBottom: '2px'
@@ -561,7 +561,7 @@ function LiveDashboardPreview() {
               className={`dp-nav-item-btn ${activeTab === item.id ? 'active' : ''}`}
               onClick={() => { setActiveTab(item.id); setUserInteracted(true); }}
               style={{
-                width: '100%', textAlign: 'left', border: 'none', background: 'transparent', fontFamily: 'inherit', fontSize: '12px', padding: '6px 8px', borderRadius: '5px',
+                width: '100%', textAlign: 'left', border: 'none', fontFamily: 'inherit', fontSize: '12px', padding: '6px 8px', borderRadius: '5px',
                 color: activeTab === item.id ? 'var(--text-primary)' : 'var(--text-dim)',
                 background: activeTab === item.id ? 'rgba(155, 89, 255, 0.12)' : 'transparent',
                 cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: activeTab === item.id ? '600' : '500', marginBottom: '2px'
@@ -577,7 +577,7 @@ function LiveDashboardPreview() {
             className={`dp-nav-item-btn ${activeTab === 'Settings' ? 'active' : ''}`}
             onClick={() => { setActiveTab('Settings'); setUserInteracted(true); }}
             style={{
-              width: '100%', textAlign: 'left', border: 'none', background: 'transparent', fontFamily: 'inherit', fontSize: '12px', padding: '6px 8px', borderRadius: '5px',
+              width: '100%', textAlign: 'left', border: 'none', fontFamily: 'inherit', fontSize: '12px', padding: '6px 8px', borderRadius: '5px',
               color: activeTab === 'Settings' ? 'var(--text-primary)' : 'var(--text-dim)',
               background: activeTab === 'Settings' ? 'rgba(155, 89, 255, 0.12)' : 'transparent',
               cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: activeTab === 'Settings' ? '600' : '500', marginBottom: '12px'
@@ -1474,7 +1474,7 @@ export default function LandingPage() {
   const ctaRef = useScrollReveal();
 
   useEffect(() => {
-    document.title = 'Stoic AgentOS — AI Agent Operations Platform';
+    document.title = 'Stoic AgentOS — AI Agent Memory & Intelligence Platform';
   }, []);
 
   useEffect(() => {
@@ -1551,12 +1551,12 @@ export default function LandingPage() {
             $11.6B market · Backed by real production use
           </div>
           <h1 className="animate-in delay-1">
-            Deploy Autonomous Agent Workflows<br />
-            in <span className="gradient-text">Under 5 Minutes</span>
+            Give Your AI Agents a<br />
+            <span className="gradient-text">Persistent Brain</span>
           </h1>
           <p className="hero-sub animate-in delay-2">
-            Monitor, orchestrate, and scale your AI agent fleet from a single premium dashboard. 
-            Knowledge persistence, auto-capture, and multi-workspace management — built for teams shipping AI.
+            Three-tier memory, knowledge persistence, reflection engine, and compliance audit — 
+            the cognitive layer your AI agent fleet is missing. Open-source. Self-hostable.
           </p>
           <div className="hero-cta animate-in delay-3">
             <button className="btn btn-primary btn-lg" onClick={() => navigate('/signup')}>
@@ -1926,7 +1926,7 @@ export default function LandingPage() {
         <div className="container" style={{ position: 'relative', zIndex: 1 }}>
           <h2 className="section-title section-reveal">Ready to command your AI fleet?</h2>
           <p className="section-sub section-reveal" style={{ margin: '0 auto 32px', transitionDelay: '0.1s' }}>
-            Join the first wave of teams using AgentOS to ship AI faster, with full observability and zero knowledge loss.
+            Join the first wave of teams using AgentOS to give their AI agents persistent memory, intelligence, and compliance controls.
           </p>
           <div className="hero-cta section-reveal" style={{ transitionDelay: '0.2s' }}>
             <button className="btn btn-primary btn-lg" onClick={() => navigate('/signup')}>🚀 Get Started Free</button>

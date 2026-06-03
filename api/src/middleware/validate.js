@@ -153,6 +153,19 @@ export const alertRuleSchema = {
   destination: { type: 'string', required: false, maxLength: 500 },
 };
 
+/** POST /api/v1/evaluations */
+export const evaluationCreateSchema = {
+  trace_id:      { type: 'string', required: false, maxLength: 100 },
+  name:          { type: 'string', required: true, minLength: 1, maxLength: 100 },
+  score:         { type: 'number', required: false, min: 0, max: 1 },
+  value:         { type: 'string', required: false, maxLength: 255 },
+  comment:       { type: 'string', required: false, maxLength: 5000 },
+  source:        { type: 'string', required: false, oneOf: ['manual', 'llm', 'api', 'sdk'] },
+  model:         { type: 'string', required: false, maxLength: 100 },
+  observation_id:{ type: 'string', required: false, maxLength: 100 },
+  metadata:      { type: 'object', required: false },
+};
+
 export default {
   validate,
   traceCreateSchema,
@@ -163,4 +176,5 @@ export default {
   observationBatchSchema,
   agentCreateSchema,
   alertRuleSchema,
+  evaluationCreateSchema,
 };

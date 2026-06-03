@@ -400,7 +400,7 @@ router.post(`/api/${API_VERSION}/traces/:id/spans`, authenticate, validate(spanC
     // Verify trace exists and belongs to org
     const { data: trace, error: traceErr } = await supabase!
       .from('traces')
-      .select('id, org_id, total_tokens, total_cost_usd, span_count')
+      .select('id, org_id, total_tokens, total_cost_usd, span_count, agent, name')
       .eq('id', traceId)
       .eq('org_id', req.org.id)
       .single();
@@ -413,7 +413,7 @@ router.post(`/api/${API_VERSION}/traces/:id/spans`, authenticate, validate(spanC
     const totalTokens = prompt_tokens + completion_tokens;
     const costUsd = calculateCost(provider, model, prompt_tokens, completion_tokens);
 
-    // Insert span
+    // Insert span (with denormalized trace attributes — Langfuse V4 pattern)
     const { data: span, error: spanErr } = await supabase!
       .from('spans')
       .insert({
@@ -433,6 +433,9 @@ router.post(`/api/${API_VERSION}/traces/:id/spans`, authenticate, validate(spanC
         started_at: started_at || new Date().toISOString(),
         ended_at: ended_at || new Date().toISOString(),
         metadata: metadata || {},
+        // ── Denormalized from parent trace ──
+        agent: trace.agent || null,
+        trace_name: trace.name || null,
       })
       .select()
       .single();
@@ -552,6 +555,11 @@ router.post(`/api/${API_VERSION}/traces/ingest`, authenticate, ingestLimiter, va
         metadata: (span.metadata as Record<string, unknown>) || {},
         started_at: (span.started_at as string) || new Date().toISOString(),
         ended_at: (span.ended_at as string) || new Date().toISOString(),
+        // ── Denormalized from trace (Langfuse V4 pattern) ──
+        // Eliminates JOINs on dashboard read path
+        agent: trace.agent || null,
+        trace_name: trace.name || null,
+        user_session: trace.session_id || (trace.metadata as Record<string, unknown>)?.session_id || null,
       }));
 
       const { error: spanErr } = await supabase!.from('spans').insert(spanRows);

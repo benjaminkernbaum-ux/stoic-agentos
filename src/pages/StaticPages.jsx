@@ -253,9 +253,12 @@ export function ChangelogPage() {
 /* ═══════════════════════════════════════ */
 export function PrivacyPage() {
   return (
-    <PageShell title="Privacy Policy" subtitle="Last updated: May 28, 2026">
+    <PageShell title="Privacy Policy" subtitle="Last updated: June 2026">
       <section className="sp-section sp-legal">
-        <h2>1. Information We Collect</h2>
+        <h2>1. Data Controller</h2>
+        <p>Stoic AgentOS is operated by Benjamin Kernbaum. For data protection inquiries, contact us at <strong>privacy@stoicagentos.com</strong>.</p>
+
+        <h2>2. Information We Collect</h2>
         <p>We collect information you provide directly when you create an account or use the Service:</p>
         <ul>
           <li><strong>Account information:</strong> Email address, full name, and organization name, collected via Supabase Auth (email/password and Google OAuth).</li>
@@ -265,21 +268,30 @@ export function PrivacyPage() {
           <li><strong>Technical data:</strong> IP address, browser type, device information, and access timestamps collected automatically when you visit our site.</li>
         </ul>
 
-        <h2>2. How We Use Your Data</h2>
-        <p>We use your data to provide, maintain, and improve the Stoic AgentOS platform. Specifically:</p>
+        <h2>3. Legal Basis for Processing (GDPR Art. 6)</h2>
+        <p>We process your personal data on the following legal bases under Regulation (EU) 2016/679:</p>
         <ul>
-          <li>Authenticate your identity and manage your account via Supabase Auth</li>
-          <li>Store and display your agent observations, knowledge items, and workspace data</li>
-          <li>Process subscription billing and invoicing through Stripe</li>
-          <li>Power AI features using Anthropic Claude (e.g., agent analysis, anomaly detection, natural-language queries)</li>
-          <li>Send transactional emails related to your account (e.g., password resets, billing receipts)</li>
-          <li>Monitor service performance, detect abuse, and improve platform reliability</li>
+          <li><strong>Account data</strong> — Contract performance (Art. 6(1)(b)): Processing is necessary to create and manage your account and provide the Service you signed up for.</li>
+          <li><strong>Billing &amp; payment data</strong> — Contract performance + Legal obligation (Art. 6(1)(b)(c)): Processing is necessary to fulfill our contractual billing obligations and comply with tax and financial regulations.</li>
+          <li><strong>Usage analytics</strong> — Legitimate interest (Art. 6(1)(f)): We analyze aggregated usage patterns to improve service reliability, detect abuse, and optimize performance. You may object to this processing at any time.</li>
+          <li><strong>AI interaction data</strong> — Contract performance (Art. 6(1)(b)): Processing is necessary to deliver the AI-powered features you request (e.g., agent analysis, anomaly detection).</li>
+          <li><strong>Marketing communications</strong> — Consent (Art. 6(1)(a)): We only send marketing emails if you have explicitly opted in. You may withdraw consent at any time via your account settings or the unsubscribe link in any email.</li>
         </ul>
 
-        <h2>3. Cookies &amp; Session Management</h2>
-        <p>Stoic AgentOS uses cookies strictly for authentication and session management. When you sign in, a secure, HTTP-only session cookie is set to maintain your authenticated state. We do <strong>not</strong> use advertising cookies, tracking pixels, or third-party analytics cookies. By using the Service, you consent to the use of these essential cookies.</p>
+        <h2>4. Data Retention</h2>
+        <p>We retain your data only as long as necessary for the purposes outlined in this policy. Specific retention periods:</p>
+        <ul>
+          <li><strong>Account data:</strong> Duration of your active account + 30 days after account deletion</li>
+          <li><strong>Traces &amp; spans:</strong> 90 days</li>
+          <li><strong>Observations:</strong> 6 months</li>
+          <li><strong>Chat conversations:</strong> 6 months</li>
+          <li><strong>Working memory:</strong> Auto-expires via TTL (time-to-live) as configured</li>
+          <li><strong>Audit logs:</strong> 3 years (legal basis: legitimate interest, compliance)</li>
+          <li><strong>Billing records:</strong> 7 years (legal basis: legal obligation under tax and financial regulations)</li>
+        </ul>
+        <p>After the retention period expires, data is permanently deleted or anonymized within 30 days.</p>
 
-        <h2>4. Data Storage &amp; Security</h2>
+        <h2>5. Data Storage &amp; Security</h2>
         <p>Your data is stored in Supabase (PostgreSQL), hosted on Amazon Web Services (AWS) infrastructure. We employ the following security measures:</p>
         <ul>
           <li>Row Level Security (RLS) policies on every table ensuring complete tenant isolation</li>
@@ -289,7 +301,16 @@ export function PrivacyPage() {
           <li>Regular automated backups with point-in-time recovery</li>
         </ul>
 
-        <h2>5. Third-Party Services</h2>
+        <h2>6. International Data Transfers</h2>
+        <p>Your data is processed in the United States through the following sub-processors:</p>
+        <ul>
+          <li><strong>Supabase</strong> (AWS US infrastructure) — Database and authentication</li>
+          <li><strong>Stripe</strong> (US) — Payment processing</li>
+          <li><strong>Anthropic</strong> (US) — AI model processing</li>
+        </ul>
+        <p>For users in the EU/EEA, this means your data leaves the European Economic Area for processing. These international transfers are safeguarded by Standard Contractual Clauses (SCCs) approved by the European Commission, ensuring an adequate level of data protection in compliance with GDPR Chapter V.</p>
+
+        <h2>7. Third-Party Services</h2>
         <p>We share data with the following third-party processors only as necessary to operate the Service:</p>
         <ul>
           <li><strong>Supabase</strong> (hosted on AWS) — Authentication, database, and file storage</li>
@@ -299,19 +320,30 @@ export function PrivacyPage() {
           <li><strong>Railway</strong> — API server hosting</li>
         </ul>
 
-        <h2>6. Your Rights</h2>
-        <p>Depending on your location, you may have the following rights regarding your personal data:</p>
+        <h2>8. Your Rights (GDPR Art. 15–22)</h2>
+        <p>Under the General Data Protection Regulation, you have the following rights regarding your personal data:</p>
         <ul>
-          <li><strong>Access:</strong> Request a copy of the personal data we hold about you</li>
-          <li><strong>Deletion:</strong> Request deletion of your account and associated data</li>
-          <li><strong>Correction:</strong> Request correction of inaccurate personal data</li>
-          <li><strong>Export:</strong> Request a machine-readable export of your data</li>
-          <li><strong>Objection:</strong> Object to certain processing of your data</li>
+          <li><strong>Right of access (Art. 15):</strong> Request a copy of the personal data we hold about you. You can export your data at any time via Settings → Data Export.</li>
+          <li><strong>Right to rectification (Art. 16):</strong> Request correction of inaccurate or incomplete personal data.</li>
+          <li><strong>Right to erasure (Art. 17):</strong> Request deletion of your account and all associated data. You can initiate account deletion via Settings → Delete Account.</li>
+          <li><strong>Right to restrict processing (Art. 18):</strong> Request that we limit the processing of your personal data under certain circumstances.</li>
+          <li><strong>Right to data portability (Art. 20):</strong> Receive your personal data in a structured, commonly used, machine-readable format (JSON). Available via Settings → Export Data.</li>
+          <li><strong>Right to object (Art. 21):</strong> Object to the processing of your personal data based on legitimate interests, including usage analytics.</li>
+          <li><strong>Right to withdraw consent:</strong> Where processing is based on consent (e.g., marketing), you may withdraw your consent at any time without affecting the lawfulness of prior processing.</li>
+          <li><strong>Right to lodge a complaint:</strong> You have the right to lodge a complaint with your local data protection supervisory authority if you believe your data is being processed unlawfully.</li>
         </ul>
-        <p>To exercise any of these rights, contact us at <strong>privacy@stoicagentos.com</strong>. We will respond within 30 days.</p>
+        <p>To exercise any of these rights, contact us at <strong>privacy@stoicagentos.com</strong>. We will respond within 30 days (or within the timeframe required by your local data protection law).</p>
 
-        <h2>7. Contact</h2>
+        <h2>9. Automated Decision-Making</h2>
+        <p>We do not use automated decision-making or profiling that produces legal effects concerning you. While our platform uses AI to analyze agent performance and detect anomalies, these features are informational tools for your use and do not make decisions that have a legal or similarly significant effect on any individual.</p>
+
+        <h2>10. Cookies &amp; Session Management</h2>
+        <p>Stoic AgentOS uses cookies strictly for authentication and session management. When you sign in, a secure, HTTP-only session cookie is set to maintain your authenticated state. We do <strong>not</strong> use advertising cookies, tracking pixels, or third-party analytics cookies. These cookies are classified as strictly necessary and do not require consent under GDPR/ePrivacy Directive.</p>
+
+        <h2>11. Changes &amp; Contact</h2>
+        <p>We may update this Privacy Policy from time to time. If we make material changes, we will notify you via email or an in-app notification at least 14 days before the changes take effect.</p>
         <p>For privacy-related inquiries: <strong>privacy@stoicagentos.com</strong></p>
+        <p><em>Last updated: June 2026</em></p>
       </section>
     </PageShell>
   );

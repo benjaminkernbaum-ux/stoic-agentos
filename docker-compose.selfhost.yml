@@ -1,0 +1,65 @@
+# ═══════════════════════════════════════════════════════
+#  Stoic AgentOS — Self-Hosted Docker Compose
+# ═══════════════════════════════════════════════════════
+#
+#  One-command self-hosting:
+#    cp .env.selfhost.example .env.selfhost
+#    # Edit .env.selfhost with your Supabase + Stripe keys
+#    docker compose -f docker-compose.selfhost.yml up -d
+#
+#  This runs the API server only. You still need:
+#    - A Supabase project (free tier works)
+#    - Run all migrations in api/migrations/ via Supabase SQL editor
+#    - (Optional) Stripe keys for billing
+#    - (Optional) Anthropic key for AI features
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: stoic-agentos-api
+    restart: unless-stopped
+    ports:
+      - "${PORT:-4444}:4444"
+    environment:
+      NODE_ENV: production
+      PORT: 4444
+
+      # ── Required ──
+      SUPABASE_URL: ${SUPABASE_URL}
+      SUPABASE_SERVICE_KEY: ${SUPABASE_SERVICE_KEY}
+
+      # ── Optional: AI Features ──
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+
+      # ── Optional: Billing ──
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_PRO_PRICE_ID: ${STRIPE_PRO_PRICE_ID:-}
+      STRIPE_TEAM_PRICE_ID: ${STRIPE_TEAM_PRICE_ID:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+
+      # ── Optional: Rate Limiting (Redis) ──
+      UPSTASH_REDIS_REST_URL: ${UPSTASH_REDIS_REST_URL:-}
+      UPSTASH_REDIS_REST_TOKEN: ${UPSTASH_REDIS_REST_TOKEN:-}
+    env_file:
+      - .env.selfhost
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:4444/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "1.0"
+        reservations:
+          memory: 128M
+          cpus: "0.25"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

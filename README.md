@@ -1,7 +1,7 @@
 <p align="center">
   <h1 align="center">⚡ Stoic AgentOS</h1>
-  <p align="center"><strong>The Operating System for AI Agent Fleets</strong></p>
-  <p align="center">Monitor, orchestrate, and persist knowledge across your AI agents — from a single dashboard.</p>
+  <p align="center"><strong>The Cognitive Layer for AI Agent Fleets</strong></p>
+  <p align="center">Three-tier memory, knowledge persistence, reflection engine, and compliance audit — the brain your AI agents are missing.</p>
 </p>
 
 <div align="center">
@@ -293,20 +293,33 @@ Run Stoic AgentOS on your own infrastructure in under 5 minutes:
 git clone --depth=1 https://github.com/benjaminkernbaum-ux/stoic-agentos.git
 cd stoic-agentos
 
-# Copy environment config
-cp .env.example .env
+## Self-Hosting (Docker)
 
-# Run the full stack
-docker compose up
+Stoic AgentOS can be self-hosted with 3 commands. You'll need a [Supabase](https://supabase.com) project (free tier works).
+
+```bash
+# 1. Clone and configure
+git clone https://github.com/benjaminkernbaum-ux/stoic-agentos.git
+cd stoic-agentos
+cp .env.selfhost.example .env.selfhost
+# Edit .env.selfhost with your Supabase URL + service key
+
+# 2. Run all migrations in Supabase SQL editor
+# (api/migrations/002_*.sql through 015_*.sql)
+
+# 3. Start the API
+docker compose -f docker-compose.selfhost.yml up -d
 ```
 
-**What's included:**
-- 🖥️ Dashboard (Vite + React) → `http://localhost:3000`
-- 🔌 API Server (Express) → `http://localhost:3001`
-- 🐘 PostgreSQL 16 (data)
-- ⚡ Redis 7 (cache + queue)
+**What you get:**
+- 🔌 API Server (Express + TypeScript) → `http://localhost:4444`
+- 🛡️ Non-root container, health checks, auto-restart
+- 📦 512MB memory limit, optimized for single-instance
+- 🔑 Optional: Stripe billing, Anthropic AI, Upstash Redis
 
-See [self-hosting documentation](https://stoicagentos.com/docs/self-hosting) for production deployment guides (Docker Compose, Kubernetes, Terraform).
+For the dashboard frontend, run `npm run dev` in the project root or deploy to Vercel/Netlify.
+
+See [self-hosting docs](https://stoicagentos.com/docs/self-hosting) for Kubernetes and Terraform guides.
 
 ---
 

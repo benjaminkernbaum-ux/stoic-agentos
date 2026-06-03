@@ -172,3 +172,23 @@
     padding-bottom: calc(24px + env(safe-area-inset-bottom));
   }
 }
+
+/* ── GDPR Consent Checkbox ── */
+.signup-consent {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 0.82rem;
+  color: rgba(255,255,255,0.6);
+  margin: 12px 0 4px;
+  cursor: pointer;
+}
+.signup-consent input[type='checkbox'] {
+  margin-top: 3px;
+  accent-color: #a78bfa;
+  cursor: pointer;
+}
+.signup-consent a {
+  color: #a78bfa;
+  text-decoration: underline;
+}

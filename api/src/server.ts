@@ -45,9 +45,12 @@ import insightRoutes from './routes/insights.js';
 import chatRoutes from './routes/chat.js';
 import memoryRoutes from './routes/memory.js';
 import complianceRoutes from './routes/compliance.js';
+import gdprRoutes from './routes/gdpr.js';
 import reflectionRoutes from './routes/reflection.js';
+import evaluationRoutes from './routes/evaluations.js';
 import statusRoutes from './routes/status.js';
 import integrationRoutes from './routes/integrations.js';
+import langfuseRoutes from './routes/langfuse.js';
 import { probeVaultRpc } from './lib/anthropic.js';
 
 // ── Install process-level safety nets ──
@@ -126,9 +129,12 @@ app.use(insightRoutes);
 app.use(chatRoutes);       // AI Chat Assistant
 app.use(memoryRoutes);     // Three-Tier Memory (Working/Episodic/Semantic)
 app.use(complianceRoutes); // Audit Log + Circuit Breaker
+app.use(gdprRoutes);       // GDPR Data Subject Rights (Art. 15-20)
 app.use(reflectionRoutes); // Reflection Worker + Memory Decay
+app.use(evaluationRoutes);  // Evaluation scores per trace
 app.use(statusRoutes);     // Self-monitoring + Status Page
 app.use(integrationRoutes); // Integration connection state
+app.use(langfuseRoutes);  // Langfuse trace import
 
 // ── 404 handler ──
 app.use((req: Request, res: Response) => {

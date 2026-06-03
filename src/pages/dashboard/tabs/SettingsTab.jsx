@@ -199,6 +199,82 @@ function AnthropicUsagePanel() {
 }
 
 export default function SettingsTab({ userName, user, orgName, planName, handleUpgrade, upgradeLoading, handleManageSubscription, apiKey, apiKeys, handleGenerateKey, handleRevokeKey, keyGenLoading, handleLogout, toast }) {
+  const [exportLoading, setExportLoading] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(null); // 'account' | 'org' | null
+
+  const handleExportData = async () => {
+    setExportLoading(true);
+    try {
+      const token = await authToken();
+      const res = await fetch(`${API_BASE}/api/v1/gdpr/export`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `stoic-agentos-export-${new Date().toISOString().slice(0, 10)}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        toast('Data exported successfully', 'success');
+      } else {
+        const body = await res.json().catch(() => ({}));
+        toast(body.error || 'Export failed', 'error');
+      }
+    } catch {
+      toast('Export failed — check your connection', 'error');
+    }
+    setExportLoading(false);
+  };
+
+  const handleDeleteAccount = async () => {
+    setDeleteLoading(true);
+    try {
+      const token = await authToken();
+      const res = await fetch(`${API_BASE}/api/v1/gdpr/delete-account`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirm: 'DELETE MY ACCOUNT' }),
+      });
+      if (res.ok) {
+        toast('Account deleted. Signing out...', 'success');
+        setTimeout(() => handleLogout(), 2000);
+      } else {
+        const body = await res.json().catch(() => ({}));
+        toast(body.error || 'Deletion failed', 'error');
+      }
+    } catch {
+      toast('Deletion failed — check your connection', 'error');
+    }
+    setDeleteLoading(false);
+    setShowDeleteConfirm(null);
+  };
+
+  const handleDeleteOrg = async () => {
+    setDeleteLoading(true);
+    try {
+      const token = await authToken();
+      const res = await fetch(`${API_BASE}/api/v1/gdpr/delete-org`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirm: 'DELETE MY DATA', org_slug: orgName?.toLowerCase().replace(/\s+/g, '-') }),
+      });
+      if (res.ok) {
+        toast('Organization deleted. Signing out...', 'success');
+        setTimeout(() => handleLogout(), 2000);
+      } else {
+        const body = await res.json().catch(() => ({}));
+        toast(body.error || body.hint || 'Deletion failed', 'error');
+      }
+    } catch {
+      toast('Deletion failed — check your connection', 'error');
+    }
+    setDeleteLoading(false);
+    setShowDeleteConfirm(null);
+  };
+
   return (
     <div className="dash-content">
 
@@ -348,6 +424,71 @@ export default function SettingsTab({ userName, user, orgName, planName, handleU
 
       {/* Claude usage */}
       <AnthropicUsagePanel />
+
+      {/* Data & Privacy (GDPR) */}
+      <div className="dash-settings-section">
+        <div className="dash-settings-section-head">Data & Privacy</div>
+
+        <div className="dash-settings-row">
+          <div className="dash-settings-icon">📦</div>
+          <div className="dash-settings-info">
+            <div className="dash-settings-label">Export Your Data</div>
+            <div className="dash-settings-value">Download a JSON archive of all your organization data (GDPR Art. 15/20)</div>
+          </div>
+          <button
+            className="btn btn-primary btn-sm"
+            onClick={handleExportData}
+            disabled={exportLoading}
+          >
+            {exportLoading ? 'Exporting...' : '⬇ Export'}
+          </button>
+        </div>
+
+        <div className="dash-settings-row">
+          <div className="dash-settings-icon">📋</div>
+          <div className="dash-settings-info">
+            <div className="dash-settings-label">Data Retention</div>
+            <div className="dash-settings-value">Traces: 90 days · Observations: 6 months · Chat: 6 months · Audit: 3 years</div>
+          </div>
+          <a href="/privacy" className="btn btn-ghost btn-sm" style={{ textDecoration: 'none' }}>View Policy</a>
+        </div>
+
+        <div className="dash-settings-row" style={{ borderLeft: '2px solid rgba(255,100,100,0.3)', paddingLeft: 12 }}>
+          <div className="dash-settings-icon">⚠️</div>
+          <div className="dash-settings-info">
+            <div className="dash-settings-label" style={{ color: '#ff6b6b' }}>Delete Account</div>
+            <div className="dash-settings-value">Remove your personal data and leave this organization (GDPR Art. 17)</div>
+          </div>
+          {showDeleteConfirm === 'account' ? (
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button className="btn btn-danger btn-sm" onClick={handleDeleteAccount} disabled={deleteLoading}>
+                {deleteLoading ? 'Deleting...' : 'Confirm Delete'}
+              </button>
+              <button className="btn btn-ghost btn-sm" onClick={() => setShowDeleteConfirm(null)}>Cancel</button>
+            </div>
+          ) : (
+            <button className="btn btn-danger btn-sm" onClick={() => setShowDeleteConfirm('account')}>Delete Account</button>
+          )}
+        </div>
+
+        <div className="dash-settings-row" style={{ borderLeft: '2px solid rgba(255,50,50,0.5)', paddingLeft: 12 }}>
+          <div className="dash-settings-icon">🗑️</div>
+          <div className="dash-settings-info">
+            <div className="dash-settings-label" style={{ color: '#ff4444' }}>Delete Organization</div>
+            <div className="dash-settings-value">Permanently delete all org data: agents, traces, memory, and billing (irreversible)</div>
+          </div>
+          {showDeleteConfirm === 'org' ? (
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button className="btn btn-danger btn-sm" onClick={handleDeleteOrg} disabled={deleteLoading}>
+                {deleteLoading ? 'Deleting...' : '⚠ Confirm Delete Org'}
+              </button>
+              <button className="btn btn-ghost btn-sm" onClick={() => setShowDeleteConfirm(null)}>Cancel</button>
+            </div>
+          ) : (
+            <button className="btn btn-danger btn-sm" onClick={() => setShowDeleteConfirm('org')}>Delete Org</button>
+          )}
+        </div>
+      </div>
 
       {/* Danger zone */}
       <div className="dash-settings-section">
