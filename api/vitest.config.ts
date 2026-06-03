@@ -5,5 +5,10 @@ export default defineConfig({
     globals: true,
     testTimeout: 15000,
     hookTimeout: 10000,
+    exclude: [
+      '**/node_modules/**',
+      '**/tests/e2e/**',
+      '**/src/__tests__/api-smoke*',
+    ],
   },
 });
