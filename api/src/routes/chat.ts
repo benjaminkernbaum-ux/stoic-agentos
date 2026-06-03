@@ -1052,7 +1052,7 @@ router.post(`/api/${API_VERSION}/chat/stream`, authenticate, async (req: Authent
     });
 
     const client = await getAnthropic(req.org);
-    const modelId = MODELS['smart'] || 'claude-sonnet-4-20250514';
+    const modelId = MODELS['smart'] || 'claude-sonnet-4-6';
 
     // Use streaming API
     const stream = client.messages.stream({

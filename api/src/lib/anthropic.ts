@@ -46,8 +46,8 @@ interface CompleteResult {
 }
 
 export const MODELS: Record<string, string> = {
-  fast: 'claude-3-5-haiku-20241022',
-  smart: 'claude-3-7-sonnet-20250219',
+  fast: 'claude-haiku-4-5-20251001',
+  smart: 'claude-sonnet-4-6',
 };
 
 const PLATFORM_KEY = process.env.ANTHROPIC_API_KEY || '';
@@ -190,16 +190,21 @@ export async function complete(org: AnthropicOrg, { model = 'fast', system, mess
   const client = await getAnthropic(org);
   const modelId = MODELS[model] || model;
 
+  // Apply cache_control on the system prompt content block (not top-level)
+  const systemBlock = system
+    ? [{ type: 'text', text: typeof system === 'string' ? system : JSON.stringify(system), cache_control: { type: 'ephemeral' } }]
+    : undefined;
+
   const params: Record<string, unknown> = {
     model: modelId,
     max_tokens: maxTokens,
-    system,
+    system: systemBlock || system,
     messages,
-    cache_control: { type: 'ephemeral' },
   };
 
   if (thinking && modelId === MODELS.smart) {
-    params.thinking = { type: 'enabled', budget_tokens: 1024 };
+    params.thinking = { type: 'adaptive' };
+    params.effort = 'medium';
     if ((params.max_tokens as number) <= 1024) {
       params.max_tokens = 2048;
     }

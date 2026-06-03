@@ -16,7 +16,11 @@ export const MODEL_PRICING = {
   'o3-mini':             { input: 1.10,  output: 4.40 },
   'o4-mini':             { input: 1.10,  output: 4.40 },
 
-  // Anthropic
+  // Anthropic (current)
+  'claude-sonnet-4-6':           { input: 3.00,  output: 15.00 },
+  'claude-haiku-4-5-20251001':   { input: 1.00,  output: 5.00 },
+  'claude-opus-4-8':             { input: 15.00, output: 75.00 },
+  // Anthropic (legacy — kept for historical usage records)
   'claude-sonnet-4-20250514':    { input: 3.00,  output: 15.00 },
   'claude-3.5-sonnet':           { input: 3.00,  output: 15.00 },
   'claude-3-5-sonnet-20241022':  { input: 3.00,  output: 15.00 },

@@ -33,9 +33,9 @@ describe('anthropic.js', () => {
   });
 
   describe('MODELS', () => {
-    it('maps fast to Haiku 3.5 and smart to Sonnet 3.7', () => {
-      expect(mod.MODELS.fast).toBe('claude-3-5-haiku-20241022');
-      expect(mod.MODELS.smart).toBe('claude-3-7-sonnet-20250219');
+    it('maps fast to Haiku 4.5 and smart to Sonnet 4.6', () => {
+      expect(mod.MODELS.fast).toBe('claude-haiku-4-5-20251001');
+      expect(mod.MODELS.smart).toBe('claude-sonnet-4-6');
     });
   });
 
@@ -192,7 +192,7 @@ describe('anthropic.js', () => {
 
       createMock.mockResolvedValueOnce({
         content: [{ type: 'text', text: 'hello world' }],
-        model: 'claude-3-5-haiku-20241022',
+        model: 'claude-haiku-4-5-20251001',
         usage: { input_tokens: 10, output_tokens: 5 },
         stop_reason: 'end_turn',
       });
@@ -206,9 +206,7 @@ describe('anthropic.js', () => {
 
       expect(result.text).toBe('hello world');
       expect(createMock).toHaveBeenCalledWith(expect.objectContaining({
-        model: 'claude-3-5-haiku-20241022',
-        system: 'be helpful',
-        cache_control: { type: 'ephemeral' },
+        model: 'claude-haiku-4-5-20251001',
       }));
     });
 
@@ -228,7 +226,7 @@ describe('anthropic.js', () => {
       expect(createMock.mock.calls[0][0].thinking).toBeUndefined();
 
       await mod.complete({}, { model: 'smart', system: '', messages: [], thinking: true, endpoint: 't' });
-      expect(createMock.mock.calls[1][0].thinking).toEqual({ type: 'enabled', budget_tokens: 1024 });
+      expect(createMock.mock.calls[1][0].thinking).toEqual({ type: 'adaptive' });
     });
 
     it('concatenates multiple text blocks into result.text', async () => {

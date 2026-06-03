@@ -52,7 +52,7 @@ const API_KEY = process.env.AGENTOS_API_KEY || '';
 const INFRA_PATH = process.env.INFRA_AGENT_PATH || '';
 const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY || '';
 
-const MODELS = { fast: 'claude-3-5-haiku-20241022', smart: 'claude-3-5-sonnet-20241022' };
+const MODELS = { fast: 'claude-haiku-4-5-20251001', smart: 'claude-sonnet-4-6' };
 const anthropic = ANTHROPIC_KEY ? new Anthropic({ apiKey: ANTHROPIC_KEY }) : null;
 
 async function claudeCall({ model = 'fast', system, prompt, maxTokens = 1024 }) {
