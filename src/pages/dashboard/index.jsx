@@ -363,6 +363,8 @@ export default function Dashboard() {
       <AgentDetailModal
         agent={selectedAgent} onClose={() => setSelectedAgent(null)}
         onToggleStatus={(id, status) => actions.toggleAgentStatus(id, status, setSelectedAgent)}
+        onRunAgent={(id, task, wsId) => actions.handleRunAgent(id, task, wsId)}
+        workspaces={data.workspaces}
       />
 
       <KnowledgeItemModal

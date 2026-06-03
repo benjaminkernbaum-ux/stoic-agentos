@@ -529,6 +529,31 @@ export function useDashboardActions({ org, toast, fetchData, setAgents, setObser
     } catch { toast('Failed to update status', 'error'); }
   };
 
+  const handleRunAgent = async (agentId, task, workspaceId) => {
+    try {
+      const token = await getToken();
+      const res = await fetch(`${API_BASE}/api/v1/agents/${agentId}/run`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ task, workspace_id: workspaceId }),
+      });
+      if (res.ok) {
+        const body = await res.json();
+        setAgents(prev => prev.map(a => a.id === agentId ? body.agent : a));
+        toast('✨ Agent execution completed successfully!', 'success');
+        fetchData();
+        return body;
+      } else {
+        const body = await res.json().catch(() => ({}));
+        toast(body.error || 'Agent execution failed', 'error');
+        return { error: body.error || 'Agent execution failed' };
+      }
+    } catch (err) {
+      toast('Agent execution failed — network error', 'error');
+      return { error: 'Network error' };
+    }
+  };
+
   const handleCreateKI = async (e, kiForm, setKiForm, setShowKiModal) => {
     e.preventDefault();
     if (!kiForm.name.trim()) return;
@@ -563,6 +588,7 @@ export function useDashboardActions({ org, toast, fetchData, setAgents, setObser
     handleAddWorkspace,
     handleDeleteObs,
     toggleAgentStatus,
+    handleRunAgent,
     handleCreateKI,
   };
 }

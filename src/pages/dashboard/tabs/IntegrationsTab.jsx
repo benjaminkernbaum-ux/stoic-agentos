@@ -337,9 +337,56 @@ export default function IntegrationsTab({ org, toast }) {
                     </div>
                     <h4 className="hub-card-name">{item.name}</h4>
                     <p className="hub-card-desc">{item.desc}</p>
+                    
+                    {item.id === 'smtp' && connected.has('smtp') && details.smtp && (
+                      <div className="hub-card-details" style={{ marginTop: 8, marginBottom: 12, padding: 8, background: 'rgba(255,255,255,0.02)', borderRadius: 6, border: '1px solid rgba(255,255,255,0.05)', fontSize: 11, fontFamily: 'monospace', display: 'flex', flexDirection: 'column', gap: 4, color: 'rgba(255,255,255,0.6)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span style={{ color: 'rgba(255,255,255,0.3)' }}>Host:</span>
+                          <span>{details.smtp.host}:{details.smtp.port}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span style={{ color: 'rgba(255,255,255,0.3)' }}>User:</span>
+                          <span>{details.smtp.user}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span style={{ color: 'rgba(255,255,255,0.3)' }}>From:</span>
+                          <span>{details.smtp.fromEmail}</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {item.id === 'twilio' && connected.has('twilio') && details.twilio && (
+                      <div className="hub-card-details" style={{ marginTop: 8, marginBottom: 12, padding: 8, background: 'rgba(255,255,255,0.02)', borderRadius: 6, border: '1px solid rgba(255,255,255,0.05)', fontSize: 11, fontFamily: 'monospace', display: 'flex', flexDirection: 'column', gap: 4, color: 'rgba(255,255,255,0.6)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span style={{ color: 'rgba(255,255,255,0.3)' }}>SID:</span>
+                          <span>{details.twilio.accountSid}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span style={{ color: 'rgba(255,255,255,0.3)' }}>From:</span>
+                          <span>{details.twilio.fromNumber}</span>
+                        </div>
+                      </div>
+                    )}
+
                     <button
                       className={`hub-card-btn ${connected.has(item.id) ? 'disconnect' : ''}`}
-                      onClick={() => toggleConnect(item.id)}
+                      onClick={() => {
+                        if (item.id === 'smtp') {
+                          if (connected.has('smtp')) {
+                            handleDisconnectCredentials('smtp');
+                          } else {
+                            setActiveModal('smtp');
+                          }
+                        } else if (item.id === 'twilio') {
+                          if (connected.has('twilio')) {
+                            handleDisconnectCredentials('twilio');
+                          } else {
+                            setActiveModal('twilio');
+                          }
+                        } else {
+                          toggleConnect(item.id);
+                        }
+                      }}
                     >
                       {connected.has(item.id) ? '✓ Disconnect' : 'Connect →'}
                     </button>
@@ -350,6 +397,159 @@ export default function IntegrationsTab({ org, toast }) {
           ))
         )}
       </div>
+
+      {activeModal === 'smtp' && (
+        <div className="cmd-backdrop" onClick={() => setActiveModal(null)} style={{ zIndex: 1000 }}>
+          <div className="cmd-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 460, padding: '28px 32px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+              <h3 style={{ fontSize: 18, fontWeight: 800, color: '#fff' }}>Configure SMTP Server</h3>
+              <button 
+                type="button" 
+                onClick={() => setActiveModal(null)} 
+                style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', fontSize: 20, cursor: 'pointer', padding: 0 }}
+              >
+                &times;
+              </button>
+            </div>
+            <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginBottom: 20 }}>
+              Connect your own SMTP relay to let Mercury send outreach emails directly from your domain.
+            </p>
+            <form onSubmit={handleSmtpSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <label style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>SMTP Host</label>
+                <input 
+                  placeholder="e.g. smtp.mailgun.org" 
+                  required 
+                  value={smtpForm.host} 
+                  onChange={e => setSmtpForm({...smtpForm, host: e.target.value})} 
+                  style={{ padding: '10px 14px', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)', borderRadius: 8, color: '#fff', fontSize: 13, outline: 'none' }} 
+                />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <label style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Port</label>
+                  <input 
+                    placeholder="e.g. 587" 
+                    required 
+                    value={smtpForm.port} 
+                    onChange={e => setSmtpForm({...smtpForm, port: e.target.value})} 
+                    style={{ padding: '10px 14px', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)', borderRadius: 8, color: '#fff', fontSize: 13, outline: 'none' }} 
+                  />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <label style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>From Email</label>
+                  <input 
+                    type="email"
+                    placeholder="hello@yourdomain.com" 
+                    required 
+                    value={smtpForm.fromEmail} 
+                    onChange={e => setSmtpForm({...smtpForm, fromEmail: e.target.value})} 
+                    style={{ padding: '10px 14px', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)', borderRadius: 8, color: '#fff', fontSize: 13, outline: 'none' }} 
+                  />
+                </div>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <label style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Username</label>
+                <input 
+                  placeholder="SMTP Username" 
+                  required 
+                  value={smtpForm.user} 
+                  onChange={e => setSmtpForm({...smtpForm, user: e.target.value})} 
+                  style={{ padding: '10px 14px', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)', borderRadius: 8, color: '#fff', fontSize: 13, outline: 'none' }} 
+                />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <label style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Password</label>
+                <input 
+                  type="password"
+                  placeholder="SMTP Password" 
+                  required 
+                  value={smtpForm.pass} 
+                  onChange={e => setSmtpForm({...smtpForm, pass: e.target.value})} 
+                  style={{ padding: '10px 14px', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)', borderRadius: 8, color: '#fff', fontSize: 13, outline: 'none' }} 
+                />
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '4px 0' }}>
+                <input 
+                  type="checkbox" 
+                  id="smtp-secure"
+                  checked={smtpForm.secure} 
+                  onChange={e => setSmtpForm({...smtpForm, secure: e.target.checked})}
+                  style={{ cursor: 'pointer' }}
+                />
+                <label htmlFor="smtp-secure" style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', cursor: 'pointer', userSelect: 'none' }}>
+                  Use SSL/TLS secure connection
+                </label>
+              </div>
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 12 }}>
+                <button type="button" className="btn btn-ghost btn-sm" onClick={() => setActiveModal(null)} disabled={formLoading}>Cancel</button>
+                <button type="submit" className="btn btn-primary btn-sm" disabled={formLoading}>
+                  {formLoading ? 'Connecting...' : 'Connect SMTP'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {activeModal === 'twilio' && (
+        <div className="cmd-backdrop" onClick={() => setActiveModal(null)} style={{ zIndex: 1000 }}>
+          <div className="cmd-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 460, padding: '28px 32px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+              <h3 style={{ fontSize: 18, fontWeight: 800, color: '#fff' }}>Configure Twilio Gateway</h3>
+              <button 
+                type="button" 
+                onClick={() => setActiveModal(null)} 
+                style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', fontSize: 20, cursor: 'pointer', padding: 0 }}
+              >
+                &times;
+              </button>
+            </div>
+            <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginBottom: 20 }}>
+              Connect your Twilio Account SID and Token to let Hermes automate WhatsApp and SMS outreach.
+            </p>
+            <form onSubmit={handleTwilioSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <label style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Account SID</label>
+                <input 
+                  placeholder="e.g. ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" 
+                  required 
+                  value={twilioForm.accountSid} 
+                  onChange={e => setTwilioForm({...twilioForm, accountSid: e.target.value})} 
+                  style={{ padding: '10px 14px', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)', borderRadius: 8, color: '#fff', fontSize: 13, outline: 'none' }} 
+                />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <label style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Auth Token</label>
+                <input 
+                  type="password"
+                  placeholder="Twilio Auth Token" 
+                  required 
+                  value={twilioForm.authToken} 
+                  onChange={e => setTwilioForm({...twilioForm, authToken: e.target.value})} 
+                  style={{ padding: '10px 14px', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)', borderRadius: 8, color: '#fff', fontSize: 13, outline: 'none' }} 
+                />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <label style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Sender ID / Phone Number</label>
+                <input 
+                  placeholder="e.g. whatsapp:+14155238886 or +1234567890" 
+                  required 
+                  value={twilioForm.fromNumber} 
+                  onChange={e => setTwilioForm({...twilioForm, fromNumber: e.target.value})} 
+                  style={{ padding: '10px 14px', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)', borderRadius: 8, color: '#fff', fontSize: 13, outline: 'none' }} 
+                />
+              </div>
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 12 }}>
+                <button type="button" className="btn btn-ghost btn-sm" onClick={() => setActiveModal(null)} disabled={formLoading}>Cancel</button>
+                <button type="submit" className="btn btn-primary btn-sm" disabled={formLoading}>
+                  {formLoading ? 'Connecting...' : 'Connect Twilio'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { AGENT_STATUSES } from '../constants';
 
 export function AgentModal({ show, agentForm, setAgentForm, onSubmit, onClose }) {
@@ -40,11 +41,47 @@ export function WorkspaceModal({ show, wsForm, setWsForm, onSubmit, onClose }) {
   );
 }
 
-export function AgentDetailModal({ agent, onClose, onToggleStatus }) {
+export function AgentDetailModal({ agent, onClose, onToggleStatus, onRunAgent, workspaces = [] }) {
+  const [task, setTask] = useState('');
+  const [selectedWorkspace, setSelectedWorkspace] = useState('');
+  const [running, setRunning] = useState(false);
+  const [runResult, setRunResult] = useState(null);
+
   if (!agent) return null;
+
+  // Set default workspace if available
+  if (workspaces.length > 0 && !selectedWorkspace) {
+    setSelectedWorkspace(workspaces[0].id);
+  }
+
+  const handleRun = async (e) => {
+    e.preventDefault();
+    setRunning(true);
+    setRunResult(null);
+    try {
+      const res = await onRunAgent(agent.id, task, selectedWorkspace);
+      if (res && res.success) {
+        setRunResult(res.response);
+        setTask('');
+      } else {
+        setRunResult(`[Error] Execution failed: ${res?.error || 'Unknown error'}`);
+      }
+    } catch (err) {
+      setRunResult(`[Error] Network request failed.`);
+    }
+    setRunning(false);
+  };
+
+  const handleClose = () => {
+    setTask('');
+    setRunResult(null);
+    setRunning(false);
+    onClose();
+  };
+
   return (
-    <div className="cmd-backdrop" onClick={onClose}>
-      <div className="cmd-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 500, padding: 28 }}>
+    <div className="cmd-backdrop" onClick={handleClose}>
+      <div className="cmd-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 500, padding: 28, maxHeight: '90vh', overflowY: 'auto' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
           <div style={{ width: 40, height: 40, borderRadius: 10, background: 'rgba(155,89,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>🤖</div>
           <div>
@@ -68,12 +105,76 @@ export function AgentDetailModal({ agent, onClose, onToggleStatus }) {
             <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase' }}>Last Heartbeat</div>
           </div>
         </div>
-        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.2)' }}>ID: {agent.id}</div>
-        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 16 }}>
+        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.2)', marginBottom: 16 }}>ID: {agent.id}</div>
+
+        {/* Live Execution Form */}
+        <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 16, marginBottom: 16 }}>
+          <h4 style={{ fontSize: 14, fontWeight: 700, marginBottom: 12, color: 'rgba(255,255,255,0.8)' }}>
+            ⚡ Direct Execution Hub
+          </h4>
+          <form onSubmit={handleRun} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <label style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', fontWeight: 600, textTransform: 'uppercase' }}>Target Workspace</label>
+              <select 
+                value={selectedWorkspace} 
+                onChange={e => setSelectedWorkspace(e.target.value)}
+                style={{ padding: '8px 12px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', borderRadius: 8, color: '#fff', fontSize: 12, outline: 'none', width: '100%' }}
+              >
+                {workspaces.map(w => (
+                  <option key={w.id} value={w.id} style={{ background: '#1c1c24' }}>
+                    {w.name} ({w.stack || 'General'})
+                  </option>
+                ))}
+                {workspaces.length === 0 && (
+                  <option value="" style={{ background: '#1c1c24' }}>No workspaces registered</option>
+                )}
+              </select>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <label style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', fontWeight: 600, textTransform: 'uppercase' }}>Task Details</label>
+              <textarea 
+                placeholder="Describe what task the agent should perform (e.g. scrape targets, draft pitch, inspect logs)..."
+                value={task}
+                required
+                onChange={e => setTask(e.target.value)}
+                rows={2}
+                style={{ padding: '8px 12px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)', borderRadius: 8, color: '#fff', fontSize: 12, outline: 'none', resize: 'vertical', fontFamily: 'inherit' }}
+              />
+            </div>
+            <button 
+              type="submit" 
+              className="btn btn-primary btn-sm" 
+              disabled={running}
+              style={{ padding: '8px 16px', fontSize: 12, width: '100%', justifyContent: 'center' }}
+            >
+              {running ? '⚙️ Running Agent (Claude)...' : '⚡ Trigger Autonomous Agent Run'}
+            </button>
+          </form>
+        </div>
+
+        {/* Live Output Feed */}
+        {runResult && (
+          <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 16, marginBottom: 16 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent-cyan)', marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>📊 Claude Execution Output</span>
+              <button 
+                onClick={() => setRunResult(null)} 
+                style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', fontSize: 11, cursor: 'pointer', textDecoration: 'underline' }}
+              >
+                Clear
+              </button>
+            </div>
+            <div style={{ maxHeight: 200, overflowY: 'auto', padding: 12, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 8, fontSize: 12, fontFamily: 'monospace', color: 'rgba(255,255,255,0.85)', whiteSpace: 'pre-wrap', lineHeight: 1.4 }}>
+              {runResult}
+            </div>
+          </div>
+        )}
+
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', borderTop: '1px solid rgba(255,255,255,0.04)', paddingTop: 12 }}>
           <button className="btn btn-ghost btn-sm" onClick={() => onToggleStatus(agent.id, agent.status)}>
             ⚡ Toggle Status → {AGENT_STATUSES[(AGENT_STATUSES.indexOf(agent.status || 'idle') + 1) % AGENT_STATUSES.length]}
           </button>
-          <button className="btn btn-ghost btn-sm" onClick={onClose}>Close</button>
+          <button className="btn btn-ghost btn-sm" onClick={handleClose}>Close</button>
         </div>
       </div>
     </div>
