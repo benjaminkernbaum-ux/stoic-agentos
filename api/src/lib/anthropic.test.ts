@@ -33,9 +33,9 @@ describe('anthropic.js', () => {
   });
 
   describe('MODELS', () => {
-    it('maps fast to Haiku 3.5 and smart to Sonnet 3.5', () => {
+    it('maps fast to Haiku 3.5 and smart to Sonnet 3.7', () => {
       expect(mod.MODELS.fast).toBe('claude-3-5-haiku-20241022');
-      expect(mod.MODELS.smart).toBe('claude-3-5-sonnet-20241022');
+      expect(mod.MODELS.smart).toBe('claude-3-7-sonnet-20250219');
     });
   });
 

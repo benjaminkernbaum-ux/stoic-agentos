@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { supabase, API_BASE } from '../../../lib/supabase';
 
 const MODELS = [
   { id: 'default', label: '✦ Auto', desc: 'Best model for the task', badge: 'SMART' },
@@ -25,7 +26,7 @@ function MessageBubble({ msg }) {
         </div>
       )}
       <div className={`comms-msg-bubble ${isUser ? 'user' : 'agent'}`}>
-        <div className="comms-msg-text">{msg.content}</div>
+        <div className="comms-msg-text" style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</div>
         <div className="comms-msg-meta">
           <span className="comms-msg-time">
             {new Date(msg.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -62,9 +63,11 @@ export default function ChatTab({ agents }) {
   const [showModelPicker, setShowModelPicker] = useState(false);
   const [threadSidebar, setThreadSidebar] = useState(true);
   const [isTyping, setIsTyping] = useState(false);
+  const [suggestions, setSuggestions] = useState(['Review PR #142', 'Summarize Slack', 'Write API docs', 'Monitor deploys']);
   const endRef = useRef(null);
   const inputRef = useRef(null);
   const modelPickerRef = useRef(null);
+  
   const activeThreadRef = useRef(activeThread);
   const modelRef = useRef(model);
   const modeRef = useRef(mode);
@@ -76,9 +79,95 @@ export default function ChatTab({ agents }) {
   const thread = threads.find(t => t.id === activeThread) || threads[0];
   const messages = thread?.messages || [];
 
+  const fetchHistory = useCallback(async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      const res = await fetch(`${API_BASE}/api/v1/chat/history`, {
+        headers: { Authorization: `Bearer ${session.access_token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.conversations) {
+          setThreads(prev => {
+            const existingDefault = prev.find(t => t.id === 'default');
+            const backendThreads = data.conversations.map(c => ({
+              id: c.conv_id,
+              name: c.title || 'Conversation',
+              messages: prev.find(t => t.id === c.conv_id)?.messages || [],
+              createdAt: new Date(c.updated_at).getTime(),
+            }));
+            if (existingDefault && (existingDefault.messages.length > 0 || activeThreadRef.current === 'default')) {
+              return [existingDefault, ...backendThreads];
+            }
+            return backendThreads.length > 0 ? backendThreads : [{ id: 'default', name: 'New Mission', messages: [], createdAt: Date.now() }];
+          });
+        }
+      }
+    } catch (err) {
+      console.error('Failed to fetch history:', err);
+    }
+  }, []);
+
+  const fetchSuggestions = useCallback(async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      const res = await fetch(`${API_BASE}/api/v1/chat/suggestions?mode=${mode}`, {
+        headers: { Authorization: `Bearer ${session.access_token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.suggestions) {
+          setSuggestions(data.suggestions.map(s => s.text));
+        }
+      }
+    } catch (err) {
+      console.error('Failed to fetch suggestions:', err);
+    }
+  }, [mode]);
+
+  useEffect(() => {
+    fetchHistory();
+  }, [fetchHistory]);
+
+  useEffect(() => {
+    fetchSuggestions();
+  }, [fetchSuggestions]);
+
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages.length, isTyping]);
+
+  useEffect(() => {
+    if (activeThread === 'default') return;
+    const currentThread = threads.find(t => t.id === activeThread);
+    if (currentThread && currentThread.messages.length > 0) return;
+
+    const loadThreadMessages = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return;
+        const res = await fetch(`${API_BASE}/api/v1/chat/${activeThread}`, {
+          headers: { Authorization: `Bearer ${session.access_token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.messages) {
+            setThreads(prev => prev.map(t =>
+              t.id === activeThread
+                ? { ...t, messages: data.messages.map((m, idx) => ({ id: idx, role: m.role, content: m.content, ts: Date.now() })) }
+                : t
+            ));
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load thread messages:', err);
+      }
+    };
+
+    loadThreadMessages();
+  }, [activeThread, threads]);
 
   useEffect(() => {
     if (!showModelPicker) return;
@@ -91,40 +180,214 @@ export default function ChatTab({ agents }) {
     return () => document.removeEventListener('mousedown', handler);
   }, [showModelPicker]);
 
-  const handleSend = () => {
+  const handleDeleteThread = async (e, id) => {
+    e.stopPropagation();
+    if (!window.confirm('Delete this mission?')) return;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      const res = await fetch(`${API_BASE}/api/v1/chat/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${session.access_token}` }
+      });
+      if (res.ok) {
+        setThreads(prev => prev.filter(t => t.id !== id));
+        if (activeThreadRef.current === id) {
+          setActiveThread('default');
+        }
+        fetchHistory();
+      }
+    } catch (err) {
+      console.error('Failed to delete conversation:', err);
+    }
+  };
+
+  const handleSend = async () => {
     if (!input.trim()) return;
-    const userMsg = { id: Date.now(), role: 'user', content: input.trim(), ts: Date.now() };
+    const messageText = input.trim();
+    const userMsg = { id: Date.now(), role: 'user', content: messageText, ts: Date.now() };
+    const threadId = activeThreadRef.current;
+    
     setThreads(prev => prev.map(t =>
-      t.id === activeThread
-        ? { ...t, name: t.messages.length === 0 ? input.trim().slice(0, 40) : t.name, messages: [...t.messages, userMsg] }
+      t.id === threadId
+        ? { ...t, name: t.messages.length === 0 ? messageText.slice(0, 40) : t.name, messages: [...t.messages, userMsg] }
         : t
     ));
     setInput('');
     setIsTyping(true);
 
-    const threadId = activeThreadRef.current;
-    const modelId = modelRef.current;
-    const modeId = modeRef.current;
-    const modelLabel = MODELS.find(m => m.id === modelId)?.label || 'Auto';
-    const modeLabel = MODES.find(m => m.id === modeId)?.label || 'Chat';
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('No active session');
 
-    setTimeout(() => {
+      const modelLabel = MODELS.find(m => m.id === modelRef.current)?.label || 'Auto';
+
+      const response = await fetch(`${API_BASE}/api/v1/chat/stream`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          message: messageText,
+          conversation_id: threadId === 'default' ? undefined : threadId,
+          mode: modeRef.current,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error ${response.status}`);
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let done = false;
+      let textBuffer = '';
+      
+      const agentMsgId = Date.now() + 1;
+      let streamStarted = false;
+
+      while (!done) {
+        const { value, done: readerDone } = await reader.read();
+        done = readerDone;
+        if (value) {
+          const chunk = decoder.decode(value, { stream: !done });
+          textBuffer += chunk;
+
+          const lines = textBuffer.split('\n');
+          textBuffer = lines.pop() || '';
+
+          for (const line of lines) {
+            const cleanLine = line.trim();
+            if (!cleanLine || !cleanLine.startsWith('data: ')) continue;
+            
+            const dataStr = cleanLine.substring(6).trim();
+            if (dataStr === '[DONE]') {
+              done = true;
+              break;
+            }
+
+            try {
+              const data = JSON.parse(dataStr);
+              if (data.type === 'text_delta' && data.text) {
+                if (!streamStarted) {
+                  streamStarted = true;
+                  setIsTyping(false);
+                  setThreads(prev => prev.map(t => {
+                    if (t.id === threadId) {
+                      return {
+                        ...t,
+                        messages: [...t.messages, {
+                          id: agentMsgId,
+                          role: 'assistant',
+                          content: data.text,
+                          ts: Date.now(),
+                          model: data.model || modelLabel
+                        }]
+                      };
+                    }
+                    return t;
+                  }));
+                } else {
+                  setThreads(prev => prev.map(t => {
+                    if (t.id === threadId) {
+                      return {
+                        ...t,
+                        messages: t.messages.map(m =>
+                          m.id === agentMsgId ? { ...m, content: m.content + data.text } : m
+                        )
+                      };
+                    }
+                    return t;
+                  }));
+                }
+              } else if (data.type === 'message_stop') {
+                const serverConvId = data.conversation_id;
+                if (serverConvId && threadId === 'default') {
+                  setThreads(prev => prev.map(t =>
+                    t.id === 'default' ? { ...t, id: serverConvId } : t
+                  ));
+                  setActiveThread(serverConvId);
+                }
+              }
+            } catch (e) {
+              // Ignore partial chunk parse
+            }
+          }
+        }
+      }
+
       setIsTyping(false);
-      const responses = {
-        chat: `I'll help you with that. Processing with ${modelLabel}...`,
-        research: `🔬 Initiating deep research pipeline. Scanning sources with ${modelLabel}. Stand by for findings...`,
-        code: `⚡ Analyzing your request in code mode. Spinning up ${modelLabel} for code generation...`,
-        automate: `🔄 Designing automation workflow. ${modelLabel} is mapping the execution graph...`,
-      };
-      const agentMsg = {
-        id: Date.now() + 1, role: 'agent',
-        content: responses[modeId] || responses.chat,
-        ts: Date.now(), model: modelLabel,
-      };
-      setThreads(prev => prev.map(t =>
-        t.id === threadId ? { ...t, messages: [...t.messages, agentMsg] } : t
-      ));
-    }, 1500);
+      fetchHistory();
+
+    } catch (err) {
+      console.error('Chat error:', err);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) throw err;
+        
+        const res = await fetch(`${API_BASE}/api/v1/chat`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            message: messageText,
+            conversation_id: threadId === 'default' ? undefined : threadId,
+            mode: modeRef.current,
+          }),
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          setIsTyping(false);
+          setThreads(prev => prev.map(t => {
+            if (t.id === threadId) {
+              return {
+                ...t,
+                messages: [...t.messages, {
+                  id: Date.now() + 2,
+                  role: 'assistant',
+                  content: data.response,
+                  ts: Date.now(),
+                  model: data.model
+                }]
+              };
+            }
+            return t;
+          }));
+
+          const serverConvId = data.conversation_id;
+          if (serverConvId && threadId === 'default') {
+            setThreads(prev => prev.map(t =>
+              t.id === 'default' ? { ...t, id: serverConvId } : t
+            ));
+            setActiveThread(serverConvId);
+          }
+          fetchHistory();
+        } else {
+          throw new Error('Fallback failed', { cause: err });
+        }
+      } catch (fallbackErr) {
+        console.error('Chat fallback error:', fallbackErr);
+        setIsTyping(false);
+        setThreads(prev => prev.map(t => {
+          if (t.id === threadId) {
+            return {
+              ...t,
+              messages: [...t.messages, {
+                id: Date.now() + 3,
+                role: 'assistant',
+                content: `⚠️ **Connection Error**: Unable to reach the Stoic AgentOS AI Brain. Please verify your internet connection or check if the API server is online.`,
+                ts: Date.now()
+              }]
+            };
+          }
+          return t;
+        }));
+      }
+    }
   };
 
   const newThread = () => {
@@ -152,10 +415,25 @@ export default function ChatTab({ agents }) {
                 key={t.id}
                 className={`comms-thread ${t.id === activeThread ? 'active' : ''}`}
                 onClick={() => setActiveThread(t.id)}
+                style={{ position: 'relative', display: 'flex', alignItems: 'center', width: '100%' }}
               >
                 <span className="comms-thread-dot" />
-                <span className="comms-thread-name">{t.name}</span>
-                <span className="comms-thread-count">{t.messages.length}</span>
+                <span className="comms-thread-name" style={{ paddingRight: t.id !== 'default' ? '24px' : '0' }}>{t.name}</span>
+                {t.id !== 'default' && (
+                  <span
+                    onClick={(e) => handleDeleteThread(e, t.id)}
+                    style={{
+                      position: 'absolute', right: '10px', opacity: 0.5, cursor: 'pointer',
+                      fontSize: '11px', transition: 'opacity 0.15s', zIndex: 5
+                    }}
+                    onMouseOver={e => e.currentTarget.style.opacity = 1}
+                    onMouseOut={e => e.currentTarget.style.opacity = 0.5}
+                    title="Delete Mission"
+                  >
+                    🗑️
+                  </span>
+                )}
+                {t.id === 'default' && <span className="comms-thread-count">{t.messages.length}</span>}
               </button>
             ))}
           </div>
@@ -189,7 +467,7 @@ export default function ChatTab({ agents }) {
               <h2 className="comms-hero-title">Mission Comms</h2>
               <p className="comms-hero-sub">Brief your agents. Deploy tasks. Get results.</p>
               <div className="comms-hero-chips">
-                {['Review PR #142', 'Summarize Slack', 'Write API docs', 'Monitor deploys'].map(s => (
+                {suggestions.map(s => (
                   <button key={s} className="comms-suggestion" onClick={() => { setInput(s); inputRef.current?.focus(); }}>
                     {s}
                   </button>

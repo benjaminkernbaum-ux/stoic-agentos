@@ -47,7 +47,7 @@ interface CompleteResult {
 
 export const MODELS: Record<string, string> = {
   fast: 'claude-3-5-haiku-20241022',
-  smart: 'claude-3-5-sonnet-20241022',
+  smart: 'claude-3-7-sonnet-20250219',
 };
 
 const PLATFORM_KEY = process.env.ANTHROPIC_API_KEY || '';
