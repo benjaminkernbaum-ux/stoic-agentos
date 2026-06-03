@@ -9,6 +9,8 @@ export interface Organization {
   hot_cache?: string | null;
   hot_cache_updated_at?: string | null;
   hot_cache_stale?: boolean;
+  smtp_key_vault_id?: string | null;
+  twilio_key_vault_id?: string | null;
   created_at: string;
   updated_at: string;
 }

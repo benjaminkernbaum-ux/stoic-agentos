@@ -15,6 +15,7 @@ import type { Response } from 'express';
 import { authenticate } from '../middleware/auth.js';
 import { supabase } from '../middleware/db.js';
 import { complete, hasAnthropic, getAnthropic, MODELS } from '../lib/anthropic.js';
+import { safeError } from '../lib/safeError.js';
 import type { AuthenticatedRequest } from '../types.js';
 
 const router = Router();
@@ -919,8 +920,7 @@ router.post(`/api/${API_VERSION}/chat`, authenticate, async (req: AuthenticatedR
     }
     if (error.status === 401) return res.status(402).json({ error: 'Invalid Anthropic API key' });
     if (error.status === 429) return res.status(429).json({ error: 'Rate limit — try again shortly', retry_after: error.headers?.['retry-after'] });
-    console.error('[chat] error:', error.message);
-    res.status(500).json({ error: error.message });
+    safeError(res, error);
   }
 });
 
@@ -1070,7 +1070,8 @@ router.post(`/api/${API_VERSION}/chat/stream`, authenticate, async (req: Authent
     });
 
     stream.on('error', (error: Error) => {
-      res.write(`data: ${JSON.stringify({ type: 'error', error: error.message })}\n\n`);
+      const clientError = process.env.NODE_ENV === 'production' ? 'Internal server error' : error.message;
+      res.write(`data: ${JSON.stringify({ type: 'error', error: clientError })}\n\n`);
       res.write('data: [DONE]\n\n');
       res.end();
     });
@@ -1107,10 +1108,12 @@ router.post(`/api/${API_VERSION}/chat/stream`, authenticate, async (req: Authent
         return res.status(402).json({ error: 'Anthropic API key not configured' });
       }
       if (error.status === 429) return res.status(429).json({ error: 'Rate limit — try again shortly' });
-      return res.status(500).json({ error: error.message });
+      safeError(res, error);
+      return;
     }
-    // If headers already sent (mid-stream error), send error event
-    res.write(`data: ${JSON.stringify({ type: 'error', error: error.message })}\n\n`);
+    // If headers already sent (mid-stream error), send error event (sanitized in production)
+    const clientError = process.env.NODE_ENV === 'production' ? 'Internal server error' : error.message;
+    res.write(`data: ${JSON.stringify({ type: 'error', error: clientError })}\n\n`);
     res.write('data: [DONE]\n\n');
     res.end();
   }

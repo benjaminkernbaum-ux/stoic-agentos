@@ -49,6 +49,8 @@ const INTEGRATIONS = {
       { id: 'notion', name: 'Notion', icon: '📓', desc: 'Pages, databases, and knowledge base.', color: '#ffffff', status: 'stable' },
       { id: 'discord', name: 'Discord', icon: '🎮', desc: 'Server messages and bot interactions.', color: '#5865f2', status: 'beta' },
       { id: 'zapier', name: 'Zapier', icon: '⚡', desc: 'Connect and automate 5,000+ apps.', color: '#ff4a00', status: 'stable' },
+      { id: 'smtp', name: 'SMTP Server', icon: '📧', desc: 'Connect custom SMTP server credentials for Mercury agent email outreach.', color: '#10a37f', status: 'stable' },
+      { id: 'twilio', name: 'Twilio Gateway', icon: '📞', desc: 'Connect Twilio credentials for Hermes WhatsApp and SMS outreach agent.', color: '#f22f46', status: 'stable' },
     ],
   },
 };
@@ -72,6 +74,32 @@ export default function IntegrationsTab({ org, toast }) {
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('all');
   const [connected, setConnected] = useState(new Set(['github', 'slack', 'supabase']));
+  const [activeModal, setActiveModal] = useState(null); // 'smtp' | 'twilio' | null
+  const [smtpForm, setSmtpForm] = useState({ host: '', port: '587', user: '', pass: '', fromEmail: '', secure: false });
+  const [twilioForm, setTwilioForm] = useState({ accountSid: '', authToken: '', fromNumber: '' });
+  const [formLoading, setFormLoading] = useState(false);
+  const [details, setDetails] = useState({ smtp: null, twilio: null });
+
+  // Fetch credential configuration metadata (safe display values)
+  const fetchCredentialStatus = useCallback(async (type) => {
+    try {
+      const headers = await getAuthHeaders();
+      const res = await fetch(`${API_BASE}/api/v1/integrations/credentials/${type}`, { headers });
+      if (res.ok) {
+        const data = await res.json();
+        setDetails(prev => ({ ...prev, [type]: data.configured ? data.details : null }));
+        if (data.configured) {
+          setConnected(prev => new Set([...prev]).add(type));
+        } else {
+          setConnected(prev => {
+            const next = new Set(prev);
+            next.delete(type);
+            return next;
+          });
+        }
+      }
+    } catch {}
+  }, []);
 
   // Fetch persisted connected integrations on mount
   const fetchConnected = useCallback(async () => {
@@ -89,7 +117,13 @@ export default function IntegrationsTab({ org, toast }) {
     }
   }, [org?.id]);
 
-  useEffect(() => { fetchConnected(); }, [fetchConnected]);
+  useEffect(() => {
+    fetchConnected();
+    if (org?.id) {
+      fetchCredentialStatus('smtp');
+      fetchCredentialStatus('twilio');
+    }
+  }, [org?.id, fetchConnected, fetchCredentialStatus]);
 
   const toggleConnect = async (id) => {
     const isConnected = connected.has(id);
@@ -117,6 +151,95 @@ export default function IntegrationsTab({ org, toast }) {
         return next;
       });
       toast?.(`Connection update failed — reverted`, 'error');
+    }
+  };
+
+  const handleSmtpSubmit = async (e) => {
+    e.preventDefault();
+    setFormLoading(true);
+    try {
+      const headers = await getAuthHeaders();
+      const res = await fetch(`${API_BASE}/api/v1/integrations/credentials`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ type: 'smtp', credentials: smtpForm }),
+      });
+      if (res.ok) {
+        toast?.('✨ SMTP Server connected successfully', 'success');
+        setConnected(prev => new Set([...prev]).add('smtp'));
+        setDetails(prev => ({
+          ...prev,
+          smtp: {
+            host: smtpForm.host,
+            port: smtpForm.port,
+            user: smtpForm.user ? `${smtpForm.user.slice(0, 3)}...` : null,
+            fromEmail: smtpForm.fromEmail,
+          }
+        }));
+        setActiveModal(null);
+      } else {
+        const body = await res.json();
+        toast?.(body.error || 'Connection failed', 'error');
+      }
+    } catch (err) {
+      toast?.('Connection failed: Network error', 'error');
+    }
+    setFormLoading(false);
+  };
+
+  const handleTwilioSubmit = async (e) => {
+    e.preventDefault();
+    setFormLoading(true);
+    try {
+      const headers = await getAuthHeaders();
+      const res = await fetch(`${API_BASE}/api/v1/integrations/credentials`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ type: 'twilio', credentials: twilioForm }),
+      });
+      if (res.ok) {
+        toast?.('✨ Twilio Gateway connected successfully', 'success');
+        setConnected(prev => new Set([...prev]).add('twilio'));
+        setDetails(prev => ({
+          ...prev,
+          twilio: {
+            accountSid: twilioForm.accountSid ? `${twilioForm.accountSid.slice(0, 6)}...` : null,
+            fromNumber: twilioForm.fromNumber,
+          }
+        }));
+        setActiveModal(null);
+      } else {
+        const body = await res.json();
+        toast?.(body.error || 'Connection failed', 'error');
+      }
+    } catch (err) {
+      toast?.('Connection failed: Network error', 'error');
+    }
+    setFormLoading(false);
+  };
+
+  const handleDisconnectCredentials = async (type) => {
+    if (!window.confirm(`Are you sure you want to disconnect your ${type.toUpperCase()} integration and delete all credentials?`)) return;
+    try {
+      const headers = await getAuthHeaders();
+      const res = await fetch(`${API_BASE}/api/v1/integrations/credentials/${type}`, {
+        method: 'DELETE',
+        headers,
+      });
+      if (res.ok) {
+        toast?.(`${type.toUpperCase()} credentials deleted successfully`, 'success');
+        setConnected(prev => {
+          const next = new Set(prev);
+          next.delete(type);
+          return next;
+        });
+        setDetails(prev => ({ ...prev, [type]: null }));
+      } else {
+        const body = await res.json();
+        toast?.(body.error || 'Failed to delete credentials', 'error');
+      }
+    } catch {
+      toast?.('Failed to delete credentials: Network error', 'error');
     }
   };
 

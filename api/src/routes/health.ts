@@ -44,10 +44,11 @@ router.get(`/api/${API_VERSION}/health/ready`, async (_req: Request, res: Respon
     const start = Date.now();
     try {
       const { error } = await supabase.from('organizations').select('id').limit(1);
+      const errMsg = error ? (process.env.NODE_ENV === 'production' ? 'Database connectivity degraded' : error.message) : undefined;
       checks.supabase = {
         status: error ? 'degraded' : 'ok',
         latency_ms: Date.now() - start,
-        ...(error ? { error: error.message } : {}),
+        ...(errMsg ? { error: errMsg } : {}),
       };
     } catch (err: unknown) {
       checks.supabase = {

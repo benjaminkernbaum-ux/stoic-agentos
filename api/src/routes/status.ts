@@ -59,7 +59,7 @@ router.get(`/api/${API_VERSION}/status`, async (_req, res: Response) => {
         name: 'Database',
         status: error ? 'degraded' : latency > 2000 ? 'degraded' : 'operational',
         latency_ms: latency,
-        message: error ? error.message : `${latency}ms response`,
+        message: error ? (process.env.NODE_ENV === 'production' ? 'Query failed' : error.message) : `${latency}ms response`,
         last_checked: now,
       });
     } catch (err: unknown) {
@@ -175,7 +175,7 @@ router.get(`/api/${API_VERSION}/status/checks`, authenticate, async (req: Authen
     for (const table of tables) {
       try {
         const { error } = await supabase.from(table).select('id').limit(1);
-        tableStatus[table] = error ? `error: ${error.message}` : 'ok';
+        tableStatus[table] = error ? (process.env.NODE_ENV === 'production' ? 'error: check failed' : `error: ${error.message}`) : 'ok';
       } catch {
         tableStatus[table] = 'missing';
       }

@@ -37,7 +37,7 @@ function handleAnthropicError(err: AnthropicError, res: Response): void {
   }
   if (err.status === 401) { res.status(402).json({ error: 'Invalid Anthropic API key' }); return; }
   if (err.status === 429) { res.status(429).json({ error: 'Anthropic rate limit', retry_after: err.headers?.['retry-after'] }); return; }
-  res.status(500).json({ error: err.message });
+  safeError(res, err);
 }
 
 // ── Summarize recent observations ──
