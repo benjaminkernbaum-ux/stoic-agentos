@@ -334,7 +334,7 @@ server.tool(
     }
 
     // Security: sanitize args to prevent command injection
-    const sanitizedArgs = args ? args.replace(/[;&|`$(){}\[\]!#~<>\\"'\n\r]/g, '') : '';
+    const sanitizedArgs = args ? args.replace(/[;&|`$(){}[\]!#~<>\\"'\n\r]/g, '') : '';
     const fullScript = sanitizedArgs ? `${script} -- ${sanitizedArgs}` : script;
     const result = runInfraCommand(fullScript, timeout);
     return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
