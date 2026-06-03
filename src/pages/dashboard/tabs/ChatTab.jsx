@@ -71,6 +71,7 @@ export default function ChatTab({ agents }) {
   const activeThreadRef = useRef(activeThread);
   const modelRef = useRef(model);
   const modeRef = useRef(mode);
+  const loadedThreadsRef = useRef(new Set());
 
   activeThreadRef.current = activeThread;
   modelRef.current = model;
@@ -141,13 +142,18 @@ export default function ChatTab({ agents }) {
 
   useEffect(() => {
     if (activeThread === 'default') return;
-    const currentThread = threads.find(t => t.id === activeThread);
-    if (currentThread && currentThread.messages.length > 0) return;
+    if (loadedThreadsRef.current.has(activeThread)) return;
+
+    // Mark as loading/loaded immediately to prevent parallel duplicate fetches
+    loadedThreadsRef.current.add(activeThread);
 
     const loadThreadMessages = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        if (!session) return;
+        if (!session) {
+          loadedThreadsRef.current.delete(activeThread);
+          return;
+        }
         const res = await fetch(`${API_BASE}/api/v1/chat/${activeThread}`, {
           headers: { Authorization: `Bearer ${session.access_token}` }
         });
@@ -160,14 +166,19 @@ export default function ChatTab({ agents }) {
                 : t
             ));
           }
+        } else {
+          // If fetch fails (non-2xx response), clear it from loaded set to allow retry
+          loadedThreadsRef.current.delete(activeThread);
         }
       } catch (err) {
         console.error('Failed to load thread messages:', err);
+        // If request fails (network error), clear from loaded set to allow retry
+        loadedThreadsRef.current.delete(activeThread);
       }
     };
 
     loadThreadMessages();
-  }, [activeThread, threads]);
+  }, [activeThread]);
 
   useEffect(() => {
     if (!showModelPicker) return;
@@ -191,6 +202,7 @@ export default function ChatTab({ agents }) {
         headers: { Authorization: `Bearer ${session.access_token}` }
       });
       if (res.ok) {
+        loadedThreadsRef.current.delete(id);
         setThreads(prev => prev.filter(t => t.id !== id));
         if (activeThreadRef.current === id) {
           setActiveThread('default');
