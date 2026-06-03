@@ -43,23 +43,23 @@ function GraphSkeleton() {
   );
 }
 
-/* ── Detail Sidebar ── */
 function DetailSidebar({ node, graphData, onClose }) {
-  if (!node) return null;
-
-  const meta = NODE_TYPE_META[node.type] || NODE_TYPE_META.entity;
   const connectedEdges = useMemo(() => {
-    if (!graphData?.edges) return [];
+    if (!node || !graphData?.edges) return [];
     return graphData.edges.filter(e => e.source === node.id || e.target === node.id);
-  }, [graphData, node.id]);
+  }, [graphData, node]);
 
   const connectedNodes = useMemo(() => {
-    if (!graphData?.nodes) return [];
+    if (!node || !graphData?.nodes) return [];
     const connectedIds = new Set(
       connectedEdges.map(e => e.source === node.id ? e.target : e.source)
     );
     return graphData.nodes.filter(n => connectedIds.has(n.id));
-  }, [graphData, connectedEdges, node.id]);
+  }, [graphData, connectedEdges, node]);
+
+  if (!node) return null;
+
+  const meta = NODE_TYPE_META[node.type] || NODE_TYPE_META.entity;
 
   return (
     <div className="dash-graph-sidebar open">

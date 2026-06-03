@@ -132,6 +132,10 @@ export default function Dashboard() {
     }
   }, [searchParams, toast, navigate]);
 
+  const liveAgents  = useMemo(() => data.agents.filter(a => a.status === 'running').length, [data.agents]);
+  const errorAgents = useMemo(() => data.agents.filter(a => a.status === 'error').length, [data.agents]);
+  const usagePct    = useMemo(() => data.usage.limit > 0 ? ((data.usage.count / data.usage.limit) * 100).toFixed(1) : 0, [data.usage]);
+
   if (authLoading) return (
     <div style={{ display: 'flex', height: '100vh', background: '#0a0a0c' }}>
       <div style={{ width: 240, background: '#111113', borderRight: '1px solid rgba(255,255,255,0.06)' }} />
@@ -144,9 +148,6 @@ export default function Dashboard() {
     </div>
   );
 
-  const liveAgents  = useMemo(() => data.agents.filter(a => a.status === 'running').length, [data.agents]);
-  const errorAgents = useMemo(() => data.agents.filter(a => a.status === 'error').length, [data.agents]);
-  const usagePct    = useMemo(() => data.usage.limit > 0 ? ((data.usage.count / data.usage.limit) * 100).toFixed(1) : 0, [data.usage]);
   const userName    = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User';
   const orgName     = org?.name || 'My Organization';
   const planName    = (org?.plan || 'free').toUpperCase();

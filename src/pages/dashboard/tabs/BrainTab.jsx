@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { BRAIN_FILTERS, TYPE_ICONS } from '../constants';
 import { supabase, API_BASE } from '../../../lib/supabase';
 import { EmptyState } from '../../../components/SkeletonLoader';
@@ -14,7 +14,7 @@ function HotCachePanel() {
   const getToken = async () =>
     (await supabase.auth.getSession()).data.session?.access_token;
 
-  const fetchCache = async () => {
+  const fetchCache = useCallback(async () => {
     const token = await getToken();
     if (!token) { setLoading(false); return; }
     try {
@@ -28,7 +28,7 @@ function HotCachePanel() {
       setError(e.message);
     }
     setLoading(false);
-  };
+  }, []);
 
   const refreshCache = async () => {
     setRefreshing(true);
@@ -52,7 +52,7 @@ function HotCachePanel() {
     setRefreshing(false);
   };
 
-  useEffect(() => { fetchCache(); }, []);
+  useEffect(() => { fetchCache(); }, [fetchCache]);
 
   // Relative time helper
   const timeAgo = (iso) => {

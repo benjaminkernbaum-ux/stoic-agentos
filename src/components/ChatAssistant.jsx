@@ -378,7 +378,7 @@ export default function ChatAssistant() {
       }]);
     }
     setLoading(false);
-  }, [loading, conversationId, activeMode, messages]);
+  }, [loading, conversationId, activeMode]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
