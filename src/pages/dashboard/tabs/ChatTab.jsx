@@ -9,10 +9,10 @@ const MODELS = [
 ];
 
 const MODES = [
-  { id: 'chat', label: '💬 Chat', desc: 'General conversation' },
-  { id: 'research', label: '🔬 Research', desc: 'Deep web search & analysis' },
-  { id: 'code', label: '⚡ Code', desc: 'Write, review & debug' },
-  { id: 'automate', label: '🔄 Automate', desc: 'Create workflows' },
+  { id: 'stoic', label: '🧘 Stoic', desc: 'Calm SRE operations assistant' },
+  { id: 'architect', label: '🏗️ Architect', desc: 'Systems design & API contracts' },
+  { id: 'analyst', label: '📊 Analyst', desc: 'Quantitative fleet analytics' },
+  { id: 'growth', label: '🚀 Growth', desc: 'No-BS growth strategy' },
 ];
 
 function MessageBubble({ msg }) {
@@ -59,7 +59,7 @@ export default function ChatTab({ agents }) {
   const [activeThread, setActiveThread] = useState('default');
   const [input, setInput] = useState('');
   const [model, setModel] = useState('default');
-  const [mode, setMode] = useState('chat');
+  const [mode, setMode] = useState('stoic');
   const [showModelPicker, setShowModelPicker] = useState(false);
   const [threadSidebar, setThreadSidebar] = useState(true);
   const [isTyping, setIsTyping] = useState(false);
