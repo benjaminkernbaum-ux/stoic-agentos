@@ -54,3 +54,18 @@ jobs:
       - run: npm audit --audit-level=high || true
       - run: cd api && npm ci
       - run: cd api && npm audit --audit-level=high || true
+
+  frontend-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Run Playwright Tests
+        run: npx playwright test
+
