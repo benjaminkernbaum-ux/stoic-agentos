@@ -142,6 +142,11 @@ async function importSingleTrace(
       },
       started_at: obs.startTime || new Date().toISOString(),
       ended_at: obs.endTime || new Date().toISOString(),
+      // ── Denormalized from parent trace ──
+      agent: (trace.metadata?.agent as string) || (trace.metadata?.agent_id as string) || null,
+      trace_name: trace.name || null,
+      user_session: trace.sessionId || trace.userId || null,
+      workspace_id: (trace.metadata?.workspace_id as string) || (trace.metadata?.workspace as string) || null,
     });
   }
 
@@ -282,7 +287,7 @@ router.post(
           errors.push({
             index: i,
             langfuse_trace_id: trace.id || 'unknown',
-            error: 'Import failed',
+            error: (err as Error).message || 'Import failed',
           });
         }
       }

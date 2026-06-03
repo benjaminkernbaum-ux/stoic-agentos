@@ -400,7 +400,7 @@ router.post(`/api/${API_VERSION}/traces/:id/spans`, authenticate, validate(spanC
     // Verify trace exists and belongs to org
     const { data: trace, error: traceErr } = await supabase!
       .from('traces')
-      .select('id, org_id, total_tokens, total_cost_usd, span_count, agent, name')
+      .select('id, org_id, total_tokens, total_cost_usd, span_count, agent, name, metadata')
       .eq('id', traceId)
       .eq('org_id', req.org.id)
       .single();
@@ -412,6 +412,10 @@ router.post(`/api/${API_VERSION}/traces/:id/spans`, authenticate, validate(spanC
     // Auto-calculate cost
     const totalTokens = prompt_tokens + completion_tokens;
     const costUsd = calculateCost(provider, model, prompt_tokens, completion_tokens);
+
+    const traceMeta = (trace.metadata || {}) as Record<string, unknown>;
+    const userSession = traceMeta.session_id || traceMeta.user_session || null;
+    const workspaceId = traceMeta.workspace_id || null;
 
     // Insert span (with denormalized trace attributes — Langfuse V4 pattern)
     const { data: span, error: spanErr } = await supabase!
@@ -436,6 +440,8 @@ router.post(`/api/${API_VERSION}/traces/:id/spans`, authenticate, validate(spanC
         // ── Denormalized from parent trace ──
         agent: trace.agent || null,
         trace_name: trace.name || null,
+        user_session: userSession,
+        workspace_id: workspaceId,
       })
       .select()
       .single();
@@ -560,6 +566,7 @@ router.post(`/api/${API_VERSION}/traces/ingest`, authenticate, ingestLimiter, va
         agent: trace.agent || null,
         trace_name: trace.name || null,
         user_session: trace.session_id || (trace.metadata as Record<string, unknown>)?.session_id || null,
+        workspace_id: trace.workspace_id || (trace.metadata as Record<string, unknown>)?.workspace_id || null,
       }));
 
       const { error: spanErr } = await supabase!.from('spans').insert(spanRows);
