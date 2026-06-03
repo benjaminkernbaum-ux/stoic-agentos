@@ -1,0 +1,102 @@
+# ╔══════════════════════════════════════════════════════════════════╗
+# ║  Stoic AgentOS — Self-Hosted Docker Compose                    ║
+# ║  Run the entire platform on your own infrastructure.           ║
+# ║                                                                ║
+# ║  Usage:                                                        ║
+# ║    docker compose up                                           ║
+# ║                                                                ║
+# ║  Docs: https://stoicagentos.com/docs/self-hosting              ║
+# ╚══════════════════════════════════════════════════════════════════╝
+
+version: "3.9"
+
+services:
+  # ── API Server ──────────────────────────────────────────────────
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: stoic-api
+    restart: unless-stopped
+    ports:
+      - "${API_PORT:-3001}:3001"
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-stoic}:${POSTGRES_PASSWORD:-stoic_secret}@postgres:5432/${POSTGRES_DB:-stoic_agentos}
+      - REDIS_URL=redis://redis:6379
+      - SUPABASE_URL=${SUPABASE_URL:-}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY:-}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY:-}
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY:-}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - JWT_SECRET=${JWT_SECRET:-change-me-in-production}
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:5173,http://localhost:3000}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/api/v1/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+  # ── Dashboard (Vite Build → Nginx) ─────────────────────────────
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: stoic-dashboard
+    restart: unless-stopped
+    ports:
+      - "${DASHBOARD_PORT:-3000}:80"
+    environment:
+      - VITE_API_URL=http://localhost:${API_PORT:-3001}
+      - VITE_SUPABASE_URL=${SUPABASE_URL:-}
+      - VITE_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY:-}
+    depends_on:
+      - api
+
+  # ── PostgreSQL ──────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: stoic-postgres
+    restart: unless-stopped
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-stoic}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-stoic_secret}
+      - POSTGRES_DB=${POSTGRES_DB:-stoic_agentos}
+    volumes:
+      - stoic_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-stoic}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Redis (Cache + Queue) ───────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: stoic-redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - stoic_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  stoic_pgdata:
+    driver: local
+  stoic_redis_data:
+    driver: local
