@@ -282,7 +282,7 @@ router.post(
           errors.push({
             index: i,
             langfuse_trace_id: trace.id || 'unknown',
-            error: (err as Error).message,
+            error: 'Import failed',
           });
         }
       }

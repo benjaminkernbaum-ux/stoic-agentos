@@ -1,7 +1,9 @@
 import { Router } from 'express';
 import type { Response } from 'express';
 import { authenticate } from '../middleware/auth.js';
+import { requireMinRole } from '../middleware/rbac.js';
 import { supabase } from '../middleware/db.js';
+import { safeError } from '../lib/safeError.js';
 import type { AuthenticatedRequest } from '../types.js';
 
 const router = Router();
@@ -19,7 +21,7 @@ router.get(`/api/${API_VERSION}/integrations`, authenticate, async (req: Authent
     const connected = data?.metadata?.connected_integrations || [];
     res.json({ connected });
   } catch (err: unknown) {
-    res.status(500).json({ error: (err as Error).message });
+    safeError(res, err);
   }
 });
 
@@ -49,12 +51,12 @@ router.post(`/api/${API_VERSION}/integrations`, authenticate, async (req: Authen
     
     res.json({ connected: metadata.connected_integrations });
   } catch (err: unknown) {
-    res.status(500).json({ error: (err as Error).message });
+    safeError(res, err);
   }
 });
 
 // DELETE /api/v1/integrations/:id — disconnect an integration
-router.delete(`/api/${API_VERSION}/integrations/:id`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
+router.delete(`/api/${API_VERSION}/integrations/:id`, authenticate, requireMinRole('admin'), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { data: org } = await supabase!
       .from('organizations')
@@ -75,7 +77,7 @@ router.delete(`/api/${API_VERSION}/integrations/:id`, authenticate, async (req: 
     
     res.json({ connected: metadata.connected_integrations });
   } catch (err: unknown) {
-    res.status(500).json({ error: (err as Error).message });
+    safeError(res, err);
   }
 });
 

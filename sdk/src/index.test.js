@@ -238,7 +238,8 @@ describe('AgentOS flush behavior', () => {
     expect(fetchMock).not.toHaveBeenCalled();
 
     await os.capture({ title: 'obs 3' }); // triggers flush
-    expect(fetchMock).toHaveBeenCalledTimes(3); // 3 individual sends
+    // flush() sends 1 batch POST to /observations/batch
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it('shutdown() flushes remaining observations', async () => {
@@ -247,7 +248,8 @@ describe('AgentOS flush behavior', () => {
     expect(fetchMock).not.toHaveBeenCalled();
 
     await os.shutdown();
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    // flush() sends 1 batch POST to /observations/batch
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });
 
