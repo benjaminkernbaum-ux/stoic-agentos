@@ -122,4 +122,76 @@ router.get(`/api/${V}/compliance/circuit-breaker`, authenticate, async (req: Aut
   } catch (err: unknown) { safeError(res, err); }
 });
 
+// ── Circuit Breaker Status (individual agent) ──
+router.get(`/api/${V}/compliance/circuit-breaker/status`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { agent_id, agent_name } = req.query;
+
+    if (!agent_id && !agent_name) {
+      return res.status(400).json({ error: 'agent_id or agent_name query parameter required' });
+    }
+
+    const { data, error } = await supabase!.rpc('check_agent_circuit_status', {
+      p_org_id: req.org.id,
+      p_agent_id: agent_id || null,
+      p_agent_name: agent_name || null,
+    });
+
+    if (error) {
+      // Fallback in case migration 016 has not been applied yet
+      console.warn('check_agent_circuit_status RPC failed, falling back to manual query:', error.message);
+
+      const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+      let resolvedAgentId = agent_id as string;
+
+      if (!resolvedAgentId && agent_name) {
+        const { data: agentData } = await supabase!
+          .from('agents')
+          .select('id')
+          .eq('org_id', req.org.id)
+          .eq('name', agent_name as string)
+          .maybeSingle();
+        if (agentData) resolvedAgentId = agentData.id;
+      }
+
+      if (!resolvedAgentId) {
+        return res.json({ tripped: false, block_count: 0, status: 'closed', agent_id: null });
+      }
+
+      const { count, error: countError } = await supabase!
+        .from('audit_log')
+        .select('*', { count: 'exact', head: true })
+        .eq('org_id', req.org.id)
+        .eq('agent_id', resolvedAgentId)
+        .eq('verdict', 'BLOCK')
+        .gte('created_at', oneHourAgo);
+
+      if (countError) throw countError;
+
+      const blocks = count || 0;
+      return res.json({
+        tripped: blocks >= 5,
+        block_count: blocks,
+        status: blocks >= 5 ? 'open' : blocks > 0 ? 'half-open' : 'closed',
+        agent_id: resolvedAgentId,
+      });
+    }
+
+    // Success response from RPC function
+    const result = Array.isArray(data) ? data[0] : data;
+    if (!result || !result.resolved_agent_id) {
+      return res.json({ tripped: false, block_count: 0, status: 'closed', agent_id: null });
+    }
+
+    res.json({
+      tripped: result.tripped,
+      block_count: result.block_count,
+      status: result.tripped ? 'open' : result.block_count > 0 ? 'half-open' : 'closed',
+      agent_id: result.resolved_agent_id,
+    });
+  } catch (err: unknown) {
+    safeError(res, err);
+  }
+});
+
 export default router;

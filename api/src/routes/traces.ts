@@ -31,6 +31,46 @@ import { getMonthlyCount, incrementCounter } from '../lib/counterCache.js';
 const router = Router();
 const API_VERSION = 'v1';
 
+/**
+ * Check if an agent's safety circuit breaker is open (tripped).
+ * Fallback to standard DB queries if RPC is not deployed yet.
+ */
+async function checkAgentCircuit(orgId: string, agentName?: string): Promise<boolean> {
+  if (!agentName) return false;
+  try {
+    const { data } = await supabase!.rpc('check_agent_circuit_status', {
+      p_org_id: orgId,
+      p_agent_id: null,
+      p_agent_name: agentName,
+    });
+    const result = Array.isArray(data) ? data[0] : data;
+    return !!result?.tripped;
+  } catch (err) {
+    try {
+      // Fallback: lookup agent ID by name
+      const { data: agentData } = await supabase!
+        .from('agents')
+        .select('id')
+        .eq('org_id', orgId)
+        .eq('name', agentName)
+        .maybeSingle();
+      if (!agentData) return false;
+
+      const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+      const { count } = await supabase!
+        .from('audit_log')
+        .select('*', { count: 'exact', head: true })
+        .eq('org_id', orgId)
+        .eq('agent_id', agentData.id)
+        .eq('verdict', 'BLOCK')
+        .gte('created_at', oneHourAgo);
+      return (count || 0) >= 5;
+    } catch {
+      return false; // Fail-safe (allow execution if query fails)
+    }
+  }
+}
+
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 //  TRACES — CRUD
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -43,6 +83,17 @@ router.post(`/api/${API_VERSION}/traces`, authenticate, validate(traceCreateSche
   try {
     const { name, agent, trace_id, metadata } = req.body;
     if (!name) return res.status(400).json({ error: 'name is required' });
+
+    // Active Circuit Breaker check
+    if (agent) {
+      const isTripped = await checkAgentCircuit(req.org.id, agent);
+      if (isTripped) {
+        return res.status(423).json({
+          error: 'AGENT_CIRCUIT_TRIPPED',
+          message: `Execution blocked: Agent "${agent}" has triggered too many safety policy violations.`,
+        });
+      }
+    }
 
     // Check monthly trace limit (cached — avoids COUNT(*) per request)
     const monthlyCount = await getMonthlyCount(supabase!, req.org.id, 'traces');
@@ -499,6 +550,17 @@ router.post(`/api/${API_VERSION}/traces/ingest`, authenticate, ingestLimiter, va
     const { trace, spans } = req.body;
     if (!trace || !trace.trace_id || !trace.name) {
       return res.status(400).json({ error: 'trace object with trace_id and name required' });
+    }
+
+    // Active Circuit Breaker check
+    if (trace.agent) {
+      const isTripped = await checkAgentCircuit(req.org.id, trace.agent);
+      if (isTripped) {
+        return res.status(423).json({
+          error: 'AGENT_CIRCUIT_TRIPPED',
+          message: `Execution blocked: Agent "${trace.agent}" has triggered too many safety policy violations.`,
+        });
+      }
     }
 
     // Check monthly trace limit (cached — avoids COUNT(*) per request)
