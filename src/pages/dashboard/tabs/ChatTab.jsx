@@ -279,51 +279,58 @@ export default function ChatTab({ agents }) {
               break;
             }
 
+            let data;
             try {
-              const data = JSON.parse(dataStr);
-              if (data.type === 'text_delta' && data.text) {
-                if (!streamStarted) {
-                  streamStarted = true;
-                  setIsTyping(false);
-                  setThreads(prev => prev.map(t => {
-                    if (t.id === threadId) {
-                      return {
-                        ...t,
-                        messages: [...t.messages, {
-                          id: agentMsgId,
-                          role: 'assistant',
-                          content: data.text,
-                          ts: Date.now(),
-                          model: data.model || modelLabel
-                        }]
-                      };
-                    }
-                    return t;
-                  }));
-                } else {
-                  setThreads(prev => prev.map(t => {
-                    if (t.id === threadId) {
-                      return {
-                        ...t,
-                        messages: t.messages.map(m =>
-                          m.id === agentMsgId ? { ...m, content: m.content + data.text } : m
-                        )
-                      };
-                    }
-                    return t;
-                  }));
-                }
-              } else if (data.type === 'message_stop') {
-                const serverConvId = data.conversation_id;
-                if (serverConvId && threadId === 'default') {
-                  setThreads(prev => prev.map(t =>
-                    t.id === 'default' ? { ...t, id: serverConvId } : t
-                  ));
-                  setActiveThread(serverConvId);
-                }
-              }
+              data = JSON.parse(dataStr);
             } catch (e) {
               // Ignore partial chunk parse
+              continue;
+            }
+
+            if (data.type === 'error') {
+              throw new Error(data.error || 'Streaming error');
+            }
+
+            if (data.type === 'text_delta' && data.text) {
+              if (!streamStarted) {
+                streamStarted = true;
+                setIsTyping(false);
+                setThreads(prev => prev.map(t => {
+                  if (t.id === threadId) {
+                    return {
+                      ...t,
+                      messages: [...t.messages, {
+                        id: agentMsgId,
+                        role: 'assistant',
+                        content: data.text,
+                        ts: Date.now(),
+                        model: data.model || modelLabel
+                      }]
+                    };
+                  }
+                  return t;
+                }));
+              } else {
+                setThreads(prev => prev.map(t => {
+                  if (t.id === threadId) {
+                    return {
+                      ...t,
+                      messages: t.messages.map(m =>
+                        m.id === agentMsgId ? { ...m, content: m.content + data.text } : m
+                      )
+                    };
+                  }
+                  return t;
+                }));
+              }
+            } else if (data.type === 'message_stop') {
+              const serverConvId = data.conversation_id;
+              if (serverConvId && threadId === 'default') {
+                setThreads(prev => prev.map(t =>
+                  t.id === 'default' ? { ...t, id: serverConvId } : t
+                ));
+                setActiveThread(serverConvId);
+              }
             }
           }
         }

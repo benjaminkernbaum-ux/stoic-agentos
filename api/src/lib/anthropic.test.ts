@@ -212,7 +212,7 @@ describe('anthropic.js', () => {
       }));
     });
 
-    it('only enables adaptive thinking on the smart (Sonnet) model', async () => {
+    it('only enables thinking on the smart (Sonnet) model', async () => {
       process.env.ANTHROPIC_API_KEY = 'sk-ant-platform';
       vi.resetModules();
       mod = await import('./anthropic.js');
@@ -228,7 +228,7 @@ describe('anthropic.js', () => {
       expect(createMock.mock.calls[0][0].thinking).toBeUndefined();
 
       await mod.complete({}, { model: 'smart', system: '', messages: [], thinking: true, endpoint: 't' });
-      expect(createMock.mock.calls[1][0].thinking).toEqual({ type: 'adaptive' });
+      expect(createMock.mock.calls[1][0].thinking).toEqual({ type: 'enabled', budget_tokens: 1024 });
     });
 
     it('concatenates multiple text blocks into result.text', async () => {

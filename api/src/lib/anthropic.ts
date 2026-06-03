@@ -199,7 +199,10 @@ export async function complete(org: AnthropicOrg, { model = 'fast', system, mess
   };
 
   if (thinking && modelId === MODELS.smart) {
-    params.thinking = { type: 'adaptive' };
+    params.thinking = { type: 'enabled', budget_tokens: 1024 };
+    if ((params.max_tokens as number) <= 1024) {
+      params.max_tokens = 2048;
+    }
   }
 
   const response = await client.messages.create(params as any);
