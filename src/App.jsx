@@ -18,6 +18,7 @@ const TermsPage = lazy(() => import('./pages/StaticPages').then((m) => ({ defaul
 const SecurityPage = lazy(() => import('./pages/StaticPages').then((m) => ({ default: m.SecurityPage })));
 const NotFoundPage = lazy(() => import('./pages/StaticPages').then((m) => ({ default: m.NotFoundPage })));
 const BlogArticles = lazy(() => import('./pages/BlogArticles'));
+const IntegrationGuides = lazy(() => import('./pages/IntegrationGuides'));
 
 function LoadingScreen() {
   return (
@@ -52,6 +53,8 @@ function AppRoutes() {
         <Route path="/blog/why-traditional-apm-fails-for-ai-agents" element={<Suspense fallback={<div>Loading...</div>}><BlogArticles article="why-apm-fails" /></Suspense>} />
         <Route path="/blog/ai-observability-market-consolidation-2026" element={<Suspense fallback={<div>Loading...</div>}><BlogArticles article="market-consolidation" /></Suspense>} />
         <Route path="/blog/langfuse-vs-langsmith-vs-stoic-agentos" element={<Suspense fallback={<div>Loading...</div>}><BlogArticles article="comparison" /></Suspense>} />
+        <Route path="/guides/agent-persistent-memory" element={<Suspense fallback={<div>Loading...</div>}><IntegrationGuides guide="langchain-memory" /></Suspense>} />
+        <Route path="/guides/agent-cost-monitoring" element={<Suspense fallback={<div>Loading...</div>}><IntegrationGuides guide="crewai-monitoring" /></Suspense>} />
         <Route path="/changelog" element={<ChangelogPage />} />
         <Route path="/privacy" element={<PrivacyPage />} />
         <Route path="/terms" element={<TermsPage />} />

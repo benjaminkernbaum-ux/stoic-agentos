@@ -119,6 +119,20 @@ export function AboutPage() {
 export function BlogPage() {
   const posts = [
     {
+      date: 'June 5, 2026',
+      title: 'How to Add Persistent Memory to Your AI Agents',
+      excerpt: 'Your agents forget everything between sessions. Here\'s how to give them three-tier persistent memory — working, episodic, and semantic — so they never make the same mistake twice.',
+      tag: 'Guide',
+      slug: '/guides/agent-persistent-memory',
+    },
+    {
+      date: 'June 5, 2026',
+      title: 'How to Monitor AI Agent Costs in Production',
+      excerpt: 'One line of code gives you per-agent, per-model, per-trace cost attribution. Plus circuit breakers that auto-halt runaway agents before they burn your API budget.',
+      tag: 'Guide',
+      slug: '/guides/agent-cost-monitoring',
+    },
+    {
       date: 'May 15, 2026',
       title: 'Introducing Stoic AgentOS — The Operating System for AI Agent Fleets',
       excerpt: 'Today we\'re publicly launching Stoic AgentOS, a platform that gives engineering teams full visibility and control over their AI agents. Here\'s why we built it and what\'s next.',
