@@ -12,6 +12,7 @@
 import { Router } from 'express';
 import type { Response } from 'express';
 import { authenticate } from '../middleware/auth.js';
+import { aiLimiter } from '../middleware/rateLimiter.js';
 import { supabase } from '../middleware/db.js';
 import { complete, hasAnthropic, MODELS } from '../lib/anthropic.js';
 import { estimateCost } from '../lib/pricing.js';
@@ -41,7 +42,7 @@ function handleAnthropicError(err: AnthropicError, res: Response): void {
 }
 
 // ── Summarize recent observations ──
-router.post(`/api/${API_VERSION}/insights/summarize`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
+router.post(`/api/${API_VERSION}/insights/summarize`, authenticate, aiLimiter, async (req: AuthenticatedRequest, res: Response) => {
   try {
     if (!hasAnthropic(req.org)) {
       return res.status(402).json({ error: 'No Anthropic API key configured' });
@@ -102,7 +103,7 @@ router.post(`/api/${API_VERSION}/insights/summarize`, authenticate, async (req: 
 });
 
 // ── Analyze a single agent's health ──
-router.post(`/api/${API_VERSION}/insights/analyze-agent`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
+router.post(`/api/${API_VERSION}/insights/analyze-agent`, authenticate, aiLimiter, async (req: AuthenticatedRequest, res: Response) => {
   try {
     if (!hasAnthropic(req.org)) {
       return res.status(402).json({ error: 'No Anthropic API key configured' });
@@ -171,7 +172,7 @@ router.post(`/api/${API_VERSION}/insights/analyze-agent`, authenticate, async (r
 });
 
 // ── Free-form ask (hot-cache-first) ──
-router.post(`/api/${API_VERSION}/insights/ask`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
+router.post(`/api/${API_VERSION}/insights/ask`, authenticate, aiLimiter, async (req: AuthenticatedRequest, res: Response) => {
   try {
     if (!hasAnthropic(req.org)) {
       return res.status(402).json({ error: 'No Anthropic API key configured' });
@@ -266,7 +267,7 @@ router.get(`/api/${API_VERSION}/insights/hot-cache`, authenticate, async (req: A
 });
 
 // ── Refresh hot cache ──
-router.post(`/api/${API_VERSION}/insights/hot-cache/refresh`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
+router.post(`/api/${API_VERSION}/insights/hot-cache/refresh`, authenticate, aiLimiter, async (req: AuthenticatedRequest, res: Response) => {
   try {
     if (!supabase) {
       return res.status(500).json({ error: 'Database not configured' });

@@ -71,6 +71,13 @@ const INGEST_LIMITS: Record<string, RateLimitConfig> = {
 
 const AUTH_LIMIT: RateLimitConfig = { windowMs: 900_000, max: 15 }; // 15 attempts per 15 min
 
+const AI_LIMITS: Record<string, RateLimitConfig> = {
+  free:       { windowMs: 60_000, max: 20   },
+  pro:        { windowMs: 60_000, max: 60   },
+  team:       { windowMs: 60_000, max: 200  },
+  enterprise: { windowMs: 60_000, max: 500  },
+};
+
 // ═══════════════════════════════════════════════════════
 //  Upstash Redis Rate Limiter (production)
 // ═══════════════════════════════════════════════════════
@@ -297,4 +304,10 @@ export const authLimiter = createLimiter(
   'rl-auth'
 );
 
-export default { apiLimiter, ingestLimiter, authLimiter };
+/** AI endpoint rate limiter — protects against LLM cost abuse */
+export const aiLimiter = createLimiter(
+  (plan) => AI_LIMITS[plan] || AI_LIMITS.free,
+  'rl-ai'
+);
+
+export default { apiLimiter, ingestLimiter, authLimiter, aiLimiter };

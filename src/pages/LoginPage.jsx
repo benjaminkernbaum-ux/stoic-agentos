@@ -31,7 +31,7 @@ export default function LoginPage() {
 
     setLoading(true);
     try {
-      const { data, error: authError } = await signIn(form.email, form.password);
+      const { data, error: authError } = await signIn(form.email, form.password, turnstileToken);
       if (authError) {
         setLoading(false);
         if (authError.message?.includes('Invalid login')) {

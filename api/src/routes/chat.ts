@@ -13,6 +13,7 @@
 import { Router } from 'express';
 import type { Response } from 'express';
 import { authenticate } from '../middleware/auth.js';
+import { aiLimiter } from '../middleware/rateLimiter.js';
 import { supabase } from '../middleware/db.js';
 import { complete, hasAnthropic, getAnthropic, MODELS } from '../lib/anthropic.js';
 import { safeError } from '../lib/safeError.js';
@@ -840,7 +841,7 @@ ${orgContext}
 }
 
 // ── Chat endpoint ──
-router.post(`/api/${API_VERSION}/chat`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
+router.post(`/api/${API_VERSION}/chat`, authenticate, aiLimiter, async (req: AuthenticatedRequest, res: Response) => {
   try {
     if (!hasAnthropic(req.org)) {
       return res.status(402).json({
@@ -1011,7 +1012,7 @@ router.delete(`/api/${API_VERSION}/chat/:conversationId`, authenticate, async (r
 });
 
 // ── Streaming chat endpoint ──
-router.post(`/api/${API_VERSION}/chat/stream`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
+router.post(`/api/${API_VERSION}/chat/stream`, authenticate, aiLimiter, async (req: AuthenticatedRequest, res: Response) => {
   try {
     if (!hasAnthropic(req.org)) {
       return res.status(402).json({

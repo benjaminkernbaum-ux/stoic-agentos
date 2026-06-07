@@ -25,9 +25,10 @@ export default function Turnstile({ onVerify, onExpire, onError, theme = 'dark' 
   const widgetIdRef = useRef(null);
   const [scriptLoaded, setScriptLoaded] = useState(false);
 
-  // If no site key configured, auto-pass in dev (but warn)
+  // If no site key configured, auto-pass ONLY in dev builds
   useEffect(() => {
-    if (!SITE_KEY) {
+    if (!SITE_KEY && import.meta.env.DEV) {
+      console.warn('[Turnstile] Dev mode — auto-passing verification');
       onVerify?.('dev-bypass-no-site-key');
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps

@@ -31,14 +31,18 @@ export default function SignupPage() {
       return;
     }
 
-    if (form.password.length < 6) {
-      setError('Password must be at least 6 characters');
+    if (form.password.length < 8) {
+      setError('Password must be at least 8 characters');
+      return;
+    }
+    if (!/[A-Z]/.test(form.password) || !/[a-z]/.test(form.password) || !/[0-9]/.test(form.password)) {
+      setError('Password must include uppercase, lowercase, and a number');
       return;
     }
 
     setLoading(true);
     try {
-      const { error: authError } = await signUp(form.email, form.password, form.name, new Date().toISOString());
+      const { error: authError } = await signUp(form.email, form.password, form.name, new Date().toISOString(), turnstileToken);
       setLoading(false);
 
       if (authError) {
@@ -141,11 +145,11 @@ export default function SignupPage() {
             <input
               id="signup-password"
               type="password"
-              placeholder="Minimum 6 characters"
+              placeholder="Min 8 chars, upper + lower + number"
               value={form.password}
               onChange={handleChange('password')}
               required
-              minLength={6}
+              minLength={8}
               autoComplete="new-password"
             />
           </div>

@@ -118,19 +118,25 @@ export function AuthProvider({ children }) {
     };
   }, [loadOrg]);
 
-  async function signUp(email, password, fullName, consentGivenAt) {
+  async function signUp(email, password, fullName, consentGivenAt, captchaToken) {
+    const options = {
+      data: { full_name: fullName, consent_given_at: consentGivenAt },
+    };
+    // Forward Turnstile token to Supabase GoTrue for server-side verification
+    if (captchaToken) options.captchaToken = captchaToken;
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: {
-        data: { full_name: fullName, consent_given_at: consentGivenAt },
-      },
+      options,
     });
     return { data, error };
   }
 
-  async function signIn(email, password) {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  async function signIn(email, password, captchaToken) {
+    const opts = { email, password };
+    // Forward Turnstile token to Supabase GoTrue for server-side verification
+    if (captchaToken) opts.options = { captchaToken };
+    const { data, error } = await supabase.auth.signInWithPassword(opts);
     return { data, error };
   }
 
