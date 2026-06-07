@@ -5,9 +5,20 @@ export default function AnimatedCounter({ end, prefix = '', suffix = '', duratio
   const [done, setDone] = useState(false);
   const ref = useRef(null);
   const triggered = useRef(false);
+  const lastEndRef = useRef(end);
+  const displayRef = useRef(display);
+  displayRef.current = display;
 
   useEffect(() => {
-    if (typeof end !== 'number' || triggered.current) return;
+    if (typeof end !== 'number') return;
+
+    if (lastEndRef.current !== end) {
+      triggered.current = false;
+      setDone(false);
+      lastEndRef.current = end;
+    }
+
+    if (triggered.current) return;
     const el = ref.current;
     if (!el) return;
 
@@ -15,12 +26,13 @@ export default function AnimatedCounter({ end, prefix = '', suffix = '', duratio
       if (entry.isIntersecting && !triggered.current) {
         triggered.current = true;
         obs.disconnect();
+        const startValue = typeof displayRef.current === 'number' ? displayRef.current : 0;
         const start = performance.now();
         function step(now) {
           const t = Math.min((now - start) / duration, 1);
           // Spring easing (overshoot + settle)
           const eased = t === 1 ? 1 : 1 - Math.pow(2, -10 * t) * Math.cos((t * 10 - 0.75) * (2 * Math.PI / 3) * 0.15 + 1);
-          setDisplay(Math.round(Math.min(eased, 1) * end));
+          setDisplay(Math.round(startValue + Math.min(eased, 1) * (end - startValue)));
           if (t < 1) {
             requestAnimationFrame(step);
           } else {
