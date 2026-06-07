@@ -204,7 +204,7 @@ export async function complete(org: AnthropicOrg, { model = 'fast', system, mess
 
   if (thinking && modelId === MODELS.smart) {
     params.thinking = { type: 'adaptive' };
-    params.effort = 'medium';
+    params.output_config = { effort: 'medium' };
     if ((params.max_tokens as number) <= 1024) {
       params.max_tokens = 2048;
     }
