@@ -3,7 +3,6 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import OnboardingTour from '../../components/OnboardingTour';
 import ErrorBoundary from '../../components/ErrorBoundary';
-import ChatAssistant from '../../components/ChatAssistant';
 import { useToast, ToastContainer } from './hooks/useToast.jsx';
 import { useDashboardData } from './hooks/useDashboardData';
 import { useDashboardActions } from './hooks/useDashboardActions';
@@ -343,8 +342,6 @@ export default function Dashboard() {
         onClose={() => { setShowWelcome(true); localStorage.setItem('stoic_welcome_done', 'true'); }}
         onGetStarted={() => { setShowWelcome(true); localStorage.setItem('stoic_welcome_done', 'true'); setActiveTab('chat'); }}
       />
-
-      <ChatAssistant />
 
       <ToastContainer toasts={toasts} />
 

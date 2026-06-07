@@ -234,7 +234,7 @@ const processInvoice = os.wrapAgent('invoice-processor', async (invoice) => {
 
   // Store what the agent learned
   await os.memory.recordEpisode(
-    \`Processed invoice #\${invoice.id}: vendor=\${invoice.vendor}, amount=\$\${invoice.amount}. Vendor prefers net-30 payment terms.\`,
+    \`Processed invoice #\${invoice.id}: vendor=\${invoice.vendor}, amount=$\${invoice.amount}. Vendor prefers net-30 payment terms.\`,
     {
       importance: 7,        // 1-10 scale
       agentId: 'invoice-processor',
