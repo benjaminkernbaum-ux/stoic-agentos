@@ -13,13 +13,15 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.105.4",
+    "@tanstack/react-query": "^5.101.0",
     "@vercel/analytics": "^2.0.1",
     "@vercel/speed-insights": "^2.0.0",
     "@xyflow/react": "^12.10.2",
     "dompurify": "^3.4.7",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
-    "react-router-dom": "^7.15.1"
+    "react-router-dom": "^7.15.1",
+    "zustand": "^5.0.14"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
