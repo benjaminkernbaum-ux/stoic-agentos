@@ -51,18 +51,22 @@ export class Trace {
     const totalCost = this.spans.reduce((s, sp) => s + sp.cost_usd, 0);
 
     const payload = {
-      trace_id: this.traceId,
-      name: this.name,
-      agent: this.agent,
-      status: this.status,
-      duration_ms: duration,
+      trace: {
+        trace_id: this.traceId,
+        name: this.name,
+        agent: this.agent,
+        status: this.status,
+        duration_ms: duration,
+        total_tokens: totalTokens,
+        total_cost_usd: Math.round(totalCost * 1_000_000) / 1_000_000,
+        metadata: this.metadata,
+        started_at: new Date(this.startedAt).toISOString(),
+        ended_at: new Date().toISOString(),
+      },
       spans: this.spans,
-      total_tokens: totalTokens,
-      total_cost_usd: Math.round(totalCost * 1_000_000) / 1_000_000,
-      metadata: this.metadata,
     };
 
-    return this._sdk._send('/traces', payload);
+    return this._sdk._send('/traces/ingest', payload);
   }
 }
 

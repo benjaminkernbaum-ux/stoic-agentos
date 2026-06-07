@@ -1,0 +1,10 @@
+{
+  "name": "stoic-demo",
+  "type": "module",
+  "private": true,
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.100.1",
+    "openai": "^4.0.0",
+    "stoic-agentos-sdk": "file:../../sdk"
+  }
+}

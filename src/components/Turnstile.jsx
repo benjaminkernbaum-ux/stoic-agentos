@@ -86,11 +86,7 @@ export default function Turnstile({ onVerify, onExpire, onError, theme = 'dark' 
   }, [scriptLoaded, theme]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!SITE_KEY) {
-    return (
-      <div style={{ textAlign: 'center', padding: '8px', fontSize: '12px', color: '#f59e0b', opacity: 0.7 }}>
-        ⚠️ Turnstile not configured — bot protection disabled
-      </div>
-    );
+    return null;
   }
 
   return (
