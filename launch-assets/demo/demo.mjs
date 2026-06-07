@@ -27,16 +27,34 @@ const result = await claude.messages.create({
 
 const answer = result.content[0].text;
 console.log('🤖 Agent says:', answer);
+console.log(`\n📊 Trace has ${trace.spans.length} span(s)`);
+if (trace.spans.length > 0) {
+  const sp = trace.spans[0];
+  console.log(`   Provider: ${sp.provider}, Model: ${sp.model}`);
+  console.log(`   Tokens: ${sp.prompt_tokens} in / ${sp.completion_tokens} out = ${sp.total_tokens}`);
+  console.log(`   Cost: $${sp.cost_usd}, Latency: ${sp.latency_ms}ms`);
+}
+
+// ─── End trace — sends to /traces/ingest ───
+console.log('\n📡 Sending trace to Stoic AgentOS...');
+try {
+  const ingestResult = await trace.end();
+  console.log('📡 Trace ingest response:', JSON.stringify(ingestResult, null, 2));
+} catch (err) {
+  console.error('❌ Trace ingest error:', err.message);
+}
 
 // ─── Store what the agent learned (persistent memory) ───
-await os.memory.recordEpisode(
-  `The capital of Brazil is Brasília. Confirmed via Claude Haiku.`,
-  { importance: 8, agentId: 'demo-agent', eventType: 'discovery' }
-);
-console.log('🧠 Episode recorded to persistent memory');
+try {
+  const memResult = await os.memory.recordEpisode(
+    `The capital of Brazil is Brasília. Confirmed via Claude Sonnet.`,
+    { importance: 8, agentId: 'demo-agent', eventType: 'discovery' }
+  );
+  console.log('🧠 Episode recorded:', JSON.stringify(memResult, null, 2));
+} catch (err) {
+  console.error('❌ Memory error:', err.message);
+}
 
-// ─── End trace and flush ───
-await trace.end();
+// ─── Flush observations ───
 await os.shutdown();
-
 console.log('\n✅ Done — check your dashboard at stoicagentos.com/dashboard\n');
