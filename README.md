@@ -1,7 +1,7 @@
 <p align="center">
   <h1 align="center">⚡ Stoic AgentOS</h1>
-  <p align="center"><strong>The Cognitive Layer for AI Agent Fleets</strong></p>
-  <p align="center">Three-tier memory, knowledge persistence, reflection engine, and compliance audit — the brain your AI agents are missing.</p>
+  <p align="center"><strong>Open-Source Observability & Memory for AI Agent Fleets</strong></p>
+  <p align="center">Trace, monitor, and persist knowledge across autonomous AI agents — the open-source LLMOps platform that fits alongside Langfuse, Helicone, and Phoenix.</p>
 </p>
 
 <div align="center">
@@ -40,6 +40,7 @@
 <p align="center">
    <a href="https://github.com/benjaminkernbaum-ux/stoic-agentos/blob/master/LICENSE">
    <img src="https://img.shields.io/badge/License-MIT-9b59ff.svg" alt="MIT License"></a>
+   <a href="https://github.com/benjaminkernbaum-ux/stoic-agentos/actions/workflows/ci.yml"><img src="https://github.com/benjaminkernbaum-ux/stoic-agentos/actions/workflows/ci.yml/badge.svg?branch=master" alt="CI"></a>
    <a href="https://www.npmjs.com/package/stoic-agentos-sdk"><img src="https://img.shields.io/npm/v/stoic-agentos-sdk?logo=npm&logoColor=white&label=npm&color=CB3837" alt="npm version"></a>
    <a href="https://www.npmjs.com/package/stoic-agentos-sdk"><img src="https://img.shields.io/npm/dm/stoic-agentos-sdk?logo=npm&logoColor=white&label=downloads&color=blue" alt="npm downloads"></a>
    <a href="https://pypi.org/project/stoic-agentos-sdk/"><img src="https://img.shields.io/pypi/dm/stoic-agentos-sdk?logo=python&logoColor=white&label=pypi&color=3776AB" alt="PyPI downloads"></a>
@@ -155,18 +156,31 @@ os.capture({
 | 🧠 **Claude-Powered Insights** | Auto-summarize activity (Haiku 4.5) and diagnose failing agents (Sonnet 4.6 + thinking) |
 | 🔐 **BYOK** | Bring your own Anthropic key — stored encrypted in Supabase Vault, never plaintext |
 
+## Built for LLMOps
+
+Stoic AgentOS is designed to integrate with the modern LLMOps stack:
+
+- **🔭 OpenTelemetry-native** — Emit OTLP spans from every agent run. Compatible with Jaeger, Datadog, Grafana, and any OTLP backend. *(Shipping Q3 2026)*
+- **🔗 Langfuse adapter** — Drop-in `@stoic/langfuse` package to auto-instrument Stoic agents as Langfuse traces. *(Shipping Q3 2026)*
+- **📊 Trace-level observability** — Every agent execution captures inputs, outputs, latency, token counts, and error traces.
+- **🧠 Knowledge layer** — Unlike pure observability tools, AgentOS persists agent decisions and architectural knowledge across sessions.
+- **📈 Eval framework** — Built-in evals for task completion rate, tool accuracy, reasoning quality, and cost efficiency. *(Shipping Q3 2026)*
+
+> **Where we fit:** Stoic AgentOS occupies the **Observability + Memory** niche in the LLMOps stack — complementing tracing tools like Langfuse and Helicone with a persistent knowledge layer that makes agents smarter over time.
+
 ## Why AgentOS?
 
-| | **Stoic AgentOS** | Langfuse | AgentOps | CrewAI |
-|---|---|---|---|---|
-| **Agent monitoring** | ✅ | ✅ | ✅ | ⚠️ Orchestration only |
-| **Knowledge persistence** | ✅ | ❌ | ❌ | ❌ |
-| **Auto-capture SDK** | ✅ 3 lines | ⚠️ Decorator-based | ✅ | ❌ |
-| **Multi-workspace** | ✅ | ⚠️ Projects | ❌ | ❌ |
-| **Self-serve dashboard** | ✅ | ✅ | ✅ | ❌ |
-| **Usage limits + billing** | ✅ Built-in | ✅ | ❌ | ❌ |
-| **Open-source core** | ✅ MIT | ✅ MIT | Partial | ✅ |
-| **Setup time** | 3 min | 10 min | 5 min | 30 min |
+| | **Stoic AgentOS** | Langfuse | Helicone | Phoenix (Arize) | AgentOps | CrewAI |
+|---|---|---|---|---|---|---|
+| **LLM tracing & observability** | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ Orchestration only |
+| **Knowledge persistence** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **Auto-capture SDK** | ✅ 3 lines | ⚠️ Decorator-based | ⚠️ Proxy-based | ⚠️ Callback-based | ✅ | ❌ |
+| **Multi-workspace** | ✅ | ⚠️ Projects | ❌ | ✅ | ❌ | ❌ |
+| **Self-serve dashboard** | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
+| **AI-powered diagnostics** | ✅ Claude | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **Self-hostable** | ✅ Docker | ✅ Docker | ❌ Cloud only | ✅ Docker | ❌ | ✅ |
+| **Open-source core** | ✅ MIT | ✅ MIT | ❌ Proprietary | ✅ Apache-2 | Partial | ✅ |
+| **Setup time** | 3 min | 10 min | 2 min | 5 min | 5 min | 30 min |
 
 ## Pricing
 
@@ -286,16 +300,7 @@ Stoic AgentOS is trusted by modern engineering teams to monitor, persist, and or
 
 ## 🐳 Self-Hosting
 
-Run Stoic AgentOS on your own infrastructure in under 5 minutes:
-
-```bash
-# Clone the repo
-git clone --depth=1 https://github.com/benjaminkernbaum-ux/stoic-agentos.git
-cd stoic-agentos
-
-## Self-Hosting (Docker)
-
-Stoic AgentOS can be self-hosted with 3 commands. You'll need a [Supabase](https://supabase.com) project (free tier works).
+Run Stoic AgentOS on your own infrastructure with 3 commands. You'll need a [Supabase](https://supabase.com) project (free tier works).
 
 ```bash
 # 1. Clone and configure

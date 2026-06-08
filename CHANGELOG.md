@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-06-08
+
+### Added
+
+- **Zustand state management** — Migrated dashboard from monolithic prop-drilling to a lightweight Zustand store with atomic selectors.
+- **React Query integration** — All API calls now use TanStack React Query with automatic caching, background polling, and optimistic mutations.
+- **Lazy code-splitting** — All 17 dashboard tabs are now loaded on-demand via `React.lazy` + `Suspense`, reducing initial bundle size by ~40%.
+- **Claude model upgrade** — Migrated from deprecated Claude 3.x models to Sonnet 4.6 (deep analysis) and Haiku 4.5 (fast summaries).
+- **Turnstile server-side verification** — Added server-side CAPTCHA validation and AI-specific rate limiting.
+
+### Changed
+
+- Removed floating AI Chat Assistant widget from the dashboard layout.
+- Fixed template literal escape in IntegrationGuides code examples.
+- Fixed AnimatedCounter to re-animate when data finishes loading asynchronously.
+- Fixed `output_config` parameter placement for Anthropic API compatibility.
+
+### Performance
+
+- Dashboard initial load reduced from ~300KB single chunk to ~80KB with lazy-loaded tab modules.
+- API response caching via React Query eliminates redundant network requests.
+
 ## [2.0.0] - 2025-05-30
 
 ### Added
@@ -56,6 +78,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Knowledge persistence for agent memory.
 - GitHub Actions CI pipeline (lint, test, build, Lighthouse).
 
-[Unreleased]: https://github.com/benjaminkernbaum-ux/stoic-agentos/compare/v2.0.0...HEAD
+[Unreleased]: https://github.com/benjaminkernbaum-ux/stoic-agentos/compare/v2.1.0...HEAD
+[2.1.0]: https://github.com/benjaminkernbaum-ux/stoic-agentos/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/benjaminkernbaum-ux/stoic-agentos/compare/v1.0.0...v2.0.0
 [1.0.0]: https://github.com/benjaminkernbaum-ux/stoic-agentos/releases/tag/v1.0.0
