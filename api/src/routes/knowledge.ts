@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import type { Response } from 'express';
 import { authenticate } from '../middleware/auth.js';
+import { requireMinRole } from '../middleware/rbac.js';
 import { supabase, checkLimit, PLAN_LIMITS } from '../middleware/db.js';
 import type { AuthenticatedRequest } from '../types.js';
 import { safeError } from '../lib/safeError.js';
@@ -22,7 +23,7 @@ router.get(`/api/${API_VERSION}/knowledge-items`, authenticate, async (req: Auth
   }
 });
 
-router.post(`/api/${API_VERSION}/knowledge-items`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
+router.post(`/api/${API_VERSION}/knowledge-items`, authenticate, requireMinRole('member'), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { name, summary, content, artifacts } = req.body;
     if (!name) return res.status(400).json({ error: 'name required' });
@@ -56,7 +57,7 @@ router.post(`/api/${API_VERSION}/knowledge-items`, authenticate, async (req: Aut
 });
 
 // ── Delete Knowledge Item ──
-router.delete(`/api/${API_VERSION}/knowledge-items/:id`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
+router.delete(`/api/${API_VERSION}/knowledge-items/:id`, authenticate, requireMinRole('admin'), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { data, error } = await supabase!
       .from('knowledge_items')

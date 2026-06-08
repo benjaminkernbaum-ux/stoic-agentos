@@ -74,17 +74,24 @@ app.use(requestIdMiddleware);
 const ALLOWED_ORIGINS = [
   'https://stoicagentos.com',
   'https://www.stoicagentos.com',
-  'https://api.stoicagentos.com',
+  'https://app.stoicagentos.com',
+  'http://localhost:5173',
+  'http://localhost:3000',
 ];
-if (process.env.NODE_ENV === 'development') ALLOWED_ORIGINS.push('http://localhost:5173');
+
+// Allow Vercel preview deployments only for our project
+function isAllowedOrigin(origin: string): boolean {
+  if (ALLOWED_ORIGINS.includes(origin)) return true;
+  // Allow Vercel preview deployments only for our project
+  if (/^https:\/\/stoic-agentos[a-z0-9-]*\.vercel\.app$/.test(origin)) return true;
+  return false;
+}
 
 app.use(cors({
   origin: (origin, callback) => {
     // Allow requests with no origin (mobile apps, curl, etc.)
     if (!origin) return callback(null, true);
-    // Allow Vercel preview deployments for stoic-agentos only (not arbitrary 'stoic' substrings)
-    const host = origin.replace('https://', '');
-    if (origin.endsWith('.vercel.app') && host.startsWith('stoic-agentos') || ALLOWED_ORIGINS.includes(origin)) {
+    if (isAllowedOrigin(origin)) {
       return callback(null, true);
     }
     callback(new Error(`CORS: ${origin} not allowed`));
