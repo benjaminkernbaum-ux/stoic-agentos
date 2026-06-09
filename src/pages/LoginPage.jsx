@@ -134,6 +134,9 @@ export default function LoginPage() {
               autoComplete="current-password"
             />
           </div>
+          <div style={{ textAlign: 'right', marginTop: '-8px', marginBottom: '8px' }}>
+            <Link to="/forgot-password" style={{ color: 'rgba(255,255,255,0.5)', fontSize: '13px', textDecoration: 'none' }}>Forgot password?</Link>
+          </div>
 
           {/* Cloudflare Turnstile — "I'm not a robot" */}
           <Turnstile
