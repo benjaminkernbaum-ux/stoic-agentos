@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 
 export const useUIStore = create((set) => ({
-  activeTab: 'overview',
+  activeTab: 'traces',
   sidebarOpen: true,
   mobileSidebarOpen: false,
   cmdOpen: false,

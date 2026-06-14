@@ -46,10 +46,10 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen, activeTab, setAct
             <span className="dash-nav-kbd">{isMac ? '⌘K' : 'Ctrl+K'}</span>
           </button>
 
-          {/* ── Main ── */}
           {[
-            { id: 'chat',    icon: '🛰️', label: 'Mission Comms', badge: null },
-            { id: 'inbox',   icon: '📡', label: 'Signal Feed',   badge: null },
+            { id: 'traces',     icon: '📈', label: 'Traces' },
+            { id: 'memory',     icon: '🧠', label: 'Memory' },
+            { id: 'settings',   icon: '⚙️', label: 'Settings' },
           ].map(item => (
             <button
               key={item.id}
@@ -59,89 +59,11 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen, activeTab, setAct
             >
               <span className="dash-nav-icon">{item.icon}</span>
               <span className="dash-nav-label">{item.label}</span>
-              {item.badge && (
-                <span className={`dash-nav-badge ${item.badge.color}`}>{item.badge.text}</span>
-              )}
-            </button>
-          ))}
-
-          {/* ── Explore ── */}
-          <div className="dash-nav-section">EXPLORE</div>
-          {[
-            { id: 'agents',       icon: '🤖', label: 'Agents',          badge: liveAgents > 0 ? { text: liveAgents, color: 'green' } : null },
-            { id: 'templates',    icon: '🧬', label: 'Blueprints',      badge: null },
-            { id: 'integrations', icon: '🔌', label: 'Connect Hub',     badge: null },
-            { id: 'skills',       icon: '🧩', label: 'Capabilities',    badge: null },
-          ].map(item => (
-            <button
-              key={item.id}
-              className={`dash-nav-btn${activeTab === item.id ? ' active' : ''}`}
-              onClick={() => handleTabClick(item.id)}
-              aria-current={activeTab === item.id ? 'page' : undefined}
-            >
-              <span className="dash-nav-icon">{item.icon}</span>
-              <span className="dash-nav-label">{item.label}</span>
-              {item.badge && (
-                <span className={`dash-nav-badge ${item.badge.color}`}>{item.badge.text}</span>
-              )}
-            </button>
-          ))}
-
-          {/* ── Deploy ── */}
-          <div className="dash-nav-section">DEPLOY</div>
-          <button className="dash-nav-btn dash-nav-action" onClick={() => handleTabClick('chat')}>
-            <span className="dash-nav-icon">✨</span>
-            <span className="dash-nav-label">Brief an agent</span>
-          </button>
-          <button className="dash-nav-btn dash-nav-action" onClick={() => handleTabClick('templates')}>
-            <span className="dash-nav-icon">🧬</span>
-            <span className="dash-nav-label">Deploy blueprint</span>
-          </button>
-          <button className="dash-nav-btn dash-nav-action" onClick={() => { if (setShowAgentModal) setShowAgentModal(true); }}>
-            <span className="dash-nav-icon">✏️</span>
-            <span className="dash-nav-label">Build from scratch</span>
-          </button>
-
-          {/* ── Operate ── */}
-          <div className="dash-nav-section">OPERATE</div>
-          {[
-            { id: 'commandcenter', icon: '🎛️', label: 'Command Center', badge: { text: 'HQ', color: 'purple' } },
-            { id: 'overview',   icon: '📊', label: 'Overview',   badge: errorAgents > 0 ? { text: errorAgents, color: 'red' } : null },
-            { id: 'workspaces', icon: '📦', label: 'Workspaces', badge: null },
-            { id: 'brain',      icon: '💡', label: 'Brain',      badge: null },
-            { id: 'graph',      icon: '🕸️', label: 'Graph',      badge: null },
-            { id: 'traces',     icon: '📈', label: 'Traces',     badge: null },
-            { id: 'workflows',  icon: '🔗', label: 'Workflows',  badge: null },
-            { id: 'memory',     icon: '🧠', label: 'Memory',     badge: null },
-            { id: 'compliance', icon: '🛡️', label: 'Compliance', badge: null },
-            { id: 'teamhq',     icon: '🏢', label: 'Team HQ',    badge: null },
-          ].map(item => (
-            <button
-              key={item.id}
-              className={`dash-nav-btn${activeTab === item.id ? ' active' : ''}`}
-              onClick={() => handleTabClick(item.id)}
-              aria-current={activeTab === item.id ? 'page' : undefined}
-            >
-              <span className="dash-nav-icon">{item.icon}</span>
-              <span className="dash-nav-label">{item.label}</span>
-              {item.badge && (
-                <span className={`dash-nav-badge ${item.badge.color}`}>{item.badge.text}</span>
-              )}
             </button>
           ))}
         </nav>
 
         <div className="dash-sidebar-foot">
-          {/* Usage & Settings */}
-          <button
-            className={`dash-nav-btn${activeTab === 'settings' ? ' active' : ''}`}
-            onClick={() => handleTabClick('settings')}
-            aria-current={activeTab === 'settings' ? 'page' : undefined}
-          >
-            <span className="dash-nav-icon">⚙️</span>
-            <span className="dash-nav-label">Settings</span>
-          </button>
-
           <div className="dash-plan-chip">
             <div className="dash-plan-dot" />
             <span className="dash-plan-text">{planName} PLAN</span>

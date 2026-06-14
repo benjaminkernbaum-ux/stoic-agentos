@@ -148,7 +148,7 @@ export default function Dashboard() {
   const usageCount = stats.observations || 0;
   const usagePct = useMemo(() => usageLimit > 0 ? ((usageCount / usageLimit) * 100).toFixed(1) : 0, [usageCount, usageLimit]);
   const dataLoading = agentsLoading || workspacesLoading || observationsLoading;
-  const isNewUser = !dataLoading && agents.length === 0 && observations.length === 0 && workspaces.length === 0;
+  const isNewUser = false;
 
   // Lock body scroll when mobile sidebar is open
   useEffect(() => {

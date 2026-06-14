@@ -60,21 +60,6 @@ export default function Topbar({ activeTab, setActiveTab, setCmdOpen, setCmdQuer
         ⭐ <span className="dash-capture-text">Star us</span>
       </a>
       <button
-        className="dash-topbar-capture"
-        onClick={() => setActiveTab('overview')}
-        aria-label="Quick capture observation"
-        style={{
-          background: 'var(--surface-4)',
-          border: '1px solid var(--line-mid)',
-          boxShadow: 'none',
-          fontWeight: 500,
-          letterSpacing: 0,
-        }}
-      >
-        <span className="dash-capture-text">+ Capture</span>
-        <span className="dash-capture-icon-only">+</span>
-      </button>
-      <button
         className="dash-avatar"
         onClick={() => setActiveTab('settings')}
         title={`${userName} — ${orgName}`}
