@@ -52,26 +52,19 @@ export function instrumentAnthropicClient(anthropicClient, sdk) {
       if (activeTrace) {
         activeTrace.addSpan(span);
       } else {
-        sdk._send('/traces', {
-          trace_id: `auto_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-          name: `anthropic:${model}`,
-          status: 'success',
-          duration_ms: latencyMs,
+        // Send as standalone trace via ingest endpoint (accepts trace + spans)
+        sdk._send('/traces/ingest', {
+          trace: {
+            trace_id: `auto_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+            name: `anthropic:${model}`,
+            status: 'success',
+            duration_ms: latencyMs,
+            total_tokens: totalTokens,
+            total_cost_usd: costUsd,
+          },
           spans: [span],
-          total_tokens: totalTokens,
-          total_cost_usd: costUsd,
         }).catch(() => {});
       }
-
-      sdk.capture({
-        type: 'agent_run',
-        title: `[Anthropic] ${model} — ${totalTokens} tokens ($${costUsd.toFixed(4)})`,
-        metadata: {
-          provider: 'anthropic', model, prompt_tokens: promptTokens,
-          completion_tokens: completionTokens, total_tokens: totalTokens,
-          latency_ms: latencyMs, cost_usd: costUsd,
-        },
-      }).catch(() => {});
 
       return result;
     } catch (error) {
@@ -94,14 +87,17 @@ export function instrumentAnthropicClient(anthropicClient, sdk) {
       if (activeTrace) {
         activeTrace.addSpan(span);
       } else {
-        sdk._send('/traces', {
-          trace_id: `auto_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-          name: `anthropic:${model}:error`,
-          status: 'error',
-          duration_ms: latencyMs,
+        // Send as standalone error trace via ingest endpoint
+        sdk._send('/traces/ingest', {
+          trace: {
+            trace_id: `auto_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+            name: `anthropic:${model}:error`,
+            status: 'error',
+            duration_ms: latencyMs,
+            total_tokens: 0,
+            total_cost_usd: 0,
+          },
           spans: [span],
-          total_tokens: 0,
-          total_cost_usd: 0,
         }).catch(() => {});
       }
 

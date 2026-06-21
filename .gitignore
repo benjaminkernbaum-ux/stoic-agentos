@@ -45,3 +45,4 @@ INVESTOR_ONEPAGER.md
 public/fetok_serie6.html
 scripts/tactical_bot/
 scripts/migrate_crm_leads.py
+.env*.local

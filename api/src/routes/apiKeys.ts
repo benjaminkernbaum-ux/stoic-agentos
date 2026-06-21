@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import type { Response } from 'express';
 import crypto from 'crypto';
-import { authenticate, hashApiKey } from '../middleware/auth.js';
+import { authenticate, hashApiKey, invalidateApiKeyCache } from '../middleware/auth.js';
 import { requireMinRole } from '../middleware/rbac.js';
 import { supabase } from '../middleware/db.js';
 import { invalidateOrgKeyCache, isVaultMigrationError } from '../lib/anthropic.js';
@@ -146,6 +146,9 @@ router.delete(`/api/${API_VERSION}/api-keys/:id`, authenticate, requireMinRole('
       .select()
       .single();
     if (error) throw error;
+    if (data?.key_hash) {
+      invalidateApiKeyCache(data.key_hash);
+    }
     res.json({ revoked: true, id: data.id });
   } catch (err: unknown) {
     safeError(res, err);

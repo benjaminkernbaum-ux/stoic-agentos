@@ -121,17 +121,6 @@ function patchInstance(instance, sdk) {
         }).catch(() => {});
       }
 
-      // Also capture as observation for the brain
-      sdk.capture({
-        type: 'agent_run',
-        title: `[OpenAI] ${model} — ${totalTokens} tokens ($${costUsd.toFixed(4)})`,
-        metadata: {
-          provider: 'openai', model, prompt_tokens: promptTokens,
-          completion_tokens: completionTokens, total_tokens: totalTokens,
-          latency_ms: latencyMs, cost_usd: costUsd,
-        },
-      }).catch(() => {});
-
       return result;
     } catch (error) {
       const latencyMs = Date.now() - startTime;

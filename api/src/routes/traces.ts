@@ -204,12 +204,59 @@ router.get(`/api/${API_VERSION}/traces`, authenticate, async (req: Authenticated
 /**
  * GET /api/v1/traces/analytics — Rich analytics with breakdowns
  * Query: period (7d|30d|90d), agent?
+ *
+ * Uses server-side PostgreSQL RPC for aggregation (migration 016).
+ * Falls back to JS-side computation if the RPC is not deployed yet.
  */
 router.get(`/api/${API_VERSION}/traces/analytics`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { period = '30d', agent } = req.query;
     const days = parseInt(period as string) || 30;
     const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+
+    // ── Try server-side RPC first (O(index-scan) instead of O(all-rows)) ──
+    const { data: rpcResult, error: rpcErr } = await supabase!.rpc('get_trace_analytics', {
+      p_org_id: req.org.id,
+      p_since: since,
+      p_agent: (agent as string) || null,
+    });
+
+    if (!rpcErr && rpcResult) {
+      // RPC succeeded — return structured response
+      const totals = rpcResult.totals || {};
+      const totalTraces = totals.traces || 0;
+      return res.json({
+        period: `${days}d`,
+        totals: {
+          traces: totalTraces,
+          spans: rpcResult.total_spans || 0,
+          tokens: totals.tokens || 0,
+          cost_usd: parseFloat(totals.cost_usd) || 0,
+          success: totals.success || 0,
+          errors: totals.errors || 0,
+          error_rate: parseFloat(totals.error_rate) || 0,
+        },
+        averages: {
+          latency_ms: totals.avg_latency_ms || 0,
+          tokens_per_trace: totals.avg_tokens_per_trace || 0,
+          cost_per_trace: parseFloat(totals.avg_cost_per_trace) || 0,
+          spans_per_trace: parseFloat(totals.avg_spans_per_trace) || 0,
+        },
+        by_model: (rpcResult.by_model || []).map((m: Record<string, unknown>) => ({
+          ...m,
+          cost: parseFloat(m.cost as string) || 0,
+        })),
+        by_agent: (rpcResult.by_agent || []).map((a: Record<string, unknown>) => ({
+          ...a,
+          cost: parseFloat(a.cost as string) || 0,
+        })),
+      });
+    }
+
+    // ── Fallback: JS-side aggregation (migration 016 not applied yet) ──
+    if (rpcErr) {
+      console.warn('[analytics] RPC get_trace_analytics not available, falling back to JS aggregation:', rpcErr.message);
+    }
 
     // Trace aggregates
     let traceQuery = supabase!
@@ -304,10 +351,66 @@ router.get(`/api/${API_VERSION}/traces/analytics`, authenticate, async (req: Aut
 /**
  * GET /api/v1/traces/stats — Quick stats (lighter than analytics)
  * Query: from?, to?
+ *
+ * Uses server-side PostgreSQL RPC for aggregation (migration 016).
+ * Falls back to JS-side computation if the RPC is not deployed yet.
  */
 router.get(`/api/${API_VERSION}/traces/stats`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { from, to } = req.query;
+
+    // ── Try server-side RPC first ──
+    const { data: rpcResult, error: rpcErr } = await supabase!.rpc('get_trace_stats', {
+      p_org_id: req.org.id,
+      p_from: (from as string) || null,
+      p_to: (to as string) || null,
+    });
+
+    if (!rpcErr && rpcResult) {
+      // RPC succeeded — return directly
+      const totalTraces = rpcResult.total_traces || 0;
+      const errorCount = rpcResult.error_count || 0;
+
+      // Ensure cost in breakdowns are parsed as floats to avoid frontend crashes
+      const providers: Record<string, any> = {};
+      if (rpcResult.providers) {
+        for (const [provider, data] of Object.entries(rpcResult.providers)) {
+          const d = data as any;
+          providers[provider] = {
+            ...d,
+            cost: parseFloat(d.cost) || 0
+          };
+        }
+      }
+
+      const models: Record<string, any> = {};
+      if (rpcResult.models) {
+        for (const [model, data] of Object.entries(rpcResult.models)) {
+          const d = data as any;
+          models[model] = {
+            ...d,
+            cost: parseFloat(d.cost) || 0
+          };
+        }
+      }
+
+      return res.json({
+        total_traces: totalTraces,
+        total_tokens: rpcResult.total_tokens || 0,
+        total_cost_usd: parseFloat(rpcResult.total_cost_usd) || 0,
+        avg_latency_ms: rpcResult.avg_latency_ms || 0,
+        error_count: errorCount,
+        error_rate: totalTraces > 0 ? parseFloat(((errorCount / totalTraces) * 100).toFixed(1)) : 0,
+        total_spans: rpcResult.total_spans || 0,
+        providers,
+        models,
+      });
+    }
+
+    // ── Fallback: JS-side aggregation ──
+    if (rpcErr) {
+      console.warn('[stats] RPC get_trace_stats not available, falling back to JS aggregation:', rpcErr.message);
+    }
 
     let query = supabase!
       .from('traces')
