@@ -83,6 +83,7 @@ export class AgentOS {
     this._maxRetries = options.maxRetries ?? 3;
     this._baseDelay = options.baseDelay ?? 500; // ms
     this._shutdownCalled = false;
+    this.autoRecall = options.autoRecall || false;
 
     if (!this.apiKey) {
       console.warn(
@@ -605,6 +606,18 @@ class MemoryClient {
     if (agentId) params.set('agent_id', agentId);
     if (eventType) params.set('event_type', eventType);
     if (minImportance) params.set('min_importance', String(minImportance));
+    const qs = params.toString();
+    return this._sdk._fetch(`/memory/episodic${qs ? `?${qs}` : ''}`);
+  }
+
+  /** Search episodic memories using semantic vector search */
+  async searchEpisodes(query, { agentId, eventType, matchThreshold, limit } = {}) {
+    const params = new URLSearchParams();
+    params.set('query', query);
+    if (agentId) params.set('agent_id', agentId);
+    if (eventType) params.set('event_type', eventType);
+    if (matchThreshold) params.set('match_threshold', String(matchThreshold));
+    if (limit) params.set('limit', String(limit));
     const qs = params.toString();
     return this._sdk._fetch(`/memory/episodic${qs ? `?${qs}` : ''}`);
   }

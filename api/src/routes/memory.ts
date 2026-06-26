@@ -14,6 +14,7 @@ import { supabase } from '../middleware/db.js';
 import type { AuthenticatedRequest } from '../types.js';
 import { isTableMissing } from '../lib/utils.js';
 import { safeError } from '../lib/safeError.js';
+import { getEmbedding } from '../lib/embeddings.js';
 
 const router = Router();
 const V = 'v1';
@@ -89,26 +90,63 @@ router.delete(`/api/${V}/memory/working/:id`, authenticate, requireMinRole('admi
 // TIER 2: EPISODIC MEMORY
 // ══════════════════════════════════════
 
+// ── GET Episodic Memory ──
 router.get(`/api/${V}/memory/episodic`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
+    const { query: searchQuery, agent_id, event_type, min_importance, match_threshold = '0.3', limit = '50' } = req.query;
+
+    // ── Try Semantic Vector Search if "query" parameter is present ──
+    if (searchQuery) {
+      const embedding = await getEmbedding(searchQuery as string);
+      if (embedding) {
+        const { data: matched, error: rpcErr } = await supabase!.rpc('match_episodic_memories', {
+          p_org_id: req.org.id,
+          p_query_embedding: embedding,
+          p_match_threshold: parseFloat(match_threshold as string) || 0.3,
+          p_match_count: parseInt(limit as string) || 5,
+          p_agent_id: (agent_id as string) || null,
+          p_event_type: (event_type as string) || null,
+        });
+
+        if (!rpcErr && matched) {
+          return res.json(matched);
+        }
+
+        if (rpcErr) {
+          console.warn('[memory] RPC match_episodic_memories failed or not deployed, falling back to temporal query:', rpcErr.message);
+        }
+      }
+    }
+
+    // ── Fallback: Temporal & Filtered Search ──
     let query = supabase!.from('episodic_memory').select('*')
-      .eq('org_id', req.org.id).order('valid_from', { ascending: false }).limit(50);
-    if (req.query.agent_id) query = query.eq('agent_id', req.query.agent_id as string);
-    if (req.query.event_type) query = query.eq('event_type', req.query.event_type as string);
-    if (req.query.min_importance) query = query.gte('importance', +(req.query.min_importance as string));
+      .eq('org_id', req.org.id).order('valid_from', { ascending: false }).limit(parseInt(limit as string) || 50);
+    if (agent_id) query = query.eq('agent_id', agent_id as string);
+    if (event_type) query = query.eq('event_type', event_type as string);
+    if (min_importance) query = query.gte('importance', +(min_importance as string));
     const { data, error } = await query;
     if (error) { if (isTableMissing(error)) return res.json([]); throw error; }
     res.json(data || []);
   } catch (err: unknown) { safeError(res, err); }
 });
 
+// ── POST Episodic Memory ──
 router.post(`/api/${V}/memory/episodic`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { agent_id, content, event_type, importance, metadata } = req.body;
     if (!content) return res.status(400).json({ error: 'content required' });
+
+    // Generate vector embedding for the content
+    const embedding = await getEmbedding(content);
+
     const { data, error } = await supabase!.from('episodic_memory').insert({
-      org_id: req.org.id, agent_id: agent_id || null, content,
-      event_type: event_type || 'observation', importance: importance ?? 5, metadata: metadata || {},
+      org_id: req.org.id,
+      agent_id: agent_id || null,
+      content,
+      embedding: embedding || null,
+      event_type: event_type || 'observation',
+      importance: importance ?? 5,
+      metadata: metadata || {},
     }).select().single();
     if (error) throw error;
     res.status(201).json(data);

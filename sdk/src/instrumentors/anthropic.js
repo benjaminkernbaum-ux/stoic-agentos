@@ -22,9 +22,47 @@ export function instrumentAnthropicClient(anthropicClient, sdk) {
   anthropicClient.messages.create = async function instrumentedCreate(params, options) {
     const startTime = Date.now();
     const model = params.model || 'unknown';
+    let finalParams = params;
+
+    if (sdk.autoRecall && Array.isArray(params.messages) && params.messages.length > 0) {
+      try {
+        const messages = params.messages;
+        const userMessages = messages.filter(m => m.role === 'user');
+        const lastUserMessage = userMessages[userMessages.length - 1];
+        const queryText = typeof lastUserMessage?.content === 'string'
+          ? lastUserMessage.content
+          : Array.isArray(lastUserMessage?.content)
+            ? lastUserMessage.content.map(c => c.text || c.content || '').join(' ')
+            : '';
+
+        if (queryText) {
+          const memories = await sdk.memory.searchEpisodes(queryText, { limit: 3, matchThreshold: 0.3 });
+          if (Array.isArray(memories) && memories.length > 0) {
+            const memoryContext = memories.map(m => `- ${m.content}`).join('\n');
+            const systemPrefix = `[Recall context from past sessions:\n${memoryContext}\nUse this historical context to ground your answer if relevant.]`;
+            
+            let system = params.system;
+            if (typeof system === 'string') {
+              system = `${systemPrefix}\n\n${system}`;
+            } else if (Array.isArray(system)) {
+              system = [{ type: 'text', text: systemPrefix }, ...system];
+            } else {
+              system = systemPrefix;
+            }
+
+            finalParams = {
+              ...params,
+              system
+            };
+          }
+        }
+      } catch (err) {
+        if (sdk.debug) console.warn('[AgentOS] Auto-recall failed:', err.message);
+      }
+    }
 
     try {
-      const result = await originalCreate(params, options);
+      const result = await originalCreate(finalParams, options);
       const latencyMs = Date.now() - startTime;
 
       const usage = result.usage || {};
