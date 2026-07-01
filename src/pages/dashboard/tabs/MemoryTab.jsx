@@ -19,6 +19,9 @@ export default function MemoryTab() {
   const [reflectionStatus, setReflectionStatus] = useState(null);
   const [reflecting, setReflecting] = useState(false);
   const [decaying, setDecaying] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [searching, setSearching] = useState(false);
 
   const headers = useCallback(async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -68,6 +71,24 @@ export default function MemoryTab() {
   };
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
+
+  const handleSearch = async (e) => {
+    if (e) e.preventDefault();
+    if (!searchQuery.trim()) {
+      setSearchResults([]);
+      return;
+    }
+    setSearching(true);
+    try {
+      const h = await headers();
+      const res = await fetch(`${API_BASE}/api/v1/memory/episodic?query=${encodeURIComponent(searchQuery)}`, { headers: h });
+      if (res.ok) {
+        const data = await res.json();
+        setSearchResults(Array.isArray(data) ? data : []);
+      }
+    } catch {}
+    setSearching(false);
+  };
 
   const seedDemo = async () => {
     setSeeding(true);
@@ -136,6 +157,63 @@ export default function MemoryTab() {
             <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{s.label}</div>
           </div>
         ))}
+      </div>
+
+      {/* Semantic Search Simulator */}
+      <div className="dash-card" style={{ marginBottom: '1rem', padding: '1.25rem' }}>
+        <h3 style={{ margin: '0 0 0.5rem', color: '#fff', fontSize: '0.95rem', fontWeight: 600 }}>🔍 Semantic Vector Search Simulator</h3>
+        <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', margin: '0 0 1rem' }}>
+          Test query retrieval on episodic memory vector embeddings using cosine similarity.
+        </p>
+        <form onSubmit={handleSearch} style={{ display: 'flex', gap: '0.5rem', marginBottom: searchResults.length > 0 ? '1rem' : 0 }}>
+          <input
+            type="text"
+            placeholder="Type a query to search agent memories (e.g. 'idempotency' or 'anomaly')..."
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            style={{
+              flex: 1,
+              background: 'rgba(255,255,255,0.05)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              color: '#fff',
+              padding: '0.5rem 0.75rem',
+              borderRadius: '6px',
+              fontSize: '0.85rem'
+            }}
+          />
+          <button className="dash-btn dash-btn-primary" type="submit" disabled={searching} style={{ padding: '0.5rem 1.25rem', fontSize: '0.85rem' }}>
+            {searching ? 'Searching...' : 'Search'}
+          </button>
+        </form>
+
+        {searchResults.length > 0 && (
+          <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '1rem' }}>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.5rem', fontWeight: 600 }}>Matched Memories:</div>
+            <div style={{ display: 'grid', gap: '0.5rem' }}>
+              {searchResults.map((r, idx) => {
+                const badge = importanceBadge(r.importance);
+                const score = r.similarity !== undefined ? Math.round(r.similarity * 100) : null;
+                return (
+                  <div key={r.id || idx} style={{ padding: '0.75rem', borderRadius: '6px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ flex: 1, marginRight: '1rem' }}>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: '0.2rem', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                        <span style={{ padding: '1px 5px', borderRadius: '3px', background: 'rgba(167,139,250,0.1)', color: '#a78bfa' }}>{r.event_type || 'episode'}</span>
+                        <span style={{ color: badge.color }}>{badge.label} (imp: {r.importance})</span>
+                      </div>
+                      <p style={{ margin: 0, fontSize: '0.8rem', color: '#fff', lineHeight: 1.4 }}>{r.content}</p>
+                    </div>
+                    {score !== null && (
+                      <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                        <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--accent)' }}>{score}%</span>
+                        <div style={{ fontSize: '0.65rem', color: 'var(--text-secondary)' }}>match</div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Reflection Panel */}

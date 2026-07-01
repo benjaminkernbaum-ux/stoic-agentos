@@ -198,6 +198,115 @@ function AnthropicUsagePanel() {
   );
 }
 
+const CIRCUIT_COLORS = { closed: '#22c55e', 'half-open': '#eab308', open: '#ef4444' };
+const CIRCUIT_LABELS = { closed: 'Healthy', 'half-open': 'Warning', open: 'Tripped' };
+
+function ComplianceSection({ toast }) {
+  const [breakers, setBreakers] = useState([]);
+  const [approvals, setApprovals] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [busyApprovalId, setBusyApprovalId] = useState(null);
+
+  const load = async () => {
+    const token = await authToken();
+    if (!token) return;
+    try {
+      const [breakerR, approvalsR] = await Promise.all([
+        fetch(`${API_BASE}/api/v1/compliance/circuit-breaker`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()).catch(() => []),
+        fetch(`${API_BASE}/api/v1/compliance/shield/approvals?status=PENDING`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()).catch(() => []),
+      ]);
+      setBreakers(Array.isArray(breakerR) ? breakerR : []);
+      setApprovals(Array.isArray(approvalsR) ? approvalsR : []);
+    } catch {}
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    load();
+    const interval = setInterval(() => {
+      authToken().then(token => {
+        if (!token) return;
+        fetch(`${API_BASE}/api/v1/compliance/shield/approvals?status=PENDING`, { headers: { Authorization: `Bearer ${token}` } })
+          .then(r => r.json())
+          .then(data => {
+            if (Array.isArray(data)) setApprovals(data);
+          })
+          .catch(() => {});
+      });
+    }, 4000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const resolveApproval = async (id, verdict) => {
+    setBusyApprovalId(id);
+    try {
+      const token = await authToken();
+      const res = await fetch(`${API_BASE}/api/v1/compliance/shield/approvals/${id}/resolve`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ verdict }),
+      });
+      if (res.ok) {
+        toast(`Action ${verdict.toLowerCase()} successfully`, 'success');
+        load();
+      } else {
+        toast('Failed to resolve action', 'error');
+      }
+    } catch (err) {
+      toast('Error connecting to compliance gateway', 'error');
+    }
+    setBusyApprovalId(null);
+  };
+
+  return (
+    <div className="dash-settings-section">
+      <div className="dash-settings-section-head">Compliance & Circuit Breakers</div>
+      
+      {/* Approvals */}
+      {approvals.length > 0 ? (
+        <div style={{ marginBottom: '1rem', padding: '10px 12px', background: 'rgba(167,139,250,0.06)', border: '1px solid rgba(167,139,250,0.2)', borderRadius: 6 }}>
+          <div style={{ fontWeight: 600, color: '#fff', fontSize: 13, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span>🛡️</span> Pending HITL Approvals ({approvals.length})
+          </div>
+          <div style={{ display: 'grid', gap: 8 }}>
+            {approvals.map(app => (
+              <div key={app.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 8, background: 'rgba(0,0,0,0.2)', borderRadius: 4, fontSize: 12 }}>
+                <div>
+                  <span style={{ color: 'var(--text-secondary)' }}>Agent requested: </span>
+                  <code style={{ color: '#a78bfa', background: 'rgba(255,255,255,0.05)', padding: '2px 4px', borderRadius: 4 }}>{app.tool_name}</code>
+                </div>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <button className="btn btn-primary btn-sm" style={{ padding: '2px 8px', fontSize: 11, background: '#22c55e', border: 'none' }} onClick={() => resolveApproval(app.id, 'APPROVED')} disabled={busyApprovalId === app.id}>Approve</button>
+                  <button className="btn btn-danger btn-sm" style={{ padding: '2px 8px', fontSize: 11, background: '#ef4444', border: 'none' }} onClick={() => resolveApproval(app.id, 'REJECTED')} disabled={busyApprovalId === app.id}>Reject</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {/* Breakers */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '10px', marginTop: 10 }}>
+        {breakers.length > 0 ? breakers.map(b => (
+          <div key={b.agent_id} style={{ padding: '10px', borderRadius: '6px', border: `1px solid ${CIRCUIT_COLORS[b.circuit_status]}33`, background: `${CIRCUIT_COLORS[b.circuit_status]}06`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12 }}>
+            <div>
+              <div style={{ fontWeight: 600, color: '#fff' }}>{b.agent_name}</div>
+              <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 2 }}>{b.blocks_last_hour} blocks last hour</div>
+            </div>
+            <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: '4px', background: `${CIRCUIT_COLORS[b.circuit_status]}22`, color: CIRCUIT_COLORS[b.circuit_status] }}>
+              {CIRCUIT_LABELS[b.circuit_status]}
+            </span>
+          </div>
+        )) : (
+          <div style={{ gridColumn: '1 / -1', fontSize: 12, color: 'var(--text-secondary)', textAlign: 'center', padding: '12px' }}>
+            No active circuit breakers found.
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function SettingsTab({ userName, user, orgName, planName, handleUpgrade, upgradeLoading, handleManageSubscription, apiKey, apiKeys, handleGenerateKey, handleRevokeKey, keyGenLoading, handleLogout, toast }) {
   const [exportLoading, setExportLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
@@ -424,6 +533,9 @@ export default function SettingsTab({ userName, user, orgName, planName, handleU
 
       {/* Claude usage */}
       <AnthropicUsagePanel />
+
+      {/* Compliance & circuit breakers */}
+      <ComplianceSection toast={toast} />
 
       {/* Data & Privacy (GDPR) */}
       <div className="dash-settings-section">

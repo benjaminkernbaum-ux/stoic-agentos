@@ -528,9 +528,6 @@ export default function Dashboard() {
               <MemoryTab />
             )}
 
-            {activeTab === 'compliance' && (
-              <ComplianceTab />
-            )}
 
             {activeTab === 'chat' && (
               <ChatTab agents={agents} />

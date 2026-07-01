@@ -49,7 +49,6 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen, activeTab, setAct
           {[
             { id: 'traces',     icon: '📈', label: 'Traces' },
             { id: 'memory',     icon: '🧠', label: 'Memory' },
-            { id: 'compliance', icon: '🛡️', label: 'Compliance' },
             { id: 'settings',   icon: '⚙️', label: 'Settings' },
           ].map(item => (
             <button

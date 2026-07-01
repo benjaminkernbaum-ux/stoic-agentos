@@ -5,7 +5,7 @@
 
 import { estimateCost } from '../pricing.js';
 import { getActiveTrace } from '../trace.js';
-import { AgentOSCircuitBreakerError, AgentOSPolicyBlockError } from '../index.js';
+import { AgentOSError, AgentOSCircuitBreakerError, AgentOSPolicyBlockError } from '../index.js';
 
 /**
  * Instrument an Anthropic client instance

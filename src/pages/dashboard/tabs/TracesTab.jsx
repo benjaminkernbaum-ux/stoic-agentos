@@ -22,6 +22,8 @@ const SPAN_TYPE_META = {
   'messages.create.stream':  { icon: '🌊', color: '#e07830', label: 'Stream' },
   tool_use:                  { icon: '🔧', color: '#67e8f9', label: 'Tool Use' },
   retrieval:                 { icon: '📚', color: '#ff8c42', label: 'Retrieval' },
+  memory_recall:             { icon: '🧠', color: '#c084fc', label: 'Memory Recall' },
+  recall:                    { icon: '🧠', color: '#c084fc', label: 'Recall' },
   llm_call:                  { icon: '🧠', color: '#a78bfa', label: 'LLM Call' },
 };
 
@@ -245,7 +247,15 @@ function TraceRow({ trace, expanded, onToggle }) {
         </div>
 
         {/* Quick stats */}
-        <div style={{ display: 'flex', gap: 10, flexShrink: 0 }}>
+        <div style={{ display: 'flex', gap: 10, flexShrink: 0, alignItems: 'center' }}>
+          {(() => {
+            const recallCount = spans.filter(sp => sp.type === 'memory_recall' || sp.type === 'recall' || sp.type === 'retrieval').length;
+            return recallCount > 0 ? (
+              <span style={{ fontSize: 8, color: '#c084fc', background: 'rgba(192,132,252,0.1)', border: '1px solid rgba(192,132,252,0.2)', padding: '2px 6px', borderRadius: '4px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                🧠 {recallCount} RECALL
+              </span>
+            ) : null;
+          })()}
           {trace.span_count > 0 && (
             <span style={{ fontSize: 9, color: 'var(--gray-3)' }}>
               <strong style={{ color: 'var(--gray-2)' }}>{trace.span_count}</strong> spans
