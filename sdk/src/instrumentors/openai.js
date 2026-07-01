@@ -207,10 +207,20 @@ function patchInstance(instance, sdk) {
               }
             }
             if (sdk.debug) console.log(`[AgentOS Shield] ✅ Tool "${criticalToolName}" APPROVED. Resuming.`);
+          } else {
+            if (sdk.failClosed) {
+              throw new AgentOSPolicyBlockError(`HITL Shield validation failed: Invalid response from compliance gateway.`);
+            }
           }
         } catch (err) {
           if (err instanceof AgentOSError) throw err;
-          throw new AgentOSPolicyBlockError(`HITL Shield validation failed: ${err.message}`);
+          if (sdk.failClosed) {
+            throw new AgentOSPolicyBlockError(`HITL Shield validation failed: ${err.message}`);
+          } else {
+            if (sdk.debug) {
+              console.warn(`[AgentOS Shield] HITL Shield validation failed (Fail-Open active, proceeding):`, err.message);
+            }
+          }
         }
       }
 

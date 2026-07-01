@@ -102,6 +102,7 @@ export class AgentOS {
     this.activeShield = options.activeShield || false;
     this.criticalTools = options.criticalTools || [];
     this.rejectionBehavior = options.rejectionBehavior || 'refuse'; // 'refuse' | 'throw'
+    this.failClosed = options.failClosed || false; // default false (fail-open)
 
     this.localCircuitBreaker = new LocalCircuitBreaker(options.circuitBreaker);
     this.backgroundQueue = new BackgroundQueue(this, options.queue);

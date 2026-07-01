@@ -74,3 +74,91 @@ describe('BackgroundQueue', () => {
     expect(mockSdk._send).toHaveBeenCalledTimes(2);
   });
 });
+
+describe('failClosed policy integration', () => {
+  it('should fail-open when failClosed is false and API fails', async () => {
+    const { AgentOS } = await import('./index.js');
+    const { instrumentOpenAIClient } = await import('./instrumentors/openai.js');
+
+    const mockSdk = new AgentOS({
+      apiKey: 'sk_test_123',
+      activeShield: true,
+      criticalTools: ['delete_all'],
+      failClosed: false,
+    });
+
+    vi.spyOn(mockSdk.compliance, 'suspend').mockRejectedValue(new Error('API Offline'));
+
+    const mockOpenAI = {
+      chat: {
+        completions: {
+          create: vi.fn().mockResolvedValue({
+            id: 'chatcmpl-123',
+            choices: [{
+              message: {
+                content: 'done',
+                tool_calls: [{
+                  id: 'call_1',
+                  type: 'function',
+                  function: { name: 'delete_all', arguments: '{}' }
+                }]
+              }
+            }],
+            usage: { prompt_tokens: 10, completion_tokens: 10 }
+          })
+        }
+      }
+    };
+
+    instrumentOpenAIClient(mockOpenAI, mockSdk);
+
+    const res = await mockOpenAI.chat.completions.create({
+      model: 'gpt-4',
+      messages: [{ role: 'user', content: 'test' }]
+    });
+
+    expect(res.choices[0].message.content).toBe('done');
+  });
+
+  it('should fail-closed when failClosed is true and API fails', async () => {
+    const { AgentOS } = await import('./index.js');
+    const { instrumentOpenAIClient } = await import('./instrumentors/openai.js');
+
+    const mockSdk = new AgentOS({
+      apiKey: 'sk_test_123',
+      activeShield: true,
+      criticalTools: ['delete_all'],
+      failClosed: true,
+    });
+
+    vi.spyOn(mockSdk.compliance, 'suspend').mockRejectedValue(new Error('API Offline'));
+
+    const mockOpenAI = {
+      chat: {
+        completions: {
+          create: vi.fn().mockResolvedValue({
+            id: 'chatcmpl-123',
+            choices: [{
+              message: {
+                content: 'done',
+                tool_calls: [{
+                  id: 'call_1',
+                  type: 'function',
+                  function: { name: 'delete_all', arguments: '{}' }
+                }]
+              }
+            }],
+            usage: { prompt_tokens: 10, completion_tokens: 10 }
+          })
+        }
+      }
+    };
+
+    instrumentOpenAIClient(mockOpenAI, mockSdk);
+
+    await expect(mockOpenAI.chat.completions.create({
+      model: 'gpt-4',
+      messages: [{ role: 'user', content: 'test' }]
+    })).rejects.toThrow(/HITL Shield validation failed/);
+  });
+});

@@ -7,6 +7,7 @@ const API_BASE = 'https://api.stoicagentos.com';
 const SECTIONS = [
   { id: 'getting-started', icon: '🚀', label: 'Getting Started', group: 'Overview' },
   { id: 'authentication', icon: '🔑', label: 'Authentication', group: 'Overview' },
+  { id: 'shield', icon: '🛡️', label: 'Shield & Firewall', group: 'Overview', badge: 'new' },
   { id: 'sdk', icon: '📦', label: 'SDK Reference', group: 'SDK', badge: 'new' },
   { id: 'agents', icon: '🤖', label: 'Agents API', group: 'API Reference' },
   { id: 'observations', icon: '👁', label: 'Observations API', group: 'API Reference' },
@@ -410,9 +411,83 @@ function RateLimits() {
   </>);
 }
 
+function ShieldDocs() {
+  return (<>
+    <h1 className="docs-page-title">🛡️ Shield & Active Firewall</h1>
+    <p className="docs-page-desc">Protect your infrastructure and control costs by intercepting AI agent actions in real-time. Block infinite loops and enforce human approvals.</p>
+
+    <Callout type="danger" title="Active Governance">
+      Unlike passive logging tools (like Langfuse), Stoic AgentOS acts as a <strong>circuit breaker</strong> and <strong>active proxy</strong>. It suspends execution before dangerous tools run, requesting human intervention.
+    </Callout>
+
+    <h2 id="setup-shield">Enabling the Firewall</h2>
+    <p>Activate the firewall by passing the shield options when instantiating the SDK. Instrument your LLM client as usual:</p>
+
+    <CodeBlock lang="javascript" file="agent.js">{`import { AgentOS } from 'stoic-agentos-sdk';
+import OpenAI from 'openai';
+
+const os = new AgentOS({
+  apiKey: 'sk_live_your_key_here',
+  activeShield: true,
+  criticalTools: ['delete_database', 'send_wire_transfer'],
+  rejectionBehavior: 'refuse', // 'refuse' (simulates polite refusal) or 'throw' (throws AgentOSPolicyBlockError)
+  failClosed: true,            // Strict security: blocks action if Stoic AgentOS API is offline
+  circuitBreaker: {
+    enabled: true,
+    maxRpm: 60,                // Local Rate Limit: 60 requests per minute max
+    maxTpm: 100000             // Local Rate Limit: 100,000 tokens per minute max
+  }
+});
+
+const openai = new OpenAI();
+os.instrumentClient('openai', openai);`}</CodeBlock>
+
+    <h2 id="how-hitl-works">How Human-in-the-Loop (HITL) Works</h2>
+    <div className="docs-step">
+      <div className="docs-step-number">1</div>
+      <div className="docs-step-content">
+        <div className="docs-step-title">Action Interception</div>
+        <div className="docs-step-desc">When the LLM decides to call a tool listed in <code>criticalTools</code>, the SDK intercepts the call before it goes to your application logic.</div>
+      </div>
+    </div>
+    <div className="docs-step">
+      <div className="docs-step-number">2</div>
+      <div className="docs-step-content">
+        <div className="docs-step-title">Execution Freeze & Polling</div>
+        <div className="docs-step-desc">The SDK registers a pending approval with the Stoic AgentOS API and suspends the execution thread. It starts a secure polling loop.</div>
+      </div>
+    </div>
+    <div className="docs-step">
+      <div className="docs-step-number">3</div>
+      <div className="docs-step-content">
+        <div className="docs-step-title">Dashboard Action</div>
+        <div className="docs-step-desc">The pending request pops up in the <strong>Settings</strong> tab of the Stoic AgentOS Dashboard. You can click <strong>Approve</strong> or <strong>Reject</strong>.</div>
+      </div>
+    </div>
+    <div className="docs-step">
+      <div className="docs-step-number">4</div>
+      <div className="docs-step-content">
+        <div className="docs-step-title">Resume or Block</div>
+        <div className="docs-step-desc">Once resolved, the SDK either resumes execution transparently (if approved) or simulates a refusal/throws an error (if rejected).</div>
+      </div>
+    </div>
+
+    <h2 id="circuit-breaker-ref">Local Circuit Breakers</h2>
+    <p>Local rate limits are computed client-side using a sliding window algorithm. This adds zero latency to your LLM requests. If the limit is reached, it trips the breaker immediately, preventing infinite loops from burning your API credits.</p>
+
+    <h2 id="fail-safe-ref">Fail-Safe Options</h2>
+    <p>Choose your governance level:</p>
+    <ul>
+      <li><strong>Fail-Open (Default):</strong> If the network drops or the Stoic AgentOS gateway is unreachable, the SDK allows the tool call to proceed so your agent remains online.</li>
+      <li><strong>Fail-Closed (Recommended for Enterprise):</strong> Set <code>failClosed: true</code>. If the Stoic AgentOS API cannot be reached, the SDK blocks the action, guaranteeing no critical tools run without safety checks.</li>
+    </ul>
+  </>);
+}
+
 const CONTENT_MAP = {
   'getting-started': GettingStarted,
   'authentication': Authentication,
+  'shield': ShieldDocs,
   'sdk': SDKRef,
   'agents': AgentsAPI,
   'observations': ObservationsAPI,
