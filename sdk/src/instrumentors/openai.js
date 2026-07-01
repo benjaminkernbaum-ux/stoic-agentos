@@ -171,15 +171,19 @@ function patchInstance(instance, sdk) {
             while (attempts < maxPollAttempts) {
               await new Promise(r => setTimeout(r, pollInterval));
               attempts++;
-              const statusRes = await sdk.compliance.checkApprovalStatus(approvalId);
-              if (statusRes && statusRes.status) {
-                if (statusRes.status === 'APPROVED') {
-                  approved = true;
-                  break;
-                } else if (statusRes.status === 'REJECTED') {
-                  approved = false;
-                  break;
+              try {
+                const statusRes = await sdk.compliance.checkApprovalStatus(approvalId);
+                if (statusRes && statusRes.status) {
+                  if (statusRes.status === 'APPROVED') {
+                    approved = true;
+                    break;
+                  } else if (statusRes.status === 'REJECTED') {
+                    approved = false;
+                    break;
+                  }
                 }
+              } catch (pollErr) {
+                if (sdk.debug) console.warn(`[AgentOS Shield] Transient polling error (will retry):`, pollErr.message);
               }
             }
 

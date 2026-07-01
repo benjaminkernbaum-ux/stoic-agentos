@@ -116,47 +116,36 @@ export class BackgroundQueue {
     if (this.isFlushing || this.queue.length === 0) return;
     this.isFlushing = true;
 
-    // Take a snapshot of the current batch
-    const batch = this.queue.splice(0, this.batchSize);
-
     try {
-      // Group by endpoint to perform batch API calls
-      const endpointsGroup = {};
-      batch.forEach(item => {
-        if (!endpointsGroup[item.endpoint]) {
-          endpointsGroup[item.endpoint] = [];
-        }
-        endpointsGroup[item.endpoint].push(item);
-      });
+      while (this.queue.length > 0) {
+        // Take a snapshot of the current batch
+        const batch = this.queue.splice(0, this.batchSize);
 
-      const promises = Object.entries(endpointsGroup).map(async ([endpoint, items]) => {
-        try {
-          if (endpoint === '/traces/ingest') {
-            // For trace ingestion, send them in parallel or batch if backend supports it
-            await Promise.all(items.map(async (item) => {
-              try {
-                await this.sdk._send(endpoint, item.payload);
-              } catch (err) {
-                this._handleFailedItem(item);
-              }
-            }));
-          } else {
-            // Generic batch send if possible, otherwise individual
-            await Promise.all(items.map(async (item) => {
-              try {
-                await this.sdk._send(endpoint, item.payload);
-              } catch (err) {
-                this._handleFailedItem(item);
-              }
-            }));
+        // Group by endpoint to perform batch API calls
+        const endpointsGroup = {};
+        batch.forEach(item => {
+          if (!endpointsGroup[item.endpoint]) {
+            endpointsGroup[item.endpoint] = [];
           }
-        } catch (err) {
-          // If group operation fails, fail all items in group
-          items.forEach(item => this._handleFailedItem(item));
-        }
-      });
+          endpointsGroup[item.endpoint].push(item);
+        });
 
-      await Promise.all(promises);
+        const promises = Object.entries(endpointsGroup).map(async ([endpoint, items]) => {
+          try {
+            await Promise.all(items.map(async (item) => {
+              try {
+                await this.sdk._send(endpoint, item.payload);
+              } catch (err) {
+                this._handleFailedItem(item);
+              }
+            }));
+          } catch (err) {
+            items.forEach(item => this._handleFailedItem(item));
+          }
+        });
+
+        await Promise.all(promises);
+      }
     } catch (err) {
       if (this.sdk.debug) {
         console.error('[AgentOS Shield] Queue flush error:', err.message);
