@@ -25,6 +25,7 @@ import { Trace, setActiveTrace, clearActiveTrace, getActiveTrace } from './trace
 import { instrumentOpenAIClient } from './instrumentors/openai.js';
 import { instrumentAnthropicClient } from './instrumentors/anthropic.js';
 import { estimateCost, MODEL_PRICING } from './pricing.js';
+import { LocalCircuitBreaker, BackgroundQueue } from './shield.js';
 
 const DEFAULT_API_URL = 'https://api.stoicagentos.com/api/v1';
 
@@ -68,6 +69,20 @@ export class AgentOSRateLimitError extends AgentOSError {
   }
 }
 
+export class AgentOSCircuitBreakerError extends AgentOSError {
+  constructor(message) {
+    super(message, 'CIRCUIT_BREAKER_TRIPPED', 429);
+    this.name = 'AgentOSCircuitBreakerError';
+  }
+}
+
+export class AgentOSPolicyBlockError extends AgentOSError {
+  constructor(message) {
+    super(message, 'POLICY_BLOCKED', 403);
+    this.name = 'AgentOSPolicyBlockError';
+  }
+}
+
 // ── Main Client ──
 
 export class AgentOS {
@@ -84,6 +99,13 @@ export class AgentOS {
     this._baseDelay = options.baseDelay ?? 500; // ms
     this._shutdownCalled = false;
     this.autoRecall = options.autoRecall || false;
+    this.activeShield = options.activeShield || false;
+    this.criticalTools = options.criticalTools || [];
+    this.rejectionBehavior = options.rejectionBehavior || 'refuse'; // 'refuse' | 'throw'
+
+    this.localCircuitBreaker = new LocalCircuitBreaker(options.circuitBreaker);
+    this.backgroundQueue = new BackgroundQueue(this, options.queue);
+    this.backgroundQueue.start();
 
     if (!this.apiKey) {
       console.warn(
@@ -462,6 +484,10 @@ export class AgentOS {
    */
   async shutdown() {
     this._shutdownCalled = true;
+    if (this.backgroundQueue) {
+      this.backgroundQueue.stop();
+      await this.backgroundQueue.flush();
+    }
     await this.flush();
   }
 
@@ -700,6 +726,34 @@ class ComplianceClient {
 
   /** Get audit log statistics — by type, verdict, and day */
   async stats() { return this._sdk._fetch('/compliance/audit-log/stats'); }
+
+  // ── Active Shield & HITL (v4.0) ──
+
+  /** Suspend execution of a critical tool call and request approval */
+  async suspend(toolName, { agentId, traceId, toolArgs } = {}) {
+    return this._sdk._send('/compliance/shield/suspend', {
+      tool_name: toolName,
+      agent_id: agentId || null,
+      trace_id: traceId || null,
+      tool_args: toolArgs || {},
+    });
+  }
+
+  /** Poll the status of a pending approval */
+  async checkApprovalStatus(approvalId) {
+    return this._sdk._fetch(`/compliance/shield/approvals/${approvalId}/status`);
+  }
+
+  /** Resolve an approval (approve or reject) */
+  async resolveApproval(approvalId, verdict) {
+    return this._sdk._send(`/compliance/shield/approvals/${approvalId}/resolve`, { verdict });
+  }
+
+  /** List pending/resolved approvals */
+  async getPendingApprovals(status) {
+    const qs = status ? `?status=${status}` : '';
+    return this._sdk._fetch(`/compliance/shield/approvals${qs}`);
+  }
 }
 
 // ═══════════════════════════════════════════════

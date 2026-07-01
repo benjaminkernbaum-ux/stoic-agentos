@@ -66,6 +66,10 @@ export class Trace {
       spans: this.spans,
     };
 
+    if (this._sdk.backgroundQueue) {
+      this._sdk.backgroundQueue.enqueue('/traces/ingest', payload);
+      return Promise.resolve({ success: true, queued: true });
+    }
     return this._sdk._send('/traces/ingest', payload);
   }
 }

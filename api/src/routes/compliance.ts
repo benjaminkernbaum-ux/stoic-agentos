@@ -194,4 +194,132 @@ router.get(`/api/${V}/compliance/circuit-breaker/status`, authenticate, async (r
   }
 });
 
+
+// ══════════════════════════════════════
+// ACTIVE SHIELD / HITL (HUMAN-IN-THE-LOOP)
+// ══════════════════════════════════════
+
+// ── Suspend Execution (SDK requests human approval) ──
+router.post(`/api/${V}/compliance/shield/suspend`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { agent_id, trace_id, tool_name, tool_args } = req.body;
+    if (!tool_name) {
+      return res.status(400).json({ error: 'tool_name is required' });
+    }
+
+    const { data, error } = await supabase!
+      .from('pending_approvals')
+      .insert({
+        org_id: req.org.id,
+        agent_id: agent_id || null,
+        trace_id: trace_id || null,
+        tool_name,
+        tool_args: tool_args || {},
+        status: 'PENDING'
+      })
+      .select('id')
+      .single();
+
+    if (error) throw error;
+    res.status(201).json({ success: true, approval_id: data.id });
+  } catch (err: unknown) {
+    safeError(res, err);
+  }
+});
+
+// ── Polling Endpoint for SDK (check approval status) ──
+router.get(`/api/${V}/compliance/shield/approvals/:id/status`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { data, error } = await supabase!
+      .from('pending_approvals')
+      .select('status')
+      .eq('id', req.params.id)
+      .eq('org_id', req.org.id)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!data) {
+      return res.status(404).json({ error: 'Approval request not found' });
+    }
+
+    res.json({ status: data.status });
+  } catch (err: unknown) {
+    safeError(res, err);
+  }
+});
+
+// ── Resolve Approval (Admin approves/rejects from Dashboard) ──
+router.post(`/api/${V}/compliance/shield/approvals/:id/resolve`, authenticate, requireMinRole('admin'), async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { verdict } = req.body; // APPROVED or REJECTED
+    if (verdict !== 'APPROVED' && verdict !== 'REJECTED') {
+      return res.status(400).json({ error: 'verdict must be APPROVED or REJECTED' });
+    }
+
+    // 1. Update the pending approval status
+    const { data: approval, error: updateError } = await supabase!
+      .from('pending_approvals')
+      .update({
+        status: verdict,
+        resolved_at: new Date().toISOString(),
+        resolved_by: req.user?.id || null
+      })
+      .eq('id', req.params.id)
+      .eq('org_id', req.org.id)
+      .select()
+      .maybeSingle();
+
+    if (updateError) throw updateError;
+    if (!approval) {
+      return res.status(404).json({ error: 'Approval request not found or not in your organization' });
+    }
+
+    // 2. Insert into the immutable audit_log for audit trail
+    try {
+      await supabase!.from('audit_log').insert({
+        org_id: req.org.id,
+        agent_id: approval.agent_id || null,
+        event_type: 'shield_evaluation',
+        action: `tool_use:${approval.tool_name}`,
+        verdict: verdict === 'APPROVED' ? 'PROCEED' : 'BLOCK',
+        reasoning: `Human administrator resolved verdict to ${verdict}`,
+        metadata: {
+          approval_id: approval.id,
+          trace_id: approval.trace_id,
+          tool_args: approval.tool_args
+        }
+      });
+    } catch (auditErr) {
+      console.error('[compliance] Failed to write to audit_log:', auditErr);
+    }
+
+    res.json({ success: true, status: verdict });
+  } catch (err: unknown) {
+    safeError(res, err);
+  }
+});
+
+// ── List Pending Approvals (Dashboard feed) ──
+router.get(`/api/${V}/compliance/shield/approvals`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const statusFilter = req.query.status as string; // Optional filter (e.g. PENDING)
+    let query = supabase!
+      .from('pending_approvals')
+      .select('*')
+      .eq('org_id', req.org.id);
+
+    if (statusFilter) {
+      query = query.eq('status', statusFilter);
+    }
+
+    const { data, error } = await query.order('created_at', { ascending: false }).limit(100);
+    if (error) throw error;
+
+    res.json(data || []);
+  } catch (err: unknown) {
+    safeError(res, err);
+  }
+});
+
+
 export default router;

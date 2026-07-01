@@ -9,6 +9,7 @@ export default function ComplianceTab() {
   const [auditLog, setAuditLog] = useState([]);
   const [stats, setStats] = useState({ total: 0, by_type: {}, by_verdict: {}, by_day: {} });
   const [breakers, setBreakers] = useState([]);
+  const [approvals, setApprovals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [seeding, setSeeding] = useState(false);
   const [filters, setFilters] = useState({ event_type: '', verdict: '' });
@@ -27,19 +28,34 @@ export default function ComplianceTab() {
       if (filters.verdict) params.set('verdict', filters.verdict);
       if (params.toString()) logUrl += `?${params}`;
 
-      const [logR, statsR, breakerR] = await Promise.all([
+      const [logR, statsR, breakerR, approvalsR] = await Promise.all([
         fetch(logUrl, { headers: h }).then(r => r.json()).catch(() => []),
         fetch(`${API_BASE}/api/v1/compliance/audit-log/stats`, { headers: h }).then(r => r.json()).catch(() => ({ total: 0, by_type: {}, by_verdict: {}, by_day: {} })),
         fetch(`${API_BASE}/api/v1/compliance/circuit-breaker`, { headers: h }).then(r => r.json()).catch(() => []),
+        fetch(`${API_BASE}/api/v1/compliance/shield/approvals?status=PENDING`, { headers: h }).then(r => r.json()).catch(() => []),
       ]);
       setAuditLog(Array.isArray(logR) ? logR : []);
       setStats(statsR);
       setBreakers(Array.isArray(breakerR) ? breakerR : []);
+      setApprovals(Array.isArray(approvalsR) ? approvalsR : []);
     } catch { /* silently degrade */ }
     setLoading(false);
   }, [headers, filters]);
 
-  useEffect(() => { fetchAll(); }, [fetchAll]);
+  useEffect(() => {
+    fetchAll();
+    const interval = setInterval(() => {
+      headers().then(h => {
+        fetch(`${API_BASE}/api/v1/compliance/shield/approvals?status=PENDING`, { headers: h })
+          .then(r => r.json())
+          .then(data => {
+            if (Array.isArray(data)) setApprovals(data);
+          })
+          .catch(() => {});
+      });
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [fetchAll, headers]);
 
   const seedDemo = async () => {
     setSeeding(true);
@@ -76,7 +92,23 @@ export default function ComplianceTab() {
     } catch { /* ignore */ }
   };
 
-  const isEmpty = stats.total === 0 && !loading;
+  const resolveApproval = async (id, verdict) => {
+    try {
+      const h = await headers();
+      const res = await fetch(`${API_BASE}/api/v1/compliance/shield/approvals/${id}/resolve`, {
+        method: 'POST',
+        headers: h,
+        body: JSON.stringify({ verdict }),
+      });
+      if (res.ok) {
+        fetchAll();
+      }
+    } catch (err) {
+      console.error('[compliance] Error resolving approval:', err);
+    }
+  };
+
+  const isEmpty = stats.total === 0 && approvals.length === 0 && !loading;
 
   if (loading) {
     return (
@@ -135,6 +167,81 @@ export default function ComplianceTab() {
           <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Active Days</div>
         </div>
       </div>
+
+      {/* Pending Approvals (HITL) */}
+      {approvals.length > 0 && (
+        <div className="dash-card" style={{ marginBottom: '1.5rem', padding: '1.25rem', border: '1px solid var(--accent)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+            <span style={{ fontSize: '1.25rem' }}>🛡️</span>
+            <h3 style={{ margin: 0, color: 'var(--text-primary)' }}>Pending Human-in-the-Loop Approvals</h3>
+            <span style={{
+              fontSize: '0.75rem', padding: '2px 8px', borderRadius: '10px',
+              background: 'var(--accent)', color: '#fff', fontWeight: 600,
+              animation: 'pulse 1.5s infinite'
+            }}>
+              {approvals.length} ACTION{approvals.length > 1 ? 'S' : ''} AWAITING
+            </span>
+          </div>
+          
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            {approvals.map(app => (
+              <div key={app.id} style={{
+                padding: '1rem', borderRadius: '8px', background: 'var(--surface-1)',
+                border: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between',
+                alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem'
+              }}>
+                <div style={{ flex: 1, minWidth: '250px' }}>
+                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '0.5rem' }}>
+                    <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Tool:</span>
+                    <code style={{ background: 'hsla(0,0%,100%,0.08)', padding: '2px 6px', borderRadius: '4px', color: 'var(--accent)', fontSize: '0.85rem' }}>
+                      {app.tool_name}
+                    </code>
+                    {app.agent_id && (
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                        (Agent: {app.agent_id.slice(0, 8)})
+                      </span>
+                    )}
+                  </div>
+                  
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                    <strong>Arguments:</strong>
+                    <pre style={{
+                      margin: '0.25rem 0 0', padding: '0.5rem', borderRadius: '4px',
+                      background: 'hsla(0,0%,0%,0.2)', fontSize: '0.75rem', overflowX: 'auto',
+                      maxHeight: '120px', border: '1px solid hsla(0,0%,100%,0.04)'
+                    }}>
+                      {JSON.stringify(app.tool_args, null, 2)}
+                    </pre>
+                  </div>
+                  
+                  <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '0.5rem' }}>
+                    Requested at: {new Date(app.created_at).toLocaleString()}
+                  </div>
+                </div>
+                
+                <div style={{ display: 'flex', gap: '0.5rem', alignSelf: 'center' }}>
+                  <button className="dash-btn" 
+                    onClick={() => resolveApproval(app.id, 'APPROVED')}
+                    style={{
+                      background: '#22c55e', color: '#fff', border: 'none',
+                      fontWeight: 600, padding: '0.5rem 1rem', fontSize: '0.8rem'
+                    }}>
+                    ✅ Approve
+                  </button>
+                  <button className="dash-btn"
+                    onClick={() => resolveApproval(app.id, 'REJECTED')}
+                    style={{
+                      background: '#ef4444', color: '#fff', border: 'none',
+                      fontWeight: 600, padding: '0.5rem 1rem', fontSize: '0.8rem'
+                    }}>
+                    ❌ Reject
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Circuit Breakers */}
       {breakers.length > 0 && (

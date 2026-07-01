@@ -5,6 +5,7 @@
 
 import { estimateCost } from '../pricing.js';
 import { getActiveTrace } from '../trace.js';
+import { AgentOSCircuitBreakerError, AgentOSPolicyBlockError } from '../index.js';
 
 /**
  * Instrument an Anthropic client instance
@@ -23,6 +24,27 @@ export function instrumentAnthropicClient(anthropicClient, sdk) {
     const startTime = Date.now();
     const model = params.model || 'unknown';
     let finalParams = params;
+
+    // ── Local Circuit Breaker Check ──
+    if (sdk.localCircuitBreaker?.enabled) {
+      let chars = 0;
+      if (Array.isArray(params.messages)) {
+        params.messages.forEach(m => {
+          if (typeof m.content === 'string') chars += m.content.length;
+          else if (Array.isArray(m.content)) {
+            m.content.forEach(c => {
+              if (c.text) chars += c.text.length;
+            });
+          }
+        });
+      }
+      const estTokens = Math.ceil(chars / 4);
+      try {
+        sdk.localCircuitBreaker.check(estTokens);
+      } catch (err) {
+        throw new AgentOSCircuitBreakerError(err.message);
+      }
+    }
 
     if (sdk.autoRecall && Array.isArray(params.messages) && params.messages.length > 0) {
       try {
@@ -71,6 +93,84 @@ export function instrumentAnthropicClient(anthropicClient, sdk) {
       const totalTokens = promptTokens + completionTokens;
       const costUsd = estimateCost(model, promptTokens, completionTokens);
 
+      // ── Human-in-the-Loop Interception ──
+      let isCritical = false;
+      let criticalToolName = '';
+      let criticalToolArgs = {};
+      if (sdk.activeShield && Array.isArray(result.content)) {
+        for (const block of result.content) {
+          if (block.type === 'tool_use' && sdk.criticalTools.includes(block.name)) {
+            isCritical = true;
+            criticalToolName = block.name;
+            criticalToolArgs = block.input;
+            break;
+          }
+        }
+      }
+
+      if (isCritical) {
+        try {
+          const activeTrace = getActiveTrace();
+          const suspendRes = await sdk.compliance.suspend(criticalToolName, {
+            agentId: activeTrace?.agent || null,
+            traceId: activeTrace?.traceId || null,
+            toolArgs: criticalToolArgs || {},
+          });
+
+          if (suspendRes && suspendRes.approval_id) {
+            const approvalId = suspendRes.approval_id;
+            if (sdk.debug) console.log(`[AgentOS Shield] ⏸️ Execution suspended. Awaiting approval for tool "${criticalToolName}" (ID: ${approvalId})...`);
+
+            const pollInterval = 2000;
+            const maxPollAttempts = 150; // 5 min timeout
+            let attempts = 0;
+            let approved = false;
+
+            while (attempts < maxPollAttempts) {
+              await new Promise(r => setTimeout(r, pollInterval));
+              attempts++;
+              const statusRes = await sdk.compliance.checkApprovalStatus(approvalId);
+              if (statusRes && statusRes.status) {
+                if (statusRes.status === 'APPROVED') {
+                  approved = true;
+                  break;
+                } else if (statusRes.status === 'REJECTED') {
+                  approved = false;
+                  break;
+                }
+              }
+            }
+
+            if (!approved) {
+              if (sdk.debug) console.warn(`[AgentOS Shield] ❌ Tool "${criticalToolName}" REJECTED or TIMED OUT.`);
+              if (sdk.rejectionBehavior === 'throw') {
+                throw new AgentOSPolicyBlockError(`Tool execution blocked: Action "${criticalToolName}" was rejected by policy/administrator.`);
+              } else {
+                const refusedResult = {
+                  ...result,
+                  content: [
+                    {
+                      type: 'text',
+                      text: `Ação bloqueada: O administrador do sistema rejeitou a execução da ferramenta "${criticalToolName}".`
+                    }
+                  ]
+                };
+                return refusedResult;
+              }
+            }
+            if (sdk.debug) console.log(`[AgentOS Shield] ✅ Tool "${criticalToolName}" APPROVED. Resuming.`);
+          }
+        } catch (err) {
+          if (err instanceof AgentOSError) throw err;
+          throw new AgentOSPolicyBlockError(`HITL Shield validation failed: ${err.message}`);
+        }
+      }
+
+      // Record in local circuit breaker
+      if (sdk.localCircuitBreaker?.enabled) {
+        sdk.localCircuitBreaker.record(totalTokens);
+      }
+
       const span = {
         span_id: `sp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
         provider: 'anthropic',
@@ -90,8 +190,8 @@ export function instrumentAnthropicClient(anthropicClient, sdk) {
       if (activeTrace) {
         activeTrace.addSpan(span);
       } else {
-        // Send as standalone trace via ingest endpoint (accepts trace + spans)
-        sdk._send('/traces/ingest', {
+        // Send as standalone trace via background queue
+        const payload = {
           trace: {
             trace_id: `auto_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
             name: `anthropic:${model}`,
@@ -101,11 +201,17 @@ export function instrumentAnthropicClient(anthropicClient, sdk) {
             total_cost_usd: costUsd,
           },
           spans: [span],
-        }).catch(() => {});
+        };
+        if (sdk.backgroundQueue) {
+          sdk.backgroundQueue.enqueue('/traces/ingest', payload);
+        } else {
+          sdk._send('/traces/ingest', payload).catch(() => {});
+        }
       }
 
       return result;
     } catch (error) {
+      if (error instanceof AgentOSError) throw error;
       const latencyMs = Date.now() - startTime;
 
       const span = {
@@ -125,8 +231,7 @@ export function instrumentAnthropicClient(anthropicClient, sdk) {
       if (activeTrace) {
         activeTrace.addSpan(span);
       } else {
-        // Send as standalone error trace via ingest endpoint
-        sdk._send('/traces/ingest', {
+        const payload = {
           trace: {
             trace_id: `auto_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
             name: `anthropic:${model}:error`,
@@ -136,7 +241,12 @@ export function instrumentAnthropicClient(anthropicClient, sdk) {
             total_cost_usd: 0,
           },
           spans: [span],
-        }).catch(() => {});
+        };
+        if (sdk.backgroundQueue) {
+          sdk.backgroundQueue.enqueue('/traces/ingest', payload);
+        } else {
+          sdk._send('/traces/ingest', payload).catch(() => {});
+        }
       }
 
       throw error;
