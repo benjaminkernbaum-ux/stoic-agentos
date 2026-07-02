@@ -206,6 +206,7 @@ function ComplianceSection({ toast }) {
   const [approvals, setApprovals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busyApprovalId, setBusyApprovalId] = useState(null);
+  const [selectedArgs, setSelectedArgs] = useState(null);
 
   const load = async () => {
     const token = await authToken();
@@ -226,12 +227,13 @@ function ComplianceSection({ toast }) {
     const interval = setInterval(() => {
       authToken().then(token => {
         if (!token) return;
-        fetch(`${API_BASE}/api/v1/compliance/shield/approvals?status=PENDING`, { headers: { Authorization: `Bearer ${token}` } })
-          .then(r => r.json())
-          .then(data => {
-            if (Array.isArray(data)) setApprovals(data);
-          })
-          .catch(() => {});
+        Promise.all([
+          fetch(`${API_BASE}/api/v1/compliance/shield/approvals?status=PENDING`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()).catch(() => []),
+          fetch(`${API_BASE}/api/v1/compliance/circuit-breaker`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()).catch(() => []),
+        ]).then(([approvalsR, breakerR]) => {
+          if (Array.isArray(approvalsR)) setApprovals(approvalsR);
+          if (Array.isArray(breakerR)) setBreakers(breakerR);
+        }).catch(() => {});
       });
     }, 4000);
     return () => clearInterval(interval);
@@ -274,6 +276,16 @@ function ComplianceSection({ toast }) {
                 <div>
                   <span style={{ color: 'var(--text-secondary)' }}>Agent requested: </span>
                   <code style={{ color: '#a78bfa', background: 'rgba(255,255,255,0.05)', padding: '2px 4px', borderRadius: 4 }}>{app.tool_name}</code>
+                  {app.tool_args && Object.keys(app.tool_args).length > 0 && (
+                    <button 
+                      onClick={() => setSelectedArgs({ tool: app.tool_name, args: app.tool_args })}
+                      style={{
+                        background: 'none', border: 'none', color: '#a78bfa', cursor: 'pointer',
+                        marginLeft: 8, padding: '2px 6px', fontSize: 10, textDecoration: 'underline'
+                      }}>
+                      🔍 View Args
+                    </button>
+                  )}
                 </div>
                 <div style={{ display: 'flex', gap: 6 }}>
                   <button className="btn btn-primary btn-sm" style={{ padding: '2px 8px', fontSize: 11, background: '#22c55e', border: 'none' }} onClick={() => resolveApproval(app.id, 'APPROVED')} disabled={busyApprovalId === app.id}>Approve</button>
@@ -303,6 +315,40 @@ function ComplianceSection({ toast }) {
           </div>
         )}
       </div>
+
+      {/* JSON Args Modal Overlay */}
+      {selectedArgs && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center',
+          justifyContent: 'center', zIndex: 10000, padding: 20
+        }} onClick={() => setSelectedArgs(null)}>
+          <div style={{
+            background: '#111113', border: '1px solid rgba(255,255,255,0.08)',
+            borderRadius: 12, padding: 20, maxWidth: 500, width: '100%',
+            boxShadow: '0 20px 40px rgba(0,0,0,0.5)', position: 'relative'
+          }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15, borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: 10 }}>
+              <h4 style={{ margin: 0, color: '#fff', fontSize: 14, fontWeight: 600 }}>
+                🛠️ Arguments for: <code style={{ color: '#a78bfa', background: 'rgba(255,255,255,0.05)', padding: '2px 6px', borderRadius: 4 }}>{selectedArgs.tool}</code>
+              </h4>
+              <button 
+                onClick={() => setSelectedArgs(null)}
+                style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', fontSize: 16 }}>
+                ✕
+              </button>
+            </div>
+            <pre style={{
+              margin: 0, padding: 12, background: 'rgba(0,0,0,0.3)',
+              borderRadius: 6, border: '1px solid rgba(255,255,255,0.04)',
+              color: '#22c55e', fontSize: 12, overflowX: 'auto', maxHeight: 300,
+              fontFamily: 'monospace'
+            }}>
+              {JSON.stringify(selectedArgs.args, null, 2)}
+            </pre>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
