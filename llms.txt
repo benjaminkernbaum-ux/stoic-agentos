@@ -1,0 +1,99 @@
+# Stoic AgentOS — LLM Context & Reference Guide
+
+This file provides context and references for LLMs and AI coding assistants (like Claude, ChatGPT, Copilot, etc.) to understand Stoic AgentOS, its architecture, memory tiers, and SDK usage.
+
+---
+
+## ⚡ Project Overview
+Stoic AgentOS is an open-source active memory and governance layer for AI agent fleets. Unlike traditional tracing tools (like Langfuse, LangSmith, or Helicone) which are passive "eyes" that monitor executions, Stoic AgentOS acts as a "brain"—governing agent behaviors and maintaining state/knowledge across sessions.
+
+- **Stack:** React 19, Vite, Express (TypeScript API), Supabase (Postgres + pgvector + HNSW index), Railway, Docker.
+- **License:** MIT
+- **SDKs:** `stoic-agentos-sdk` (NPM), `stoicos` (PyPI)
+
+---
+
+## 🧠 Memory Architecture (Three-Tier Memory)
+
+Stoic AgentOS organizes agent memory into three distinct, decaying tiers:
+
+1. **Working Memory (Tier 1):** Session-scoped key-value store with Time-To-Live (TTL) expiration.
+2. **Episodic Memory (Tier 2):** A chronological, vector-embedded timeline of all past agent actions. Uses cosine similarity for semantic retrieval.
+3. **Semantic Memory (Tier 3):** A knowledge graph of extracted facts (subject-relation-object triples) compiled by the AI Reflection Engine from episodic logs.
+
+---
+
+## 📡 Core API Reference
+API endpoints require authentication via Bearer token: `Authorization: Bearer <API_KEY>`.
+
+- `POST /api/v1/traces/ingest` — Ingest trace and spans (auto-telemetry).
+- `POST /api/v1/memory/working` — Store session-scoped working memory.
+- `POST /api/v1/memory/episodic` — Store timestamped episodic memory.
+- `GET /api/v1/memory/episodic?query=<text>` — Retrieve episodic memories using semantic vector search.
+- `POST /api/v1/memory/semantic` — Store a knowledge triple (subject, relation, object).
+- `GET /api/v1/memory/semantic` — Query knowledge triples.
+- `POST /api/v1/compliance/shield/suspend` — Suspend execution of critical actions for approval (Human-in-the-loop).
+- `POST /api/v1/reflection/run` — Run Claude-powered reflection to extract semantic facts from episodic logs.
+- `POST /api/v1/reflection/decay` — Trigger TTL cleanup, episode importance decay, and semantic triple confidence decay.
+
+---
+
+## 📦 SDK Quick Start & Usage Reference
+
+### Installation
+```bash
+npm install stoic-agentos-sdk
+```
+
+### Initialization with autoRecall
+Setting `autoRecall: true` automatically triggers vector cosine similarity search on the episodic memory database using the user's prompt, and transparently injects matching historical context into the LLM system prompt.
+
+```javascript
+import { AgentOS } from 'stoic-agentos-sdk';
+import OpenAI from 'openai';
+import Anthropic from '@anthropic-ai/sdk';
+
+const os = new AgentOS({
+  apiKey: 'sk_live_your_key_here',
+  workspace: 'my-project',
+  autoRecall: true, // Transparently injects memory into prompts
+  activeShield: true, // Enables Human-In-The-Loop checks
+  criticalTools: ['send_invoice', 'execute_trade'] // Tool actions requiring approval
+});
+
+// Auto-instrument LLM Clients
+const openai = new OpenAI();
+const anthropic = new Anthropic();
+os.instrumentClient('openai', openai);
+os.instrumentClient('anthropic', anthropic);
+```
+
+### Trace Grouping
+```javascript
+// Wrap any agent function to auto-capture execution, start, success, and errors
+const myAgent = os.wrapAgent('payment-processor', async (input) => {
+  // All OpenAI/Anthropic calls in here are auto-traced and grouped
+  const completion = await openai.chat.completions.create({
+    model: 'gpt-4o-mini',
+    messages: [{ role: 'user', content: `Process user payment for ${input.email}` }]
+  });
+  return completion;
+});
+
+await myAgent({ email: 'user@example.com' });
+```
+
+### Memory Recording & Retrieval
+```javascript
+// Record episodic memory manually (e.g., in a tool execution)
+await os.memory.recordEpisode('User prefers invoices sent via email', {
+  eventType: 'preference',
+  importance: 7
+});
+
+// Search episodic memories using semantic vector search manually
+const pastMemories = await os.memory.searchEpisodes('How does the user want their invoices?', {
+  limit: 3,
+  matchThreshold: 0.3
+});
+```

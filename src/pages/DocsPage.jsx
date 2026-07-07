@@ -12,7 +12,7 @@ const SECTIONS = [
   { id: 'agents', icon: '🤖', label: 'Agents API', group: 'API Reference' },
   { id: 'observations', icon: '👁', label: 'Observations API', group: 'API Reference' },
   { id: 'workspaces', icon: '📂', label: 'Workspaces API', group: 'API Reference' },
-  { id: 'knowledge', icon: '🧠', label: 'Knowledge API', group: 'API Reference' },
+  { id: 'knowledge', icon: '🧠', label: 'Memory & Knowledge API', group: 'API Reference' },
   { id: 'billing', icon: '💳', label: 'Billing & Plans', group: 'API Reference' },
   { id: 'webhooks', icon: '🔔', label: 'Webhooks', group: 'Integrations' },
   { id: 'git-hooks', icon: '🔗', label: 'Git Hooks', group: 'Integrations' },
@@ -198,17 +198,33 @@ await os.capture({
   importance: 9
 });`}</CodeBlock>
 
-    <h2 id="sdk-knowledge">Knowledge Items</h2>
-    <CodeBlock lang="javascript">{`// Store a knowledge item
-await os.storeKnowledge({
-  title: 'Production DB credentials',
-  content: 'Always use connection pooling with max 20 connections',
-  category: 'infrastructure',
-  tags: ['database', 'production']
+    <h2 id="sdk-knowledge">Memory & autoRecall</h2>
+    <p>Stoic AgentOS features a three-tier memory architecture (Working, Episodic, Semantic). Setting <code>autoRecall: true</code> during initialization automatically injects past episodic context matching the prompt into the system prompt of OpenAI/Anthropic calls.</p>
+    <CodeBlock lang="javascript">{`import { AgentOS } from 'stoic-agentos-sdk';
+
+const os = new AgentOS({
+  apiKey: 'sk_live_xxx',
+  autoRecall: true, // Enables transparent vector memory injection
 });
 
-// Search knowledge
-const items = await os.searchKnowledge('database');`}</CodeBlock>
+// Auto-recall will automatically grab past episodes similar to the user prompt.
+// You can also write episodes manually:
+await os.memory.recordEpisode('User loves dark mode interface', {
+  eventType: 'preference',
+  importance: 8,
+});
+
+// Search episodic memories manually via cosine vector similarity (pgvector + HNSW):
+const pastRuns = await os.memory.searchEpisodes('What are the user UI preferences?', {
+  limit: 3,
+  matchThreshold: 0.3
+});
+
+// Store semantic triples (knowledge graph):
+await os.memory.storeTriple('user-123', 'prefers', 'dark mode');
+
+// Query semantic triples:
+const triples = await os.memory.queryTriples({ subject: 'user-123' });`}</CodeBlock>
 
     <h2 id="cli">CLI Tool</h2>
     <CodeBlock lang="bash">{`# Initialize a new project
@@ -282,18 +298,45 @@ function WorkspacesAPI() {
 
 function KnowledgeAPI() {
   return (<>
-    <h1 className="docs-page-title">Knowledge API</h1>
-    <p className="docs-page-desc">Persistent memory for your AI agents. Store architectural decisions, best practices, and learned patterns that survive across sessions.</p>
+    <h1 className="docs-page-title">Memory & Knowledge API</h1>
+    <p className="docs-page-desc">Endpoints for the three-tier memory layer (Working, Episodic, Semantic). Exposes vector search and semantic triple storage.</p>
 
-    <Endpoint method="GET" path="/api/v1/knowledge" desc="List all knowledge items." />
-    <Endpoint method="POST" path="/api/v1/knowledge" desc="Create a knowledge item."
+    <h2 id="working-memory-api">Working Memory (Tier 1)</h2>
+    <p>Session-scoped, fast key-value store with automatic TTL decay.</p>
+    <Endpoint method="POST" path="/api/v1/memory/working" desc="Set a working memory key-value pair for a session."
       params={[
-        { name: 'title', type: 'string', required: true, desc: 'Knowledge item title' },
-        { name: 'content', type: 'string', required: true, desc: 'Full content/body' },
-        { name: 'category', type: 'string', required: false, desc: 'Category: architecture, process, tool, pattern' },
-        { name: 'tags', type: 'string[]', required: false, desc: 'Searchable tags' },
-        { name: 'workspace_id', type: 'uuid', required: false, desc: 'Associate with a workspace' },
+        { name: 'session_id', type: 'string', required: true, desc: 'Unique session identifier' },
+        { name: 'key', type: 'string', required: true, desc: 'Memory key name' },
+        { name: 'value', type: 'any', required: true, desc: 'Value to persist' },
+        { name: 'ttl_seconds', type: 'integer', required: false, desc: 'Custom TTL duration' },
       ]} />
+    <Endpoint method="GET" path="/api/v1/memory/working" desc="Fetch all active working memory entries for a session." />
+
+    <h2 id="episodic-memory-api">Episodic Memory (Tier 2)</h2>
+    <p>Chronological logging with cosine similarity vector search.</p>
+    <Endpoint method="POST" path="/api/v1/memory/episodic" desc="Create a new episodic memory log (automatically vectorized)."
+      params={[
+        { name: 'content', type: 'string', required: true, desc: 'Episode description text' },
+        { name: 'importance', type: 'integer', required: false, desc: 'Priority rating 1-10' },
+        { name: 'event_type', type: 'string', required: false, desc: 'Action type tag' },
+      ]} />
+    <Endpoint method="GET" path="/api/v1/memory/episodic" desc="Search episodes using semantic vector search."
+      params={[
+        { name: 'query', type: 'string', required: true, desc: 'Text query to embed and match against' },
+        { name: 'match_threshold', type: 'float', required: false, desc: 'Cosine similarity threshold (default 0.3)' },
+        { name: 'limit', type: 'integer', required: false, desc: 'Max matches (default 3)' },
+      ]} />
+
+    <h2 id="semantic-memory-api">Semantic Memory (Tier 3)</h2>
+    <p>Fact triples extracted from logs to build a knowledge graph.</p>
+    <Endpoint method="POST" path="/api/v1/memory/semantic" desc="Store a subject-relation-object triple."
+      params={[
+        { name: 'subject', type: 'string', required: true, desc: 'Entity subject' },
+        { name: 'relation', type: 'string', required: true, desc: 'Connection relationship' },
+        { name: 'object', type: 'string', required: true, desc: 'Target object' },
+        { name: 'confidence', type: 'float', required: false, desc: 'Starting confidence score 0.0-1.0' },
+      ]} />
+    <Endpoint method="GET" path="/api/v1/memory/semantic" desc="Query matching triples." />
   </>);
 }
 

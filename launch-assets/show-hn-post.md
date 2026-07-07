@@ -11,30 +11,30 @@
 
 Hi HN — I'm Benjamin, and I built Stoic AgentOS because my AI agents kept making the same mistakes.
 
-**The problem:** Every agent observability tool (Langfuse, LangSmith, Helicone) is stateless. They record traces — what your agent did — but the agent itself forgets everything when the session ends. My support agent hallucinated a refund policy on a Tuesday, I fixed it, and on Thursday it did the exact same thing. Because it had no memory of the fix.
+**The problem:** Every agent observability tool (Langfuse, LangSmith, Helicone) is stateless. They record traces — what your agent did — but the agent itself forgets everything when the session ends. My support agent hallucinated a refund policy on a Tuesday, I fixed it, and on Thursday it did the exact same thing because it had no memory of the fix.
 
-**What I built:** An open-source platform with three things no other tool has:
+**What I built:** An open-source active memory and governance layer with three things no other tool has:
 
-1. **Three-tier persistent memory** — working (session state with TTL), episodic (timestamped timeline of past actions), and semantic (structured knowledge graph). Your agents actually remember across restarts and deployments.
+1. **Three-tier persistent memory with Vector Search** — working (session state with TTL), episodic (timestamped timeline of past actions embedded using cosine similarity), and semantic (structured knowledge graph). It's backed by `pgvector` and an HNSW index.
 
-2. **AI Reflection Engine** — Claude reads raw episodic logs and automatically extracts entity-relationship triples into a queryable knowledge graph. Memory decay automatically reduces confidence on stale facts.
+2. **Transparent autoRecall** — Wrap your OpenAI or Anthropic clients in 3 lines of code. When initialized with `autoRecall: true`, the SDK automatically searches episodic memory for historical context matching the user's prompt and injects it directly into the system prompt. The agent learns from past runs with zero manual prompt tweaking.
 
-3. **Circuit breakers** — server-side automatic halt when an agent's error rate or cost spikes. One of my agents burned $800 in a retry loop at 3 AM. That doesn't happen anymore.
+3. **Active Shields & Circuit Breakers** — Server-side cost/loop limits and Human-in-the-Loop approvals. Suspend critical tool executions (like database edits or trades) until verified via the dashboard.
 
 **How it works (3 lines):**
 
     import { AgentOS } from 'stoic-agentos-sdk';
-    const os = new AgentOS({ apiKey: 'sk_live_xxx' });
-    os.instrumentClient('openai', openai);  // auto-captures every LLM call
+    const os = new AgentOS({ apiKey: 'sk_live_xxx', autoRecall: true });
+    os.instrumentClient('openai', openai);  // auto-captures calls & injects memory context
 
-Then memory:
+Then manual memory or telemetry (optional):
 
     await os.memory.recordEpisode('Customer prefers email over phone', { importance: 7 });
     // ...next session, after restart:
-    const knowledge = await os.memory.queryTriples({ subject: 'customer-123' });
-    // Returns: [{ subject: 'customer-123', relation: 'prefers', object: 'email over phone' }]
+    const past = await os.memory.searchEpisodes('Preferred communication channel?');
+    // Returns relevant episodes using vector cosine similarity
 
-**Stack:** React + Express + Supabase (Postgres + RLS) + Railway. SDKs in Node.js and Python. MIT licensed. Self-hostable with docker compose.
+**Stack:** React + Express + Supabase (Postgres + pgvector + HNSW) + Railway. SDKs in Node.js and Python. MIT licensed. Self-hostable with docker compose.
 
 **What I'm NOT:** I'm not replacing Langfuse or LangSmith for tracing. They're great at that (Langfuse especially, now backed by ClickHouse). I'm building the layer that sits on top — the brain that remembers and governs, not just the eyes that watch.
 
@@ -43,7 +43,7 @@ Live: https://stoicagentos.com
 npm: `npm install stoic-agentos-sdk`
 pip: `pip install stoicos`
 
-Happy to answer any questions about the architecture, the memory system, or why I chose Supabase over ClickHouse.
+Happy to answer any questions about the architecture, pgvector, or the memory system.
 
 ---
 

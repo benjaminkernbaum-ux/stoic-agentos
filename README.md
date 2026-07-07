@@ -146,40 +146,38 @@ os.capture({
 | Feature | Description |
 |---------|-------------|
 | 🤖 **Agent Monitoring** | Real-time status, heartbeats, error tracking for your entire fleet |
-| 🧠 **Knowledge Persistence** | Agents remember decisions across sessions — no more re-learning |
-| 📊 **Usage Analytics** | Observations/month, agent runs, error rates at a glance |
-| 📦 **Multi-Workspace** | Group agents by project, repo, or team |
-| ⚡ **Auto-Capture** | `wrapAgent()` logs start, success, and errors automatically |
-| 🔑 **API Key Management** | Generate, list, and revoke keys from the dashboard |
-| 💳 **Usage-Based Billing** | Free tier with real limits, upgrade when you need more |
-| 🔒 **Row-Level Security** | Full RLS on Supabase — your data is isolated per org |
-| 🧠 **Claude-Powered Insights** | Auto-summarize activity (Haiku 4.5) and diagnose failing agents (Sonnet 4.6 + thinking) |
-| 🔐 **BYOK** | Bring your own Anthropic key — stored encrypted in Supabase Vault, never plaintext |
+| 🧠 **Three-Tier Memory** | Persistent memory across restarts: Working memory, episodic memory, and semantic triples. |
+| 🔍 **Vector Cosine Similarity** | Built-in semantic search on episodic memories using `pgvector` and optimized HNSW index. |
+| 🔄 **autoRecall Prompt Injection**| Automatically search memory database for past context and inject it into system prompts. |
+| 🛡️ **Active Shields & HITL** | Human-in-the-Loop approval loops. Suspend critical tool executions (e.g. database edits) until verified. |
+| 📊 **Usage Analytics** | Observations/month, agent runs, error rates, and token cost tracking |
+| ⚡ **Auto-Capture SDK** | `wrapAgent()` and client instrumentation auto-capture full OpenAI and Anthropic traces. |
+| 🔒 **Row-Level Security** | Full multi-tenant isolation on Supabase — your data is isolated per organization |
+| 🧠 **Claude-Powered Insights** | Auto-summarize logs (Haiku 4.5) and diagnose failing agents (Sonnet 4.6 + thinking) |
 
 ## Built for LLMOps
 
 Stoic AgentOS is designed to integrate with the modern LLMOps stack:
 
-- **🔭 OpenTelemetry-native** — Emit OTLP spans from every agent run. Compatible with Jaeger, Datadog, Grafana, and any OTLP backend. *(Shipping Q3 2026)*
+- **🔬 OpenTelemetry-native** — Emit OTLP spans from every agent run. Compatible with Jaeger, Datadog, Grafana, and any OTLP backend. *(Shipping Q3 2026)*
 - **🔗 Langfuse adapter** — Drop-in `@stoic/langfuse` package to auto-instrument Stoic agents as Langfuse traces. *(Shipping Q3 2026)*
 - **📊 Trace-level observability** — Every agent execution captures inputs, outputs, latency, token counts, and error traces.
-- **🧠 Knowledge layer** — Unlike pure observability tools, AgentOS persists agent decisions and architectural knowledge across sessions.
-- **📈 Eval framework** — Built-in evals for task completion rate, tool accuracy, reasoning quality, and cost efficiency. *(Shipping Q3 2026)*
+- **🧠 Memory Layer** — Unlike pure observability tools, AgentOS persists agent decisions and architectural knowledge across sessions.
+- **🛡️ Active Defense** — Server-side active circuit breakers and Human-In-The-Loop approval loops prevent rogue agent loops and unauthorized operations.
 
-> **Where we fit:** Stoic AgentOS occupies the **Observability + Memory** niche in the LLMOps stack — complementing tracing tools like Langfuse and Helicone with a persistent knowledge layer that makes agents smarter over time.
+> **Where we fit:** Stoic AgentOS occupies the **Active Memory & Governance** niche in the LLMOps stack — complementing tracing tools like Langfuse and Helicone with an active layer that makes agents smarter over time and protects your budget.
 
 ## Why AgentOS?
 
 | | **Stoic AgentOS** | Langfuse | Helicone | Phoenix (Arize) | AgentOps | CrewAI |
 |---|---|---|---|---|---|---|
 | **LLM tracing & observability** | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ Orchestration only |
-| **Knowledge persistence** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **Auto-capture SDK** | ✅ 3 lines | ⚠️ Decorator-based | ⚠️ Proxy-based | ⚠️ Callback-based | ✅ | ❌ |
-| **Multi-workspace** | ✅ | ⚠️ Projects | ❌ | ✅ | ❌ | ❌ |
-| **Self-serve dashboard** | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
-| **AI-powered diagnostics** | ✅ Claude | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **Self-hostable** | ✅ Docker | ✅ Docker | ❌ Cloud only | ✅ Docker | ❌ | ✅ |
-| **Open-source core** | ✅ MIT | ✅ MIT | ❌ Proprietary | ✅ Apache-2 | Partial | ✅ |
+| **Persistent Memory** | ✅ Three-tier | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **Semantic Vector Search** | ✅ pgvector/HNSW | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **autoRecall Prompt Injection**| ✅ SDK level | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **Active Shield (HITL approvals)**| ✅ Server-side | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **Docker Self-host** | ✅ | ✅ | ❌ | ✅ | ❌ | ✅ |
+| **Open-source core** | ✅ MIT | ✅ MIT | ❌ | ✅ Apache-2 | Partial | ✅ |
 | **Setup time** | 3 min | 10 min | 2 min | 5 min | 5 min | 30 min |
 
 ## Pricing

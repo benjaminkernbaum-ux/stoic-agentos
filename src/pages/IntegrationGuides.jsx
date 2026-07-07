@@ -274,40 +274,33 @@ console.log(result);
       </section>
 
       <section className="sp-section">
-        <h2>Step 5: Load Knowledge on Next Run</h2>
+        <h2>Step 5: Auto-Recall Memory with autoRecall</h2>
         <p>
-          Before your agent starts a new task, query the knowledge graph for relevant context:
+          Instead of manually querying and formatting memory context, you can enable transparent prompt injection. When <code>autoRecall</code> is enabled, the SDK searches episodic memory using cosine vector similarity on the user's prompt and injects matching historical context directly into system instructions:
         </p>
-        <Code>{`// On the NEXT agent run — even after restart/redeploy:
+        <Code>{`const os = new AgentOS({
+  apiKey: process.env.AGENTOS_API_KEY,
+  autoRecall: true, // Transparent memory injection
+});
 
-// Query what the agent knows about this vendor
-const knowledge = await os.memory.queryTriples({ subject: 'Acme Corp' });
+// Auto-instrument LLM client
+os.instrumentClient('openai', openai);
 
-// Returns:
-// [
-//   { subject: 'Acme Corp', relation: 'prefers', object: 'net-30 payment terms', confidence: 0.92 },
-//   { subject: 'Acme Corp', relation: 'typical_amount', object: '$2000-$3000', confidence: 0.85 },
-// ]
-
-// Inject into the agent's prompt
-const context = knowledge
-  .map(k => \`• \${k.subject} \${k.relation} \${k.object} (confidence: \${k.confidence})\`)
-  .join('\\n');
-
+// Next session — just write your prompt as usual:
 const result = await openai.chat.completions.create({
   model: 'gpt-4o',
   messages: [
-    { role: 'system', content: \`You are an invoice processor.\\n\\nKnown facts:\\n\${context}\` },
-    { role: 'user', content: \`Process this invoice from Acme Corp...\` },
-  ],
+    { role: 'user', content: 'Process this invoice from Acme Corp.' }
+  ]
 });
 
-// The agent now KNOWS Acme Corp prefers net-30 terms
-// without re-discovering it from scratch.`}</Code>
+// The SDK automatically runs pgvector cosine similarity, matches the
+// vendor preference episode, and prefixes the system prompt:
+// "[Recall context from past sessions: - Processed invoice #INV-1234: vendor=Acme Corp...]"
+// The agent now knows Acme Corp prefers net-30 terms without manual work.`}</Code>
 
-        <Callout emoji="🔥" title="This Is the Moment">
-          This is the conversion point. The agent remembers something from a previous session —
-          after a restart, a redeployment, a scaling event. No other observability platform does this.
+        <Callout emoji="🔥" title="Active Memory Layer">
+          This is the conversion point. The agent recalls past context automatically across sessions and deployments, using vector similarity queries on pgvector + HNSW, keeping prompt sizes slim.
         </Callout>
       </section>
 
