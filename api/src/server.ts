@@ -177,18 +177,23 @@ app.listen(PORT, async () => {
   }
   
   // ── Server-side Sweep for expired HITL pending approvals (Timeouts) ──
+  // The window MUST stay <= the SDK client poll window (150 polls x 2s = 5 min,
+  // see sdk/src/instrumentors/*.js). Otherwise the agent gives up and refuses
+  // locally while the row is still PENDING, letting an admin approve a call that
+  // already failed — a dashboard-vs-reality divergence. Server is the arbiter.
+  const APPROVAL_TIMEOUT_MS = 5 * 60 * 1000; // 5 min, matched to client poll window
   if (supabase) {
     setInterval(async () => {
       try {
-        const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+        const expiryCutoff = new Date(Date.now() - APPROVAL_TIMEOUT_MS).toISOString();
         const { data, error } = await supabase!
           .from('pending_approvals')
-          .update({ 
+          .update({
             status: 'TIMEOUT',
             resolved_at: new Date().toISOString()
           })
           .eq('status', 'PENDING')
-          .lt('created_at', tenMinutesAgo)
+          .lt('created_at', expiryCutoff)
           .select('id');
 
         if (error) {
