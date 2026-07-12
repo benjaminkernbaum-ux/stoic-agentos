@@ -214,6 +214,7 @@ export class AgentOS {
    * @param {string} [observation.content] - Detailed content
    * @param {string} [observation.agent] - Agent name/ID
    * @param {Object} [observation.metadata] - Extra data
+   * @param {string[]} [observation.tags] - Up to 5 tags, ≤20 chars each
    */
   async capture(observation) {
     if (!observation || typeof observation !== 'object') {
@@ -228,6 +229,22 @@ export class AgentOS {
         `Valid types: ${VALID_OBSERVATION_TYPES.join(', ')}`
       );
     }
+    if (observation.tags !== undefined) {
+      if (!Array.isArray(observation.tags)) {
+        throw new AgentOSValidationError('capture() tags must be an array of strings');
+      }
+      if (observation.tags.length > 5) {
+        throw new AgentOSValidationError('capture() accepts at most 5 tags');
+      }
+      for (const t of observation.tags) {
+        if (typeof t !== 'string') {
+          throw new AgentOSValidationError('capture() tags must all be strings');
+        }
+        if (t.length > 20) {
+          throw new AgentOSValidationError('capture() tags must be ≤20 characters each');
+        }
+      }
+    }
 
     const payload = {
       workspace: this.workspace,
@@ -237,6 +254,9 @@ export class AgentOS {
       agent: observation.agent || null,
       metadata: observation.metadata || {},
     };
+    if (observation.tags && observation.tags.length > 0) {
+      payload.tags = observation.tags;
+    }
 
     this._queue.push(payload);
 

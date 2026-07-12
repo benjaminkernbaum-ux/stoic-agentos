@@ -11,10 +11,28 @@ import { getMonthlyCount, incrementCounter } from '../lib/counterCache.js';
 const router = Router();
 const API_VERSION = 'v1';
 
+// Sanitize a tags array: strings only, trimmed, non-empty, ≤20 chars, ≤5 items, deduped.
+function sanitizeTags(input: unknown): string[] {
+  if (!Array.isArray(input)) return [];
+  const seen = new Set<string>();
+  for (const raw of input) {
+    if (typeof raw !== 'string') continue;
+    const tag = raw.trim().slice(0, 20);
+    if (tag) seen.add(tag);
+    if (seen.size >= 5) break;
+  }
+  return Array.from(seen);
+}
+
+// Flipped to false once we detect migration 020 hasn't run; subsequent inserts skip tags
+// to avoid a PG error per call. Re-probed on server restart.
+let tagsColumnAvailable = true;
+const PG_UNDEFINED_COLUMN = '42703';
+
 // ── Create Observation ──
 router.post(`/api/${API_VERSION}/observations`, authenticate, validate(observationCreateSchema), async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { workspace, agent, type, title, content, metadata } = req.body;
+    const { workspace, agent, type, title, content, metadata, tags } = req.body;
     if (!type || !title) return res.status(400).json({ error: 'type and title required' });
 
     // Check observation limit (cached — avoids COUNT(*) per request)
@@ -28,20 +46,33 @@ router.post(`/api/${API_VERSION}/observations`, authenticate, validate(observati
       });
     }
 
-    const { data, error } = await supabase!
+    const sanitizedTags = sanitizeTags(tags);
+    const baseRow: Record<string, unknown> = {
+      org_id: req.org.id,
+      workspace_id: workspace || null,
+      agent_id: agent || null,
+      type: type || 'note',
+      title,
+      content: content || '',
+      metadata: metadata || {},
+      importance: type === 'architecture' ? 9 : type === 'decision' ? 8 : type === 'error' ? 7 : 6,
+    };
+    const row = tagsColumnAvailable ? { ...baseRow, tags: sanitizedTags } : baseRow;
+
+    let { data, error } = await supabase!
       .from('observations')
-      .insert({
-        org_id: req.org.id,
-        workspace_id: workspace || null,
-        agent_id: agent || null,
-        type: type || 'note',
-        title,
-        content: content || '',
-        metadata: metadata || {},
-        importance: type === 'architecture' ? 9 : type === 'decision' ? 8 : type === 'error' ? 7 : 6,
-      })
+      .insert(row)
       .select()
       .single();
+
+    // Migration 020 not yet applied — degrade gracefully and stop sending `tags`.
+    if (error && (error as { code?: string }).code === PG_UNDEFINED_COLUMN && tagsColumnAvailable) {
+      console.warn('⚠️  observations.tags column missing — run migration 020_observation_tags.sql to enable tags');
+      tagsColumnAvailable = false;
+      const retry = await supabase!.from('observations').insert(baseRow).select().single();
+      data = retry.data;
+      error = retry.error;
+    }
 
     if (error) throw error;
 
@@ -135,9 +166,9 @@ router.post(`/api/${API_VERSION}/observations/batch`, authenticate, validate(obs
 
     // Build rows for batch insert
     const VALID_TYPES = ['file_edit', 'command', 'decision', 'error', 'discovery', 'architecture', 'dependency', 'config', 'deployment', 'note', 'agent_run'];
-    const rows = observations.map((obs: Record<string, unknown>) => {
+    const buildRow = (obs: Record<string, unknown>, includeTags: boolean) => {
       const type = (obs.type as string) || 'note';
-      return {
+      const base: Record<string, unknown> = {
         org_id: req.org.id,
         workspace_id: (obs.workspace as string) || null,
         agent_id: (obs.agent as string) || null,
@@ -147,20 +178,32 @@ router.post(`/api/${API_VERSION}/observations/batch`, authenticate, validate(obs
         metadata: (obs.metadata as Record<string, unknown>) || {},
         importance: type === 'architecture' ? 9 : type === 'decision' ? 8 : type === 'error' ? 7 : 6,
       };
-    });
+      return includeTags ? { ...base, tags: sanitizeTags(obs.tags) } : base;
+    };
 
     // Single batch insert (not N individual inserts)
-    const { data, error } = await supabase!
+    let { data, error } = await supabase!
       .from('observations')
-      .insert(rows)
+      .insert(observations.map((o: Record<string, unknown>) => buildRow(o, tagsColumnAvailable)))
       .select();
+
+    if (error && (error as { code?: string }).code === PG_UNDEFINED_COLUMN && tagsColumnAvailable) {
+      console.warn('⚠️  observations.tags column missing — run migration 020_observation_tags.sql to enable tags');
+      tagsColumnAvailable = false;
+      const retry = await supabase!
+        .from('observations')
+        .insert(observations.map((o: Record<string, unknown>) => buildRow(o, false)))
+        .select();
+      data = retry.data;
+      error = retry.error;
+    }
 
     if (error) throw error;
 
     // Bump cached counter by batch size
-    incrementCounter(req.org.id, 'observations', rows.length);
+    incrementCounter(req.org.id, 'observations', observations.length);
 
-    console.log(`📋 Batch observation: ${rows.length} items for org ${req.org.id}`);
+    console.log(`📋 Batch observation: ${observations.length} items for org ${req.org.id}`);
     res.status(201).json({
       inserted: data?.length ?? 0,
       observations: data || [],
