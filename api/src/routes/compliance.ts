@@ -17,6 +17,10 @@ import { isTableMissing } from '../lib/utils.js';
 const router = Router();
 const V = 'v1';
 
+// Number of BLOCK verdicts (per agent, rolling 1h window) that trips the circuit "open".
+// Kept in sync with the SQL threshold in migration 016 (check_agent_circuit_status).
+const CIRCUIT_BREAKER_BLOCK_THRESHOLD = 5;
+
 
 // ══════════════════════════════════════
 // AUDIT LOG
@@ -87,6 +91,17 @@ router.get(`/api/${V}/compliance/audit-log/export`, authenticate, requireMinRole
 // ══════════════════════════════════════
 // CIRCUIT BREAKER
 // ══════════════════════════════════════
+//
+// NOTE ON SEMANTICS: this is an eventually-consistent *observability* tripwire,
+// not a hard concurrency gate. It reports how many BLOCK verdicts an agent has
+// accrued in the last hour by counting rows in audit_log. Under a burst of
+// concurrent tool calls, several may be evaluated before their BLOCK verdicts
+// land, so the reported count can lag actual state by the audit-write latency.
+// That is acceptable for a "5 blocks/hour" tripwire: it still trips within
+// seconds and is only consumed as a read (dashboard + SDK compliance.circuitBreaker()).
+// If this is ever promoted to gate execution server-side, replace the COUNT with
+// an atomic per-agent counter row (UPDATE ... RETURNING) — a COUNT check cannot
+// be made race-free against concurrent writers.
 
 router.get(`/api/${V}/compliance/circuit-breaker`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
@@ -112,7 +127,7 @@ router.get(`/api/${V}/compliance/circuit-breaker`, authenticate, async (req: Aut
     const breakers = (agents || []).map((a: Record<string, unknown>) => {
       const count = blockCounts[a.id as string] || 0;
       let status: string;
-      if (count > 5) status = 'open';
+      if (count >= CIRCUIT_BREAKER_BLOCK_THRESHOLD) status = 'open';
       else if (count > 0) status = 'half-open';
       else status = 'closed';
       return { agent_id: a.id, agent_name: a.name, agent_status: a.status, circuit_status: status, blocks_last_hour: count };
@@ -169,10 +184,11 @@ router.get(`/api/${V}/compliance/circuit-breaker/status`, authenticate, async (r
       if (countError) throw countError;
 
       const blocks = count || 0;
+      const tripped = blocks >= CIRCUIT_BREAKER_BLOCK_THRESHOLD;
       return res.json({
-        tripped: blocks >= 5,
+        tripped,
         block_count: blocks,
-        status: blocks >= 5 ? 'open' : blocks > 0 ? 'half-open' : 'closed',
+        status: tripped ? 'open' : blocks > 0 ? 'half-open' : 'closed',
         agent_id: resolvedAgentId,
       });
     }
