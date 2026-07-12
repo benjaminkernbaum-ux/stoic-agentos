@@ -15,6 +15,7 @@ import type { AuthenticatedRequest } from '../types.js';
 import { isTableMissing } from '../lib/utils.js';
 import { safeError } from '../lib/safeError.js';
 import { getEmbedding } from '../lib/embeddings.js';
+import { recordVectorRetrieval, getVectorRetrievalStats } from '../lib/metrics.js';
 
 const router = Router();
 const V = 'v1';
@@ -35,6 +36,44 @@ router.get(`/api/${V}/memory/stats`, authenticate, async (req: AuthenticatedRequ
       } catch { /* table may not exist */ }
     }
     res.json(counts);
+  } catch (err: unknown) {
+    safeError(res, err);
+  }
+});
+
+// ── VECTOR STATS (step-4 instrumentation) ──
+//    Reports hot-vector count (per-org + table-wide) and vector-retrieval
+//    latency percentiles so we can see when time-range partitioning on
+//    valid_from is justified (~10-20M hot vectors). Partitioning itself is
+//    deferred — see migration 022 for the plan and pgvectorscale escalation.
+router.get(`/api/${V}/memory/vector-stats`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    // Per-org hot-vector count (rows actually occupying the HNSW index)
+    let hot_vector_count = 0;
+    try {
+      const { count, error } = await supabase!
+        .from('episodic_memory')
+        .select('*', { count: 'exact', head: true })
+        .eq('org_id', req.org.id)
+        .not('embedding', 'is', null);
+      if (!error) hot_vector_count = count ?? 0;
+    } catch { /* table may not exist */ }
+
+    // Table-wide hot-vector count — the partition decision is table-level,
+    // not per-org. Uses the migration-022 SQL helper (global when p_org_id is null).
+    let hot_vector_count_global: number | null = null;
+    try {
+      const { data, error } = await supabase!.rpc('episodic_hot_vector_count', { p_org_id: null });
+      if (!error) hot_vector_count_global = (data as number) ?? null;
+    } catch { /* migration 022 not deployed */ }
+
+    res.json({
+      hot_vector_count,
+      hot_vector_count_global,
+      retrieval_latency: getVectorRetrievalStats(),
+      partition_revisit_threshold: 10_000_000, // ~10-20M hot vectors — see migration 022
+      note: 'Time-range partitioning on valid_from is deferred until hot_vector_count_global approaches ~10-20M and/or p95 retrieval latency degrades. pgvectorscale (StreamingDiskANN) is the escalation path. See migration 022.',
+    });
   } catch (err: unknown) {
     safeError(res, err);
   }
@@ -99,6 +138,7 @@ router.get(`/api/${V}/memory/episodic`, authenticate, async (req: AuthenticatedR
     if (searchQuery) {
       const embedding = await getEmbedding(searchQuery as string);
       if (embedding) {
+        const t0 = Date.now();
         const { data: matched, error: rpcErr } = await supabase!.rpc('match_episodic_memories', {
           p_org_id: req.org.id,
           p_query_embedding: embedding,
@@ -107,6 +147,7 @@ router.get(`/api/${V}/memory/episodic`, authenticate, async (req: AuthenticatedR
           p_agent_id: (agent_id as string) || null,
           p_event_type: (event_type as string) || null,
         });
+        recordVectorRetrieval(Date.now() - t0); // step-4 retrieval-latency hook
 
         if (!rpcErr && matched) {
           return res.json(matched);
