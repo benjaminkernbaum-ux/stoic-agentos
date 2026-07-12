@@ -9,6 +9,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "register:agents": "node scripts/register-agents.js",
+    "setup": "node scripts/setup-env.js",
     "audit:check": "npm audit --audit-level=high && cd api && npm audit --audit-level=high"
   },
   "dependencies": {
