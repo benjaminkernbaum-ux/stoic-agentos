@@ -256,22 +256,21 @@ router.post(`/api/${V}/compliance/shield/approvals/:id/resolve`, authenticate, r
       return res.status(400).json({ error: 'verdict must be APPROVED or REJECTED' });
     }
 
-    // 1. Update the pending approval status
-    const { data: approval, error: updateError } = await supabase!
-      .from('pending_approvals')
-      .update({
-        status: verdict,
-        resolved_at: new Date().toISOString(),
-        resolved_by: req.user?.id || null
-      })
-      .eq('id', req.params.id)
-      .eq('org_id', req.org.id)
-      .select()
-      .maybeSingle();
+    // 1. Update the pending approval status atomically using Compare-and-Swap RPC
+    const { data, error: updateError } = await supabase!
+      .rpc('transition_approval_status', {
+        p_org_id: req.org.id,
+        p_approval_id: req.params.id,
+        p_from_status: 'PENDING',
+        p_to_status: verdict,
+        p_user_id: req.user?.id || null
+      });
 
     if (updateError) throw updateError;
+    
+    const approval = Array.isArray(data) ? data[0] : data;
     if (!approval) {
-      return res.status(404).json({ error: 'Approval request not found or not in your organization' });
+      return res.status(409).json({ error: 'Resolution conflict. This approval request may have already been resolved or timed out.' });
     }
 
     // 2. Insert into the immutable audit_log for audit trail
@@ -294,6 +293,31 @@ router.post(`/api/${V}/compliance/shield/approvals/:id/resolve`, authenticate, r
     }
 
     res.json({ success: true, status: verdict });
+  } catch (err: unknown) {
+    safeError(res, err);
+  }
+});
+
+// ── Consume Approval (SDK transitions status APPROVED -> CONSUMED to prevent double-execution) ──
+router.post(`/api/${V}/compliance/shield/approvals/:id/consume`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { data, error } = await supabase!
+      .rpc('transition_approval_status', {
+        p_org_id: req.org.id,
+        p_approval_id: req.params.id,
+        p_from_status: 'APPROVED',
+        p_to_status: 'CONSUMED',
+        p_user_id: null
+      });
+
+    if (error) throw error;
+
+    const approval = Array.isArray(data) ? data[0] : data;
+    if (!approval) {
+      return res.status(409).json({ error: 'Failed to claim approval. The request may have timed out, been rejected, or already consumed.' });
+    }
+
+    res.json({ success: true, status: 'CONSUMED', approval });
   } catch (err: unknown) {
     safeError(res, err);
   }

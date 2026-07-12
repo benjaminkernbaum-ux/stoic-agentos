@@ -175,5 +175,33 @@ app.listen(PORT, async () => {
                 : 'Vault BYOK status unknown (probe failed)';
     console.log(`   ${icon} ${label}`);
   }
+  
+  // ── Server-side Sweep for expired HITL pending approvals (Timeouts) ──
+  if (supabase) {
+    setInterval(async () => {
+      try {
+        const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+        const { data, error } = await supabase!
+          .from('pending_approvals')
+          .update({ 
+            status: 'TIMEOUT',
+            resolved_at: new Date().toISOString()
+          })
+          .eq('status', 'PENDING')
+          .lt('created_at', tenMinutesAgo)
+          .select('id');
+
+        if (error) {
+          // Silent log or console warning
+          console.error('[compliance-sweep] Error sweeping expired approvals:', error.message);
+        } else if (data && data.length > 0) {
+          console.log(`[compliance-sweep] Marked ${data.length} expired approvals as TIMEOUT`);
+        }
+      } catch (e) {
+        console.error('[compliance-sweep] Sweep crash:', e);
+      }
+    }, 10000); // Check every 10s
+    console.log(`   🛡️  Active Shield: Server-side timeout sweep running every 10s`);
+  }
   console.log('');
 });

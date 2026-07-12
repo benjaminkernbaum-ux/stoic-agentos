@@ -750,6 +750,11 @@ class ComplianceClient {
     return this._sdk._send(`/compliance/shield/approvals/${approvalId}/resolve`, { verdict });
   }
 
+  /** Consume/claim an approved request atomically (CAS) before tool execution */
+  async consumeApproval(approvalId) {
+    return this._sdk._send(`/compliance/shield/approvals/${approvalId}/consume`, {});
+  }
+
   /** List pending/resolved approvals */
   async getPendingApprovals(status) {
     const qs = status ? `?status=${status}` : '';

@@ -175,7 +175,17 @@ function patchInstance(instance, sdk) {
                 const statusRes = await sdk.compliance.checkApprovalStatus(approvalId);
                 if (statusRes && statusRes.status) {
                   if (statusRes.status === 'APPROVED') {
-                    approved = true;
+                    try {
+                      const consumeRes = await sdk.compliance.consumeApproval(approvalId);
+                      if (consumeRes && consumeRes.success) {
+                        approved = true;
+                      } else {
+                        approved = false;
+                      }
+                    } catch (consumeErr) {
+                      approved = false;
+                      if (sdk.debug) console.warn(`[AgentOS Shield] Failed to claim/consume approved ticket:`, consumeErr.message);
+                    }
                     break;
                   } else if (statusRes.status === 'REJECTED') {
                     approved = false;

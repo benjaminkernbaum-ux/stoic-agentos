@@ -63,5 +63,13 @@ docker compose -f docker-compose.selfhost.yml up -d
 
 I’m really looking for feedback on the middleware design patterns (the client monkey-patching approach) and how to improve the local sliding-window circuit breaker.
 
-- **GitHub:** https://github.com/benjaminkernbaum-ux/stoic-agentos
-- **Docs:** https://stoicagentos.com/docs
+Since some subreddits automatically block posts containing external links from low-karma accounts, I’ll drop the GitHub repository and documentation links in the first comment below!
+
+---
+
+### FIRST COMMENT (Post immediately after publishing):
+
+Here are the links to check out the code and try it:
+
+⭐ **GitHub:** https://github.com/benjaminkernbaum-ux/stoic-agentos
+📖 **Docs:** https://stoicagentos.com/docs

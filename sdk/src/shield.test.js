@@ -162,3 +162,105 @@ describe('failClosed policy integration', () => {
     })).rejects.toThrow(/HITL Shield validation failed/);
   });
 });
+
+describe('Active Shield Concurrency & CAS Double-Execution', () => {
+  it('should block execution if consumeApproval fails (concurrency race condition)', async () => {
+    const { AgentOS } = await import('./index.js');
+    const { instrumentOpenAIClient } = await import('./instrumentors/openai.js');
+
+    const mockSdk = new AgentOS({
+      apiKey: 'sk_test_123',
+      activeShield: true,
+      criticalTools: ['send_funds'],
+      failClosed: true,
+      rejectionBehavior: 'throw'
+    });
+
+    // Mock suspend to return a valid approval_id
+    vi.spyOn(mockSdk.compliance, 'suspend').mockResolvedValue({ success: true, approval_id: 'app-999' });
+    
+    // Mock checkApprovalStatus to return APPROVED
+    vi.spyOn(mockSdk.compliance, 'checkApprovalStatus').mockResolvedValue({ status: 'APPROVED' });
+
+    // Mock consumeApproval to FAIL (simulating that a concurrent process claimed it first)
+    vi.spyOn(mockSdk.compliance, 'consumeApproval').mockRejectedValue(new Error('Resolution conflict: Already consumed'));
+
+    const mockOpenAI = {
+      chat: {
+        completions: {
+          create: vi.fn().mockResolvedValue({
+            id: 'chatcmpl-123',
+            choices: [{
+              message: {
+                content: 'executing send_funds',
+                tool_calls: [{
+                  id: 'call_99',
+                  type: 'function',
+                  function: { name: 'send_funds', arguments: '{"amount":100}' }
+                }]
+              }
+            }],
+            usage: { prompt_tokens: 10, completion_tokens: 10 }
+          })
+        }
+      }
+    };
+
+    instrumentOpenAIClient(mockOpenAI, mockSdk);
+
+    // Call must throw AgentOSPolicyBlockError because the consume call failed
+    await expect(mockOpenAI.chat.completions.create({
+      model: 'gpt-4',
+      messages: [{ role: 'user', content: 'test' }]
+    })).rejects.toThrow(/Tool execution blocked: Action/);
+  });
+
+  it('should proceed if consumeApproval succeeds', async () => {
+    const { AgentOS } = await import('./index.js');
+    const { instrumentOpenAIClient } = await import('./instrumentors/openai.js');
+
+    const mockSdk = new AgentOS({
+      apiKey: 'sk_test_123',
+      activeShield: true,
+      criticalTools: ['send_funds'],
+      failClosed: true,
+    });
+
+    vi.spyOn(mockSdk.compliance, 'suspend').mockResolvedValue({ success: true, approval_id: 'app-999' });
+    vi.spyOn(mockSdk.compliance, 'checkApprovalStatus').mockResolvedValue({ status: 'APPROVED' });
+    
+    // Mock consumeApproval to SUCCEED
+    vi.spyOn(mockSdk.compliance, 'consumeApproval').mockResolvedValue({ success: true });
+
+    const mockOpenAI = {
+      chat: {
+        completions: {
+          create: vi.fn().mockResolvedValue({
+            id: 'chatcmpl-123',
+            choices: [{
+              message: {
+                content: 'executing send_funds',
+                tool_calls: [{
+                  id: 'call_99',
+                  type: 'function',
+                  function: { name: 'send_funds', arguments: '{"amount":100}' }
+                }]
+              }
+            }],
+            usage: { prompt_tokens: 10, completion_tokens: 10 }
+          })
+        }
+      }
+    };
+
+    instrumentOpenAIClient(mockOpenAI, mockSdk);
+
+    const res = await mockOpenAI.chat.completions.create({
+      model: 'gpt-4',
+      messages: [{ role: 'user', content: 'test' }]
+    });
+
+    expect(res.choices[0].message.content).toBe('executing send_funds');
+  });
+});
+

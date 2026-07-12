@@ -58,5 +58,13 @@ We also added active shields at the SDK level. If an agent goes rogue in a reaso
 
 I’m the solo developer behind this. I’d love to hear your thoughts on the three-tier memory model or the pgvector/HNSW search setup. 
 
-- **GitHub:** https://github.com/benjaminkernbaum-ux/stoic-agentos
-- **Docs:** https://stoicagentos.com/docs
+Since some subreddits automatically block posts containing external links from low-karma accounts, I’ll drop the GitHub repository and documentation links in the first comment below!
+
+---
+
+### FIRST COMMENT (Post immediately after publishing):
+
+Here are the links to check out the code and try it:
+
+⭐ **GitHub:** https://github.com/benjaminkernbaum-ux/stoic-agentos
+📖 **Docs:** https://stoicagentos.com/docs
