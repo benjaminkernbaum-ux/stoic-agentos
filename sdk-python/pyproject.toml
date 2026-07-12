@@ -20,7 +20,14 @@ classifiers = [
     "Topic :: Software Development :: Libraries",
 ]
 
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
 [project.urls]
 Homepage = "https://stoicagentos.com"
 Repository = "https://github.com/benjaminkernbaum-ux/stoic-agentos"
 Documentation = "https://docs.stoicagentos.com"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
