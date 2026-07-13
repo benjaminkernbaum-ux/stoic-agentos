@@ -137,6 +137,26 @@ export function recordRequest(method: string, path: string, statusCode: number, 
 export function connectionOpened(): void { activeConnections++; }
 export function connectionClosed(): void { activeConnections = Math.max(0, activeConnections - 1); }
 
+// ── Vector retrieval latency (dedicated instrumentation for episodic ──
+//    vector search — step-4 hook for the partition-when-slow signal).
+//    Kept separate from the endpoint metric so temporal (non-vector)
+//    queries to /memory/episodic don't dilute the p95.
+const vectorLatencies: number[] = [];
+let vectorLatencyIdx = 0;
+let vectorSamples = 0;
+
+/** Record one match_episodic_memories retrieval, in ms. */
+export function recordVectorRetrieval(durationMs: number): void {
+  vectorLatencyIdx = pushLatency(vectorLatencies, vectorLatencyIdx, durationMs);
+  vectorSamples++;
+}
+
+/** p50/p95/p99 for episodic vector retrieval since boot (circular-buffer window). */
+export function getVectorRetrievalStats(): { samples: number; p50_ms: number; p95_ms: number; p99_ms: number; avg_ms: number } {
+  const s = computePercentiles(vectorLatencies);
+  return { samples: vectorSamples, p50_ms: s.p50, p95_ms: s.p95, p99_ms: s.p99, avg_ms: s.avg };
+}
+
 /**
  * Normalize a path for aggregation.
  * /api/v1/traces/550e8400-e29b-41d4-a716-446655440000 → GET /api/v1/traces/:id
@@ -205,4 +225,4 @@ export function getQuickStats(): { uptime: number; requests: number; errors: num
   };
 }
 
-export default { recordRequest, getMetricsSnapshot, getQuickStats, connectionOpened, connectionClosed };
+export default { recordRequest, getMetricsSnapshot, getQuickStats, connectionOpened, connectionClosed, recordVectorRetrieval, getVectorRetrievalStats };
