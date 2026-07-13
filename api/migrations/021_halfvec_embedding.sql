@@ -1,5 +1,5 @@
 -- ═══════════════════════════════════════════════════════
---  Migration 020: Migrate episodic_memory.embedding to halfvec(384)
+--  Migration 021: Migrate episodic_memory.embedding to halfvec(384)
 --  Stoic AgentOS — Vector Storage Halving
 -- ═══════════════════════════════════════════════════════
 --  pgvector 0.7+ added the halfvec type (16-bit floats). For
@@ -66,7 +66,7 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
 BEGIN
-  -- Preserved from migration 019 — keep iterative scan on for the
+  -- Preserved from migration 020 — keep iterative scan on for the
   -- filtered query path so selective org_id filters don't under-return.
   SET LOCAL hnsw.iterative_scan = relaxed_order;
 

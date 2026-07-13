@@ -1,5 +1,5 @@
 -- ═══════════════════════════════════════════════════════
---  Migration 019: Iterative HNSW Index Scans for Episodic Memory
+--  Migration 020: Iterative HNSW Index Scans for Episodic Memory
 --  Stoic AgentOS — Vector Search Correctness Fix
 -- ═══════════════════════════════════════════════════════
 --  pgvector 0.8.0 introduced hnsw.iterative_scan, which fixes

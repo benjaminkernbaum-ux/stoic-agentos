@@ -1,0 +1,24 @@
+# Migration apply order — canonical sequence
+#
+# Numeric filename order is authoritative EXCEPT where numbers are shared
+# (three independent 016_* files, applied on master before this manifest
+# existed). Apply top-to-bottom. Each migration is idempotent / degrades
+# gracefully if a prior one has not run.
+#
+# This manifest is the reconciliation of five feature branches consolidated
+# on the integration branch (HITL concurrency, Shield L1, Shield L2/3,
+# vector scaling, launch-copy). The vector migrations were renumbered from
+# 019–022 to 020–023 to resolve a collision with 019_atomic_cas_transitions.
+
+016_analytics_rpc.sql
+016_circuit_breaker_active.sql
+016_vault_smtp_twilio.sql
+017_vector_search_function.sql
+018_hitl_and_shield_policies.sql
+019_atomic_cas_transitions.sql          # HITL — CAS approval state machine
+020_iterative_hnsw_scan.sql             # vector — was 019
+021_halfvec_embedding.sql               # vector — was 020
+022_memory_consolidation.sql            # vector — was 021
+023_vector_scaling_instrumentation.sql  # vector — was 022
+030_tool_policies.sql                   # Shield L1 — schema policies
+031_shield_predicates_budgets.sql       # Shield L2/3 — CEL predicates, budgets

@@ -1,5 +1,5 @@
 -- ═══════════════════════════════════════════════════════
---  Migration 021: Memory Consolidation (Retention Layer)
+--  Migration 022: Memory Consolidation (Retention Layer)
 --  Stoic AgentOS — Reflection-Driven Episodic Archival
 -- ═══════════════════════════════════════════════════════
 --  Consolidation folds AGED + LOW-IMPORTANCE episodic memories
@@ -17,7 +17,7 @@
 --  SECURITY DEFINER function that does the DELETE→INSERT in a single
 --  data-modifying CTE so a row is never in neither table nor both.
 --  Org isolation is enforced by the explicit p_org_id predicate,
---  exactly as in match_episodic_memories (migration 019/020).
+--  exactly as in match_episodic_memories (migration 020/021).
 --
 --  Requires: migration 008 (episodic_memory) + 020 (halfvec(384)).
 --  Degrades gracefully: if this migration hasn't run, the

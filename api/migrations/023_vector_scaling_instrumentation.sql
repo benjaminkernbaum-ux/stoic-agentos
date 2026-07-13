@@ -1,5 +1,5 @@
 -- ═══════════════════════════════════════════════════════
---  Migration 022: Vector Scaling Instrumentation (no partitioning)
+--  Migration 023: Vector Scaling Instrumentation (no partitioning)
 --  Stoic AgentOS — Hot-Vector Reporting + Partition Plan
 -- ═══════════════════════════════════════════════════════
 --  Partitioning is intentionally NOT implemented here. This migration
@@ -8,7 +8,7 @@
 --
 --  "Hot vectors" = episodic_memory rows with a non-null embedding —
 --  i.e. rows actually occupying the halfvec HNSW index. Consolidation
---  (migration 021) is what keeps this number bounded by archiving aged,
+--  (migration 022) is what keeps this number bounded by archiving aged,
 --  low-importance rows out of the hot table.
 -- ═══════════════════════════════════════════════════════
 
@@ -33,7 +33,7 @@ $$;
 --  vector count (episodic_hot_vector_count(NULL), surfaced via
 --  GET /api/v1/memory/vector-stats) approaches ~10-20M and/or p95
 --  vector-retrieval latency degrades past target. Below that, a single
---  halfvec HNSW index + consolidation (migration 021) is sufficient.
+--  halfvec HNSW index + consolidation (migration 022) is sufficient.
 --
 --  Plan when the threshold is crossed:
 --    1. Convert episodic_memory to a PARTITIONED table, RANGE-partitioned
@@ -43,7 +43,7 @@ $$;
 --       so each vector search only probes recent partitions, keeping the
 --       hot graph small even as total rows grow.
 --    3. match_episodic_memories stays compatible — with iterative_scan
---       (migration 019) already on, partition pruning + per-partition HNSW
+--       (migration 020) already on, partition pruning + per-partition HNSW
 --       compose cleanly; add a valid_from lower-bound predicate to prune.
 --    4. Preserve RLS on every partition (RLS is inherited by partitions in
 --       PG 15+, but verify policies after the ALTER).
