@@ -46,20 +46,22 @@ os.instrumentClient('openai', openai);
 ### Key SDK Middleware Capabilities:
 
 1. **`autoRecall` Prompt Patching:** When your agent runs, the SDK intercepts the incoming user prompt, runs a cosine similarity vector search on episodic memories stored in Postgres (utilizing `pgvector` + `HNSW` index), and prepends matched historical context directly to the LLM system prompt on the fly. Your agent remembers past sessions with zero manual code changes.
-2. **Local Circuit Breakers:** Evaluates token and request volume using client-side sliding window algorithms. If a runaway loop is detected, it trips the breaker locally to save your API budget before making the call.
-3. **Active Shield (HITL):** If the LLM returns a tool call matching one in `criticalTools`, the SDK suspends execution, registers an approval request on the API, and polls until you click Approve/Reject in the dashboard.
+2. **Local Circuit Breakers:** Evaluates token and request volume using client-side sliding window algorithms. If a runaway loop is detected, it trips the breaker locally to save your API budget before making the call. This is a client-side, eventually-consistent tripwire, not a hard concurrency gate — it's meant to catch obvious runaway loops, not to be a bulletproof limiter.
+3. **Active Shield (HITL):** If the LLM returns a tool call matching one in `criticalTools`, the SDK suspends execution, registers an approval request on the API, and polls until you click Approve/Reject in the dashboard. Approvals are backed by a compare-and-swap state machine in Postgres (single-use `CONSUMED` state, server-side timeout sweep), so concurrent callers can't double-consume the same approval. The Shield's policy layer today is Layer 1 (per-tool JSON-Schema rules with ALLOW/BLOCK/REQUIRE_APPROVAL verdicts); predicate rules and AST-based validators are roadmap.
 
-### Self-Hosting (MIT License)
+All of the above is **SDK-level interception** — it monkey-patches the client, so it only works for agents that actually call through the instrumented client. An on-path enforcement proxy that can't be skipped is on the roadmap, not shipped.
 
-You can self-host the API and backend with Docker Compose:
+### Self-Hosting (Roadmap)
 
-```bash
-git clone https://github.com/benjaminkernbaum-ux/stoic-agentos.git
-cd stoic-agentos
-cp .env.selfhost.example .env.selfhost
-# add Supabase URL and service key
-docker compose -f docker-compose.selfhost.yml up -d
-```
+Self-hosting the API and backend with Docker Compose is planned but not a working one-command setup yet. Today, the hosted platform (stoicagentos.com) is the supported path — the code is MIT licensed and the schema has no lock-in, but you'd need to wire up your own deploy if you wanted to run it now.
+
+### Limitations
+
+- SDK-level interception (both the circuit breaker and Active Shield) is bypassable — an agent that doesn't go through the instrumented client skips the check entirely.
+- The circuit breaker is eventually consistent, not a hard concurrency gate.
+- Active Shield is schema-layer (Layer 1) today; predicate/AST-based validators are next.
+- Self-hosting isn't turnkey yet.
+- Because instrumentation works via monkey-patching, you're pinned to the OpenAI/Anthropic SDK versions we've tested against.
 
 I’m really looking for feedback on the middleware design patterns (the client monkey-patching approach) and how to improve the local sliding-window circuit breaker.
 
