@@ -13,6 +13,12 @@ import { supabase } from '../middleware/db.js';
 import { safeError } from '../lib/safeError.js';
 import type { AuthenticatedRequest } from '../types.js';
 import { isTableMissing } from '../lib/utils.js';
+import {
+  compilePolicySchema,
+  validateToolArgs,
+  isEnforcementMode,
+  ENFORCEMENT_MODES,
+} from '../lib/shieldPolicy.js';
 
 const router = Router();
 const V = 'v1';
@@ -318,6 +324,185 @@ router.post(`/api/${V}/compliance/shield/approvals/:id/consume`, authenticate, a
     }
 
     res.json({ success: true, status: 'CONSUMED', approval });
+  } catch (err: unknown) {
+    safeError(res, err);
+  }
+});
+
+// ══════════════════════════════════════
+// ACTIVE SHIELD LAYER 1 — SCHEMA POLICY ENGINE
+// ══════════════════════════════════════
+
+// ── List Tool Policies ──
+router.get(`/api/${V}/compliance/shield/policies`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { data, error } = await supabase!
+      .from('tool_policies')
+      .select('*')
+      .eq('org_id', req.org.id)
+      .order('tool_name', { ascending: true });
+    if (error) { if (isTableMissing(error)) return res.json([]); throw error; }
+    res.json(data || []);
+  } catch (err: unknown) { safeError(res, err); }
+});
+
+// ── Upsert Tool Policy (one policy per org+tool_name) ──
+router.post(`/api/${V}/compliance/shield/policies`, authenticate, requireMinRole('admin'), async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { tool_name, schema, enforcement, active } = req.body;
+    if (!tool_name || typeof tool_name !== 'string') {
+      return res.status(400).json({ error: 'tool_name is required' });
+    }
+    const mode = enforcement ?? 'monitor';
+    if (!isEnforcementMode(mode)) {
+      return res.status(400).json({ error: `enforcement must be one of: ${ENFORCEMENT_MODES.join(', ')}` });
+    }
+    const policySchema = schema ?? {};
+    // Reject schemas that Ajv can't compile — a policy that would break /evaluate must never be stored
+    try {
+      compilePolicySchema(policySchema);
+    } catch (compileErr: unknown) {
+      return res.status(400).json({ error: (compileErr as Error).message });
+    }
+
+    const { data, error } = await supabase!
+      .from('tool_policies')
+      .upsert({
+        org_id: req.org.id,
+        tool_name,
+        schema: policySchema,
+        enforcement: mode,
+        active: active !== false,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'org_id,tool_name' })
+      .select()
+      .single();
+    if (error) {
+      if (isTableMissing(error)) {
+        return res.status(503).json({ error: 'Tool policies unavailable — run migration 030_tool_policies.sql' });
+      }
+      throw error;
+    }
+    res.status(201).json(data);
+  } catch (err: unknown) { safeError(res, err); }
+});
+
+// ── Delete Tool Policy ──
+router.delete(`/api/${V}/compliance/shield/policies/:id`, authenticate, requireMinRole('admin'), async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { error } = await supabase!
+      .from('tool_policies')
+      .delete()
+      .eq('id', req.params.id)
+      .eq('org_id', req.org.id);
+    if (error) {
+      if (isTableMissing(error)) return res.status(404).json({ error: 'Policy not found' });
+      throw error;
+    }
+    res.json({ success: true });
+  } catch (err: unknown) { safeError(res, err); }
+});
+
+// ── Evaluate Tool Call (the core: graduated ALLOW / BLOCK / REQUIRE_APPROVAL) ──
+router.post(`/api/${V}/compliance/shield/evaluate`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { tool_name, tool_args, agent_id, trace_id } = req.body;
+    if (!tool_name || typeof tool_name !== 'string') {
+      return res.status(400).json({ error: 'tool_name is required' });
+    }
+    const args = tool_args ?? {};
+
+    // 1. Load the active policy for this (org, tool).
+    //    Fail-open on unconfigured tools: no policy (or migration 030 not run) → ALLOW.
+    const { data: policy, error: policyError } = await supabase!
+      .from('tool_policies')
+      .select('*')
+      .eq('org_id', req.org.id)
+      .eq('tool_name', tool_name)
+      .eq('active', true)
+      .maybeSingle();
+    if (policyError) {
+      if (isTableMissing(policyError)) return res.json({ verdict: 'ALLOW', reason: 'no_policy' });
+      throw policyError;
+    }
+    if (!policy) return res.json({ verdict: 'ALLOW', reason: 'no_policy' });
+
+    // 2. Validate tool_args against the policy's JSON Schema
+    //    (validator memoized per policy id + updated_at)
+    const { valid, errors } = validateToolArgs(policy.schema, args, `${policy.id}:${policy.updated_at}`);
+
+    // 3. Graduated verdict
+    let verdict: 'ALLOW' | 'BLOCK' | 'REQUIRE_APPROVAL' = 'ALLOW';
+    let reason = 'schema_valid';
+    let approvalId: string | null = null;
+
+    if (!valid) {
+      reason = 'schema_violation';
+      if (policy.enforcement === 'block') {
+        verdict = 'BLOCK';
+      } else if (policy.enforcement === 'require_approval') {
+        // Suspend into the existing HITL flow — same insert as /shield/suspend
+        const { data: approval, error: approvalError } = await supabase!
+          .from('pending_approvals')
+          .insert({
+            org_id: req.org.id,
+            agent_id: agent_id || null,
+            trace_id: trace_id || null,
+            tool_name,
+            tool_args: args,
+            status: 'PENDING'
+          })
+          .select('id')
+          .single();
+        if (approvalError) {
+          // HITL unavailable (e.g. migration 018 missing) — fail closed: the org
+          // explicitly demanded human review, so silently allowing is not an option.
+          console.error('[shield] pending_approvals insert failed, downgrading REQUIRE_APPROVAL to BLOCK:', approvalError.message);
+          verdict = 'BLOCK';
+          reason = 'approval_unavailable';
+        } else {
+          verdict = 'REQUIRE_APPROVAL';
+          approvalId = approval.id;
+        }
+      } else {
+        // monitor: log but allow
+        verdict = 'ALLOW';
+        reason = 'monitor_only';
+      }
+    }
+
+    // 4. Write the outcome to the immutable audit_log SYNCHRONOUSLY —
+    //    verdict-bearing events must never be batched or fire-and-forget.
+    const auditVerdict = verdict === 'BLOCK' ? 'BLOCK' : verdict === 'REQUIRE_APPROVAL' ? 'REVIEW' : 'PROCEED';
+    const reasoning = valid
+      ? `Schema policy '${tool_name}' passed (enforcement=${policy.enforcement})`
+      : `Schema policy '${tool_name}' violated (enforcement=${policy.enforcement}): ${errors.map((e) => `${e.path} ${e.message}`).join('; ').slice(0, 500)}`;
+    try {
+      const { error: auditError } = await supabase!.from('audit_log').insert({
+        org_id: req.org.id,
+        agent_id: agent_id || null,
+        event_type: 'shield_evaluation',
+        action: `tool_use:${tool_name}`,
+        verdict: auditVerdict,
+        reasoning,
+        metadata: {
+          policy_id: policy.id,
+          enforcement: policy.enforcement,
+          approval_id: approvalId,
+          trace_id: trace_id || null,
+          tool_args: args,
+          validation_errors: valid ? [] : errors,
+        }
+      });
+      if (auditError) console.error('[compliance] Failed to write to audit_log:', auditError.message);
+    } catch (auditErr) {
+      console.error('[compliance] Failed to write to audit_log:', auditErr);
+    }
+
+    const response: Record<string, unknown> = { verdict, reason, policy_id: policy.id };
+    if (!valid) response.errors = errors;
+    if (approvalId) response.approval_id = approvalId;
+    res.json(response);
   } catch (err: unknown) {
     safeError(res, err);
   }

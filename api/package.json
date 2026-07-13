@@ -17,6 +17,7 @@
     "@types/pg": "^8.20.0",
     "@upstash/ratelimit": "^2.0.5",
     "@upstash/redis": "^1.34.3",
+    "ajv": "^8.20.0",
     "cors": "^2.8.5",
     "express": "^4.21.0",
     "pg": "^8.21.0",
