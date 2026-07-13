@@ -19,7 +19,7 @@ Hi HN — I'm Benjamin, and I built Stoic AgentOS because my AI agents kept maki
 
 2. **Transparent autoRecall** — Wrap your OpenAI or Anthropic clients in 3 lines of code. When initialized with `autoRecall: true`, the SDK automatically searches episodic memory for historical context matching the user's prompt and injects it directly into the system prompt. The agent learns from past runs with zero manual prompt tweaking.
 
-3. **Active Shields & Circuit Breakers** — Server-side cost/loop limits and Human-in-the-Loop approvals. Suspend critical tool executions (like database edits or trades) until verified via the dashboard.
+3. **Human-in-the-loop approvals, backed by a real concurrency-safety mechanism** — mark a tool as critical (like a database edit or a trade) and the SDK suspends it until someone approves or rejects it from the dashboard. The approval itself is a compare-and-swap state machine in Postgres: once consumed, an approval flips to a single-use `CONSUMED` state so two concurrent callers can't both act on it, and a server-side sweep times out stale requests. Active Shield's policy layer (Layer 1, today) evaluates per-tool JSON-Schema rules with ALLOW / BLOCK / REQUIRE_APPROVAL verdicts. All of this runs as SDK-level interception — an agent that skips the SDK skips the check; an on-path enforcement proxy is roadmap, not shipped. The circuit-breaker dashboard is an eventually-consistent tripwire on cost/loop metrics, not a hard concurrency gate.
 
 **How it works (3 lines):**
 
@@ -34,9 +34,16 @@ Then manual memory or telemetry (optional):
     const past = await os.memory.searchEpisodes('Preferred communication channel?');
     // Returns relevant episodes using vector cosine similarity
 
-**Stack:** React + Express + Supabase (Postgres + pgvector + HNSW) + Railway. SDKs in Node.js and Python. MIT licensed. Self-hostable with docker compose.
+**Stack:** React + Express + Supabase (Postgres + pgvector + HNSW) + Railway. SDKs in Node.js and Python. MIT licensed. Self-hosting via Docker Compose is on the roadmap — it's not a working one-command setup yet, so today this is a hosted service.
 
 **What I'm NOT:** I'm not replacing Langfuse or LangSmith for tracing. They're great at that (Langfuse especially, now backed by ClickHouse). I'm building the layer that sits on top — the brain that remembers and governs, not just the eyes that watch.
+
+**Limitations (so you don't have to ask):**
+- Active Shield and the circuit breaker are SDK-level interception (we monkey-patch the OpenAI/Anthropic client). A compromised or misbehaving agent that skips the SDK skips the check entirely — there's no on-path proxy enforcing this independent of the agent yet. That's the next big roadmap item.
+- The circuit breaker is an eventually-consistent observability tripwire on cost/loop metrics, not a hard concurrency gate — it can lag a burst of concurrent calls.
+- Active Shield today is Layer 1 only: per-tool JSON-Schema policies with ALLOW / BLOCK / REQUIRE_APPROVAL verdicts. Predicate rules (CEL) and AST-based validators for raw SQL/shell/URL payloads are designed but not shipped.
+- Self-hosting isn't ready — the hosted platform is the only supported path today.
+- The SDK works by monkey-patching client methods, so you're pinned to the OpenAI/Anthropic SDK versions we've tested against; upstream client updates can break instrumentation until we patch it.
 
 GitHub: https://github.com/benjaminkernbaum-ux/stoic-agentos
 Live: https://stoicagentos.com
@@ -63,7 +70,7 @@ Happy to answer any questions about the architecture, pgvector, or the memory sy
 ### Likely Questions and Prepared Answers
 
 **Q: "How is this different from just using a database?"**
-A: "The logging/storage part, fair point — that's just Postgres. But the Reflection Engine (Claude extracting structured triples from raw logs), memory decay (automatic confidence reduction on stale facts), and circuit breakers (server-side auto-halt) — those are the pieces that took months. You could build each one individually, but the integration is where the value lives."
+A: "The logging/storage part, fair point — that's just Postgres. But the Reflection Engine (Claude extracting structured triples from raw logs), memory decay (automatic confidence reduction on stale facts), and the circuit-breaker tripwire (eventually-consistent, cost/loop anomaly detection surfaced on the dashboard) — those are the pieces that took months. You could build each one individually, but the integration is where the value lives."
 
 **Q: "Why not just use Langfuse?"**
 A: "Langfuse is excellent for tracing — I've used it myself. But it's stateless by design. It records what happened; it doesn't remember what happened. If your agent needs to know what it learned yesterday, Langfuse can't help. That's the gap I'm filling. Some teams run both."
@@ -78,4 +85,4 @@ A: "It monkey-patches the client methods and adds ~2-5ms per call for the teleme
 A: "It reads the last N episodic memory entries, sends them to Claude Haiku with a structured extraction prompt, and gets back subject-relation-object triples with confidence scores. Example: from 'Customer asked about refund policy three times this week', it extracts: (customer-123, frequently_asks_about, refund_policy, confidence: 0.9). These triples are upserted into the semantic memory table. Memory decay runs on a cron — episodes older than 30 days get importance reduced, triples older than 60 days get confidence reduced."
 
 **Q: "Solo founder? How do I know this won't disappear?"**
-A: "MIT licensed, fully self-hostable, standard Postgres. If I get hit by a bus tomorrow, you docker compose up on your own server and everything keeps running. No proprietary formats, no lock-in. That's the whole point of open source."
+A: "MIT licensed, standard Postgres, no proprietary formats. Self-hosting isn't turnkey yet — that's on the roadmap — but the schema and code are yours to run today if you're willing to wire up the deploy yourself. No lock-in by design, even if the one-command version isn't there yet."
