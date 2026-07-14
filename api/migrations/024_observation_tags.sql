@@ -1,4 +1,4 @@
--- Migration 020: add optional tags[] to observations
+-- Migration 024: add optional tags[] to observations
 -- Enables consumers to attach free-form labels for grouping/search.
 -- Safe to run at any time; existing rows get NULL/empty and continue working.
 
