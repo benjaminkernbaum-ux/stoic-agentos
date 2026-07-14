@@ -56,7 +56,7 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
     if (cached && cached.expiresAt > Date.now()) {
       const apiKey = cached.data;
       (req as AuthenticatedRequest).org = apiKey.organizations as AuthenticatedRequest['org'];
-      (req as AuthenticatedRequest).apiKey = apiKey;
+      (req as AuthenticatedRequest).apiKey = apiKey as unknown as AuthenticatedRequest['apiKey'];
       // Debounced last_used_at
       const now = Date.now();
       const lastUpdated = lastUsedCache.get(apiKey.id as string);
