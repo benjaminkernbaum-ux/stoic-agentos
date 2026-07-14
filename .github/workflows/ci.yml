@@ -5,6 +5,9 @@ on:
     branches: [master]
   pull_request:
     branches: [master]
+  schedule:
+    - cron: '0 7 * * *'   # nightly 07:00 UTC — run live E2E smoke against staging
+  workflow_dispatch: {}    # allow manual E2E runs on demand
 
 jobs:
   lint:
@@ -68,4 +71,26 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Run Playwright Tests
         run: npx playwright test
+
+  e2e:
+    # Live-API smoke tests against a running deployment. Runs on the nightly
+    # schedule and on-demand (workflow_dispatch) ONLY — never on PRs, so it can
+    # never block a merge on external state or hammer the API on every push.
+    # Self-skips unless AGENTOS_E2E_API_KEY is configured; point AGENTOS_E2E_API_URL
+    # at STAGING (never production) via repo secrets before enabling real runs.
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: cd api && npm ci
+      - name: Run E2E smoke tests
+        env:
+          AGENTOS_E2E_API_KEY: ${{ secrets.AGENTOS_E2E_API_KEY }}
+          AGENTOS_E2E_API_URL: ${{ secrets.AGENTOS_E2E_API_URL }}
+        run: cd api && npm run test:e2e
 
