@@ -304,20 +304,22 @@ Run Stoic AgentOS on your own infrastructure with 3 commands. You'll need a [Sup
 # 1. Clone and configure
 git clone https://github.com/benjaminkernbaum-ux/stoic-agentos.git
 cd stoic-agentos
-cp .env.selfhost.example .env.selfhost
-# Edit .env.selfhost with your Supabase URL + service key
+cp .env.selfhost.example .env
+# Edit .env with your Supabase URL, service key, and anon key
 
-# 2. Run all migrations in Supabase SQL editor
-# (api/migrations/002_*.sql through 015_*.sql)
+# 2. Run all migrations in the Supabase SQL editor
+# (every file in api/migrations/, in the order in api/migrations/APPLY_ORDER)
 
-# 3. Start the API
-docker compose -f docker-compose.selfhost.yml up -d
+# 3. Start the API + dashboard
+docker compose up -d
 ```
+
+See [SELF_HOSTING.md](SELF_HOSTING.md) for the full walkthrough.
 
 **What you get:**
 - 🔌 API Server (Express + TypeScript) → `http://localhost:4444`
-- 🛡️ Non-root container, health checks, auto-restart
-- 📦 512MB memory limit, optimized for single-instance
+- 🖥️ Dashboard (Vite/React → Nginx) → `http://localhost:3000`
+- 🛡️ Health checks, auto-restart, against your own Supabase project
 - 🔑 Optional: Stripe billing, Anthropic AI, Upstash Redis
 
 For the dashboard frontend, run `npm run dev` in the project root or deploy to Vercel/Netlify.

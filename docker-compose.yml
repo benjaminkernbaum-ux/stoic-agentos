@@ -1,106 +1,81 @@
-# ╔══════════════════════════════════════════════════════════════════╗
-# ║  Stoic AgentOS — Self-Hosted Docker Compose                    ║
-# ║  Run the entire platform on your own infrastructure.           ║
-# ║                                                                ║
-# ║  Usage:                                                        ║
-# ║    docker compose up                                           ║
-# ║                                                                ║
-# ║  Docs: https://stoicagentos.com/docs/self-hosting              ║
-# ╚══════════════════════════════════════════════════════════════════╝
-
-version: "3.9"
+# ═══════════════════════════════════════════════════════
+#  Stoic AgentOS — Self-Hosted Docker Compose
+# ═══════════════════════════════════════════════════════
+#
+#  Runs the two things you host yourself — the API and the dashboard —
+#  against your own Supabase project. Supabase (Postgres + Auth + RLS +
+#  Vault) is the system of record; the platform talks to it over the
+#  Supabase client, so there is no separate database container here.
+#  A bundled, zero-dependency Supabase stack is on the roadmap.
+#
+#  Quick start:
+#    cp .env.selfhost.example .env
+#    # edit .env: SUPABASE_URL, SUPABASE_SERVICE_KEY, SUPABASE_ANON_KEY
+#    # then apply api/migrations/ in the Supabase SQL editor (see APPLY_ORDER)
+#    docker compose up -d
+#
+#  Prerequisites (see SELF_HOSTING.md):
+#    - A Supabase project (free tier is fine)
+#    - Migrations applied via the Supabase SQL editor, in APPLY_ORDER
+#    - (Optional) Anthropic key for AI features, Stripe for billing,
+#      Upstash Redis for distributed rate limiting
 
 services:
-  # ── API Server ──────────────────────────────────────────────────
+  # ── API server (Express + TypeScript) ──
   api:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: stoic-api
+    container_name: stoic-agentos-api
     restart: unless-stopped
     ports:
-      - "${API_PORT:-3001}:3001"
+      - "${API_PORT:-4444}:4444"
     environment:
-      - NODE_ENV=production
-      - PORT=3001
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-stoic}:${POSTGRES_PASSWORD:-stoic_secret}@postgres:5432/${POSTGRES_DB:-stoic_agentos}
-      - REDIS_URL=redis://redis:6379
-      - SUPABASE_URL=${SUPABASE_URL:-}
-      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY:-}
-      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY:-}
-      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY:-}
-      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET:-}
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
-      - JWT_SECRET=${JWT_SECRET:-change-me-in-production}
-      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:5173,http://localhost:3000}
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+      NODE_ENV: production
+      PORT: 4444
+      # ── Required: your Supabase project (service-role key, server-side only) ──
+      SUPABASE_URL: ${SUPABASE_URL}
+      SUPABASE_SERVICE_KEY: ${SUPABASE_SERVICE_KEY}
+      # ── Optional: AI features (per-org BYOK still works without this) ──
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      # ── Optional: billing (empty = everyone on the free plan) ──
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_PRO_PRICE_ID: ${STRIPE_PRO_PRICE_ID:-}
+      STRIPE_TEAM_PRICE_ID: ${STRIPE_TEAM_PRICE_ID:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+      # ── Optional: distributed rate limiting (falls back to in-memory) ──
+      UPSTASH_REDIS_REST_URL: ${UPSTASH_REDIS_REST_URL:-}
+      UPSTASH_REDIS_REST_TOKEN: ${UPSTASH_REDIS_REST_TOKEN:-}
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3001/api/v1/status"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:4444/health"]
       interval: 30s
-      timeout: 10s
-      retries: 3
+      timeout: 5s
       start_period: 15s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
-  # ── Dashboard (Vite Build → Nginx) ─────────────────────────────
+  # ── Dashboard (Vite/React build → Nginx) ──
   dashboard:
     build:
       context: .
       dockerfile: Dockerfile.dashboard
       args:
-        - VITE_API_URL=${VITE_API_URL:-http://localhost:3001}
-        - VITE_SUPABASE_URL=${SUPABASE_URL:-}
-        - VITE_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY:-}
-    container_name: stoic-dashboard
+        # Vite inlines these at build time — the ANON key is public by design.
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:4444}
+        VITE_SUPABASE_URL: ${SUPABASE_URL}
+        VITE_SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY}
+    container_name: stoic-agentos-dashboard
     restart: unless-stopped
     ports:
       - "${DASHBOARD_PORT:-3000}:80"
-    environment:
-      - VITE_API_URL=http://localhost:${API_PORT:-3001}
-      - VITE_SUPABASE_URL=${SUPABASE_URL:-}
-      - VITE_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY:-}
     depends_on:
       - api
-
-  # ── PostgreSQL ──────────────────────────────────────────────────
-  postgres:
-    image: postgres:16-alpine
-    container_name: stoic-postgres
-    restart: unless-stopped
-    ports:
-      - "${POSTGRES_PORT:-5432}:5432"
-    environment:
-      - POSTGRES_USER=${POSTGRES_USER:-stoic}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-stoic_secret}
-      - POSTGRES_DB=${POSTGRES_DB:-stoic_agentos}
-    volumes:
-      - stoic_pgdata:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-stoic}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # ── Redis (Cache + Queue) ───────────────────────────────────────
-  redis:
-    image: redis:7-alpine
-    container_name: stoic-redis
-    restart: unless-stopped
-    ports:
-      - "${REDIS_PORT:-6379}:6379"
-    volumes:
-      - stoic_redis_data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-volumes:
-  stoic_pgdata:
-    driver: local
-  stoic_redis_data:
-    driver: local
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
