@@ -181,6 +181,25 @@ describe('Layer 2: CEL predicate evaluation', () => {
     expect(budgetChain.eq).toHaveBeenCalledWith('key', 'spend_money');
   });
 
+  it('does NOT interpolate a non-UUID agent_id into the .or() budget filter', async () => {
+    queued.tool_policies = [{ data: policyRow('block', { predicate: 'args.amount_cents <= budget_remaining' }), error: null }];
+    queued.budgets = [{ data: [{ limit_cents: 10000, spent_cents: 0 }], error: null }];
+    const res = await evaluate({ tool_name: 'spend_money', tool_args: { amount_cents: 1 }, agent_id: 'agent-1,limit_cents.gte.0' });
+    expect(res.status).toBe(200);
+    const budgetChain = chains.budgets?.[0];
+    expect(budgetChain.or).not.toHaveBeenCalled();
+    expect(budgetChain.is).toHaveBeenCalledWith('agent_id', null);
+  });
+
+  it('interpolates a valid UUID agent_id into the .or() budget filter', async () => {
+    queued.tool_policies = [{ data: policyRow('block', { predicate: 'args.amount_cents <= budget_remaining' }), error: null }];
+    queued.budgets = [{ data: [{ limit_cents: 10000, spent_cents: 0 }], error: null }];
+    const uuid = '11111111-2222-3333-4444-555555555555';
+    const res = await evaluate({ tool_name: 'spend_money', tool_args: { amount_cents: 1 }, agent_id: uuid });
+    expect(res.status).toBe(200);
+    expect(chains.budgets?.[0].or).toHaveBeenCalledWith(`agent_id.eq.${uuid},agent_id.is.null`);
+  });
+
   it('BLOCKs an over-budget call via budget_remaining (limit - spent < amount)', async () => {
     queued.tool_policies = [{ data: policyRow('block', { predicate: 'args.amount_cents <= budget_remaining' }), error: null }];
     queued.budgets = [{ data: [{ limit_cents: 10000, spent_cents: 9500 }], error: null }];
@@ -343,6 +362,22 @@ describe('Layer 3: SQL validator (pgsql-parser)', () => {
     const body = await res.json();
     expect(body.verdict).toBe('BLOCK');
     expect(body.errors.some((e: any) => e.keyword === 'sql_table_denied' && e.message.includes('api_keys'))).toBe(true);
+  });
+
+  it('BLOCKs a dangerous built-in function even when no table is referenced', async () => {
+    queued.tool_policies = [{ data: policyRow('block', { schema: SQL_SCHEMA }), error: null }];
+    const res = await evaluate({ tool_name: 'spend_money', tool_args: { query: "SELECT pg_read_file('/etc/passwd')" } });
+    const body = await res.json();
+    expect(body.verdict).toBe('BLOCK');
+    expect(body.errors.some((e: any) => e.keyword === 'sql_function_denied')).toBe(true);
+  });
+
+  it('BLOCKs a schema-qualified table that would ride an unqualified allowlist entry', async () => {
+    queued.tool_policies = [{ data: policyRow('block', { schema: SQL_SCHEMA }), error: null }];
+    const res = await evaluate({ tool_name: 'spend_money', tool_args: { query: 'SELECT * FROM evil.observations' } });
+    const body = await res.json();
+    expect(body.verdict).toBe('BLOCK');
+    expect(body.errors.some((e: any) => e.keyword === 'sql_table_denied' && e.message.includes('evil.observations'))).toBe(true);
   });
 });
 
