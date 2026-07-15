@@ -279,29 +279,25 @@ function extractConfig(prop: Record<string, unknown>): ValidatorConfig | null {
   };
 }
 
-/**
- * Run every x-validator declared on the policy schema's TOP-LEVEL properties
- * against the matching args. Non-string / absent args are skipped — presence
- * and type belong to Layer 1 (JSON Schema required/type keywords).
- * Returns all violations; [] = pass.
- */
-export async function runSemanticValidators(
-  schema: unknown,
-  args: Record<string, unknown>,
-): Promise<SchemaViolation[]> {
-  if (schema === null || typeof schema !== 'object') return [];
-  const properties = (schema as Record<string, unknown>).properties;
-  if (properties === null || typeof properties !== 'object') return [];
+// Recursion guards for nested schema walking — real tool-call payloads are
+// shallow and small; these bound the walk against a pathological schema/args
+// pair (deep nesting or huge arrays) rather than reflect any real use case.
+const MAX_WALK_DEPTH = 8;
+const MAX_ARRAY_ITEMS = 200;
 
-  const violations: SchemaViolation[] = [];
-  for (const [name, rawProp] of Object.entries(properties as Record<string, unknown>)) {
-    if (rawProp === null || typeof rawProp !== 'object') continue;
-    const config = extractConfig(rawProp as Record<string, unknown>);
-    if (!config) continue;
-    const value = args[name];
-    if (typeof value !== 'string') continue;
+async function walkSchemaProperties(
+  schemaNode: unknown,
+  value: unknown,
+  path: string,
+  depth: number,
+  violations: SchemaViolation[],
+): Promise<void> {
+  if (depth > MAX_WALK_DEPTH || schemaNode === null || typeof schemaNode !== 'object') return;
+  const node = schemaNode as Record<string, unknown>;
 
-    const path = `/${name}`;
+  // A leaf carrying x-validator is checked directly, regardless of nesting depth.
+  const config = extractConfig(node);
+  if (config && typeof value === 'string') {
     if (config.type === 'sql') {
       violations.push(...await validateSqlArg(path, value, config));
     } else if (config.type === 'shell') {
@@ -309,6 +305,40 @@ export async function runSemanticValidators(
     } else {
       violations.push(...validateUrlArg(path, value, config));
     }
+    return; // a validated leaf doesn't also recurse as a container
   }
+
+  // Object schema — recurse into each declared property.
+  const properties = node.properties;
+  if (properties !== null && typeof properties === 'object' && value !== null && typeof value === 'object' && !Array.isArray(value)) {
+    const argObj = value as Record<string, unknown>;
+    for (const [name, rawProp] of Object.entries(properties as Record<string, unknown>)) {
+      await walkSchemaProperties(rawProp, argObj[name], `${path}/${name}`, depth + 1, violations);
+    }
+  }
+
+  // Array schema — recurse into each item against the same `items` schema.
+  const items = node.items;
+  if (items !== null && typeof items === 'object' && !Array.isArray(items) && Array.isArray(value)) {
+    const arr = value.slice(0, MAX_ARRAY_ITEMS);
+    for (let i = 0; i < arr.length; i++) {
+      await walkSchemaProperties(items, arr[i], `${path}/${i}`, depth + 1, violations);
+    }
+  }
+}
+
+/**
+ * Run every x-validator declared anywhere in the policy schema (top-level or
+ * nested inside object/array properties) against the matching args. Non-string
+ * / absent leaf values are skipped — presence and type belong to Layer 1 (JSON
+ * Schema required/type keywords). Returns all violations; [] = pass.
+ */
+export async function runSemanticValidators(
+  schema: unknown,
+  args: Record<string, unknown>,
+): Promise<SchemaViolation[]> {
+  if (schema === null || typeof schema !== 'object') return [];
+  const violations: SchemaViolation[] = [];
+  await walkSchemaProperties(schema, args, '', 0, violations);
   return violations;
 }
