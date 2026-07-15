@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.2.0] - 2026-07-15
+
+### Added — Active Shield: server-side policy engine (Layers 1–3)
+
+- **Layer 1 — schema policies.** Per-tool JSON Schema policies (`tool_policies`) evaluated server-side via `POST /compliance/shield/evaluate`, returning a graduated verdict: `ALLOW`, `BLOCK`, or `REQUIRE_APPROVAL`. `REQUIRE_APPROVAL` suspends into the existing HITL approval flow — same CAS state machine, same dashboard.
+- **Layer 2 — predicate rules & budgets.** Sandboxed CEL expressions (`cel-js`, no eval/host access) evaluated against `{ args, agent_id, trace_id, budget_remaining }`. Fleet-wide spend budgets are enforced with an atomic `consume_budget` compare-and-swap RPC — the decision and the debit are one server-side operation, so concurrent calls can't overspend.
+- **Layer 3 — semantic validators (parse, don't regex).** SQL args are parsed with the real PostgreSQL grammar (`pgsql-parser`) and checked against a statement-type + schema-qualified table allowlist, with a fixed denylist of dangerous built-in functions (`pg_read_file`, `dblink`, `lo_*`, `pg_sleep`, …) rejected regardless of the table allowlist. Shell args are parsed (`shell-quote`) and checked against a binary allowlist, rejecting substitution/chaining/redirection. URL args are parsed with the WHATWG URL API and checked against a domain/protocol allowlist. Validators now recurse into nested object/array schema properties, not just top-level args. A parse failure is always a rejection.
+- **SDK wiring.** `os.compliance.evaluate()` plus policy/budget CRUD (`getPolicies`/`setPolicy`/`deletePolicy`/`getBudgets`/`setBudget`) on the JS SDK. Both OpenAI and Anthropic instrumentors consult the policy engine before tool execution, behind an opt-in `policyShield` flag (off by default; the existing `criticalTools` HITL flow is unchanged).
+- **Fail-closed audit.** A `BLOCK` verdict that cannot be written to the immutable audit log now returns `503` rather than silently reporting success — a compliance decision that couldn't be recorded is not reported as decided.
+
+### Added — HITL concurrency correctness
+
+- **Compare-and-swap approval state machine.** Every `pending_approvals` status transition is a conditional `UPDATE … WHERE status = $from RETURNING`, so the classic TIMEOUT-vs-APPROVED race has a single database-enforced winner. Approvals are single-use: a new `CONSUMED` state prevents a retried poll from executing a tool twice.
+- **Server-side timeout sweep**, matched to the SDK's client poll window, so an approval can't be approved by an admin after the agent has already given up and refused.
+- **Circuit breaker** threshold unified across all endpoints and documented as an eventually-consistent observability tripwire (not a hard concurrency gate).
+
+### Added — Episodic memory at scale
+
+- `halfvec(384)` embedding column (halves HNSW index size with negligible recall loss at this dimensionality), iterative HNSW scans (`hnsw.iterative_scan = relaxed_order`, fixes under-return on selective `org_id` filters), reflection-driven memory consolidation, and vector-scaling instrumentation.
+
+### Added — Self-hosting & CI
+
+- **Self-host, honestly scoped.** A single, correct `docker-compose.yml` (API + dashboard against your own Supabase project) replaces a previous compose file that stood up a Postgres/Redis the app never used. New `SELF_HOSTING.md` walkthrough.
+- **e2e tests actually run.** Live-API smoke suites, previously excluded from every CI run, now execute on a nightly schedule + manual dispatch (self-skip without staging secrets, so they never block a PR or hit production unprompted).
+- **Migration hygiene.** All migrations reconciled into a single non-colliding sequence with a checked-in `api/migrations/APPLY_ORDER` manifest.
+
+### Fixed
+
+- Pricing page claims corrected to match shipped reality: SSO/SAML marked `(roadmap)` (no implementation existed), "self-hosted (coming soon)" → "self-hosting (open source)".
+- Schema-qualified SQL tables (`other_schema.table`) no longer bypass a same-name table allowlist entry.
+- An unvalidated `agent_id` is no longer interpolated into a PostgREST filter string; budget lookups fall back to the fleet-wide budget for non-UUID identifiers.
+
 ## [2.1.0] - 2026-06-08
 
 ### Added

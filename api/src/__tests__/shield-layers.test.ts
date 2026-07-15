@@ -379,6 +379,40 @@ describe('Layer 3: SQL validator (pgsql-parser)', () => {
     expect(body.verdict).toBe('BLOCK');
     expect(body.errors.some((e: any) => e.keyword === 'sql_table_denied' && e.message.includes('evil.observations'))).toBe(true);
   });
+
+  it('validates a NESTED arg (object property) — dangerous query buried inside a wrapper object', async () => {
+    const NESTED_SCHEMA = {
+      type: 'object',
+      properties: {
+        request: {
+          type: 'object',
+          properties: { query: { type: 'string', 'x-validator': 'sql', 'x-allow-tables': ['observations'] } },
+        },
+      },
+    };
+    queued.tool_policies = [{ data: policyRow('block', { schema: NESTED_SCHEMA }), error: null }];
+    const res = await evaluate({ tool_name: 'spend_money', tool_args: { request: { query: 'DROP TABLE observations' } } });
+    const body = await res.json();
+    expect(body.verdict).toBe('BLOCK');
+    expect(body.errors.some((e: any) => e.path === '/request/query' && e.keyword === 'sql_statement_denied')).toBe(true);
+  });
+
+  it('validates a NESTED arg (array item) — dangerous URL buried inside a list', async () => {
+    const NESTED_ARRAY_SCHEMA = {
+      type: 'object',
+      properties: {
+        webhooks: {
+          type: 'array',
+          items: { type: 'string', 'x-validator': 'url', 'x-allow-domains': ['stoicagentos.com'] },
+        },
+      },
+    };
+    queued.tool_policies = [{ data: policyRow('block', { schema: NESTED_ARRAY_SCHEMA }), error: null }];
+    const res = await evaluate({ tool_name: 'spend_money', tool_args: { webhooks: ['https://stoicagentos.com/ok', 'https://evil.example.com/steal'] } });
+    const body = await res.json();
+    expect(body.verdict).toBe('BLOCK');
+    expect(body.errors.some((e: any) => e.path === '/webhooks/1' && e.keyword === 'url_domain_denied')).toBe(true);
+  });
 });
 
 const SHELL_SCHEMA = {
