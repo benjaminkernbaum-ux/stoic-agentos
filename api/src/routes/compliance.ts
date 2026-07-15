@@ -34,6 +34,10 @@ const V = 'v1';
 // Kept in sync with the SQL threshold in migration 016 (check_agent_circuit_status).
 const CIRCUIT_BREAKER_BLOCK_THRESHOLD = 5;
 
+// agent_id is a UUID FK. Validate before it reaches any query — notably the
+// budget read's PostgREST .or() filter, which interpolates it into a filter string.
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 
 // ══════════════════════════════════════
 // AUDIT LOG
@@ -510,7 +514,11 @@ router.post(`/api/${V}/compliance/shield/evaluate`, authenticate, async (req: Au
           .select('limit_cents, spent_cents')
           .eq('org_id', req.org.id)
           .eq('key', budgetKey);
-        budgetQuery = agent_id
+        // Only interpolate agent_id into the .or() filter string when it's a
+        // real UUID — an unvalidated value here could inject PostgREST filter
+        // operators. A non-UUID agent has no valid agent-scoped row anyway, so
+        // fall back to the fleet-wide (agent_id IS NULL) budget.
+        budgetQuery = (agent_id && UUID_RE.test(String(agent_id)))
           ? budgetQuery.or(`agent_id.eq.${agent_id},agent_id.is.null`)
           : budgetQuery.is('agent_id', null);
         const { data: budgetRows, error: budgetError } = await budgetQuery
