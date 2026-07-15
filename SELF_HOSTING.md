@@ -59,9 +59,20 @@ and `VITE_API_URL` in `.env`. `VITE_API_URL` must be reachable from the
 
 ## 4. Verify
 
+Run the smoke test — it builds, boots, waits for the API, and confirms the
+API is actually talking to your Supabase project (not silently running in
+demo mode):
+
 ```bash
-curl http://localhost:4444/health          # → { "status": "ok", ... }
-docker compose ps                           # both services healthy
+./scripts/selfhost-smoke-test.sh
+```
+
+Or check by hand:
+
+```bash
+curl http://localhost:4444/health                    # → { "status": "ok", ... }
+curl http://localhost:4444/api/v1/health/ready        # → checks.supabase.status should be "ok"
+docker compose ps                                     # both services healthy
 ```
 
 ## Notes
