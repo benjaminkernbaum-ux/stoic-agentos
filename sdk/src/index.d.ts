@@ -367,6 +367,18 @@ export declare class ComplianceClient {
   circuitBreaker(): Promise<CircuitBreakerStatus[]>;
   /** Get audit log statistics */
   stats(): Promise<AuditLogStats | null>;
+  /** Evaluate a tool call against the server-side policy engine (Active Shield L1–L3) */
+  evaluate(toolName: string, toolArgs: Record<string, unknown>, options?: { agentId?: string; traceId?: string }): Promise<{ verdict: 'ALLOW' | 'BLOCK' | 'REQUIRE_APPROVAL'; reason?: string; approval_id?: string; errors?: unknown[]; policy_id?: string }>;
+  /** List the org's tool policies */
+  getPolicies(): Promise<any[]>;
+  /** Create or update a tool policy (admin) */
+  setPolicy(toolName: string, options?: { schema?: Record<string, unknown>; enforcement?: 'block' | 'require_approval' | 'monitor'; predicate?: string; active?: boolean }): Promise<any>;
+  /** Delete a tool policy by id (admin) */
+  deletePolicy(id: string): Promise<any>;
+  /** List spend budgets */
+  getBudgets(): Promise<any[]>;
+  /** Create or update a spend budget (admin) */
+  setBudget(options: { key: string; limitCents: number; agentId?: string | null; period?: string }): Promise<any>;
 }
 
 /** Create an AgentOS instance (convenience function) */

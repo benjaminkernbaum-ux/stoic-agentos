@@ -264,3 +264,72 @@ describe('Active Shield Concurrency & CAS Double-Execution', () => {
   });
 });
 
+describe('Policy Shield (server engine wiring)', () => {
+  async function makeSdk(overrides = {}) {
+    const { AgentOS } = await import('./index.js');
+    return new AgentOS({ apiKey: 'sk_test_123', activeShield: true, policyShield: true, ...overrides });
+  }
+  function openAiWith(toolName) {
+    return {
+      chat: { completions: { create: vi.fn().mockResolvedValue({
+        id: 'chatcmpl-1',
+        choices: [{ message: { content: 'ran', tool_calls: [{ id: 'c1', type: 'function', function: { name: toolName, arguments: '{"amount":5}' } }] } }],
+        usage: { prompt_tokens: 5, completion_tokens: 5 },
+      }) } },
+    };
+  }
+
+  it('throws when policy verdict is BLOCK (rejectionBehavior throw)', async () => {
+    const { instrumentOpenAIClient } = await import('./instrumentors/openai.js');
+    const sdk = await makeSdk({ rejectionBehavior: 'throw' });
+    vi.spyOn(sdk.compliance, 'evaluate').mockResolvedValue({ verdict: 'BLOCK', errors: [] });
+    const client = openAiWith('charge_card');
+    instrumentOpenAIClient(client, sdk);
+    await expect(client.chat.completions.create({ model: 'gpt-4', messages: [] }))
+      .rejects.toThrow(/denied by policy \(BLOCK\)/);
+  });
+
+  it('refuses without throwing when BLOCK and rejectionBehavior is refuse', async () => {
+    const { instrumentOpenAIClient } = await import('./instrumentors/openai.js');
+    const sdk = await makeSdk({ rejectionBehavior: 'refuse' });
+    vi.spyOn(sdk.compliance, 'evaluate').mockResolvedValue({ verdict: 'BLOCK' });
+    const client = openAiWith('charge_card');
+    instrumentOpenAIClient(client, sdk);
+    const res = await client.chat.completions.create({ model: 'gpt-4', messages: [] });
+    expect(res.choices[0].message.content).toMatch(/policy denied/);
+    expect(res.choices[0].message.tool_calls).toBeNull();
+  });
+
+  it('proceeds and forwards parsed args when verdict is ALLOW', async () => {
+    const { instrumentOpenAIClient } = await import('./instrumentors/openai.js');
+    const sdk = await makeSdk();
+    vi.spyOn(sdk.compliance, 'evaluate').mockResolvedValue({ verdict: 'ALLOW', reason: 'schema_valid' });
+    const client = openAiWith('charge_card');
+    instrumentOpenAIClient(client, sdk);
+    const res = await client.chat.completions.create({ model: 'gpt-4', messages: [] });
+    expect(res.choices[0].message.content).toBe('ran');
+    expect(sdk.compliance.evaluate).toHaveBeenCalledWith('charge_card', { amount: 5 }, expect.any(Object));
+  });
+
+  it('fails open on evaluate transport error when failClosed is false', async () => {
+    const { instrumentOpenAIClient } = await import('./instrumentors/openai.js');
+    const sdk = await makeSdk({ failClosed: false });
+    vi.spyOn(sdk.compliance, 'evaluate').mockRejectedValue(new Error('offline'));
+    const client = openAiWith('charge_card');
+    instrumentOpenAIClient(client, sdk);
+    const res = await client.chat.completions.create({ model: 'gpt-4', messages: [] });
+    expect(res.choices[0].message.content).toBe('ran');
+  });
+
+  it('does not consult the policy engine when policyShield is off', async () => {
+    const { instrumentOpenAIClient } = await import('./instrumentors/openai.js');
+    const sdk = await makeSdk({ policyShield: false });
+    const spy = vi.spyOn(sdk.compliance, 'evaluate').mockResolvedValue({ verdict: 'BLOCK' });
+    const client = openAiWith('charge_card');
+    instrumentOpenAIClient(client, sdk);
+    const res = await client.chat.completions.create({ model: 'gpt-4', messages: [] });
+    expect(res.choices[0].message.content).toBe('ran');
+    expect(spy).not.toHaveBeenCalled();
+  });
+});
+
