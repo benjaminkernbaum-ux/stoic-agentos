@@ -6,6 +6,7 @@
 import { estimateCost } from '../pricing.js';
 import { getActiveTrace } from '../trace.js';
 import { AgentOSError, AgentOSCircuitBreakerError, AgentOSPolicyBlockError } from '../index.js';
+import { enforceToolPolicy } from './shieldEnforce.js';
 
 /**
  * Instrument an Anthropic client instance
@@ -92,6 +93,38 @@ export function instrumentAnthropicClient(anthropicClient, sdk) {
       const completionTokens = usage.output_tokens || 0;
       const totalTokens = promptTokens + completionTokens;
       const costUsd = estimateCost(model, promptTokens, completionTokens);
+
+      // ── Server-side Policy Engine (Active Shield L1–L3), opt-in via policyShield ──
+      // Asks the server for a graduated verdict per tool_use block. Runs before the
+      // static critical-tool HITL below; a BLOCK / rejected-approval short-circuits here.
+      if (sdk.activeShield && sdk.policyShield && Array.isArray(result.content)) {
+        const activeTrace = getActiveTrace();
+        for (const block of result.content) {
+          if (block.type !== 'tool_use' || !block.name) continue;
+          try {
+            const { allowed, verdict } = await enforceToolPolicy(sdk, block.name, block.input || {}, {
+              agentId: activeTrace?.agent || null,
+              traceId: activeTrace?.traceId || null,
+            });
+            if (!allowed) {
+              if (sdk.debug) console.warn(`[AgentOS Shield] ⛔ Policy ${verdict} for tool "${block.name}".`);
+              if (sdk.rejectionBehavior === 'throw') {
+                throw new AgentOSPolicyBlockError(`Tool execution blocked: Action "${block.name}" denied by policy (${verdict}).`);
+              }
+              return {
+                ...result,
+                content: [{ type: 'text', text: `Action blocked: policy denied execution of "${block.name}".` }]
+              };
+            }
+          } catch (err) {
+            if (err instanceof AgentOSError) throw err;
+            if (sdk.failClosed) {
+              throw new AgentOSPolicyBlockError(`Shield policy validation failed: ${err.message}`);
+            }
+            if (sdk.debug) console.warn('[AgentOS Shield] policy check failed (fail-open, proceeding):', err.message);
+          }
+        }
+      }
 
       // ── Human-in-the-Loop Interception ──
       let isCritical = false;

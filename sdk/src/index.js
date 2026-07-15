@@ -101,6 +101,9 @@ export class AgentOS {
     this.autoRecall = options.autoRecall || false;
     this.activeShield = options.activeShield || false;
     this.criticalTools = options.criticalTools || [];
+    // Opt-in: consult the server-side policy engine (Shield L1–L3) per tool call,
+    // in addition to the static criticalTools HITL list. Off by default.
+    this.policyShield = options.policyShield || false;
     this.rejectionBehavior = options.rejectionBehavior || 'refuse'; // 'refuse' | 'throw'
     this.failClosed = options.failClosed || false; // default false (fail-open)
 
@@ -759,6 +762,44 @@ class ComplianceClient {
   async getPendingApprovals(status) {
     const qs = status ? `?status=${status}` : '';
     return this._sdk._fetch(`/compliance/shield/approvals${qs}`);
+  }
+
+  // ── Server-side Policy Engine (Active Shield Layers 1–3) ──
+
+  /**
+   * Evaluate a tool call against the org's server-side policy.
+   * → { verdict: 'ALLOW' | 'BLOCK' | 'REQUIRE_APPROVAL', approval_id?, errors?, reason }
+   */
+  async evaluate(toolName, toolArgs, { agentId, traceId } = {}) {
+    return this._sdk._send('/compliance/shield/evaluate', {
+      tool_name: toolName,
+      tool_args: toolArgs || {},
+      agent_id: agentId || null,
+      trace_id: traceId || null,
+    });
+  }
+
+  /** List tool policies for the org */
+  async getPolicies() { return this._sdk._fetch('/compliance/shield/policies'); }
+
+  /** Create or update a tool policy (admin). enforcement: 'block' | 'require_approval' | 'monitor' */
+  async setPolicy(toolName, { schema, enforcement, predicate, active } = {}) {
+    return this._sdk._send('/compliance/shield/policies', {
+      tool_name: toolName, schema, enforcement, predicate, active,
+    });
+  }
+
+  /** Delete a tool policy by id (admin) */
+  async deletePolicy(id) { return this._sdk._send(`/compliance/shield/policies/${id}`, null, 'DELETE'); }
+
+  /** List spend budgets */
+  async getBudgets() { return this._sdk._fetch('/compliance/shield/budgets'); }
+
+  /** Create or update a spend budget (admin). agentId null = fleet-wide */
+  async setBudget({ key, limitCents, agentId, period } = {}) {
+    return this._sdk._send('/compliance/shield/budgets', {
+      key, limit_cents: limitCents, agent_id: agentId || null, period,
+    });
   }
 }
 

@@ -641,6 +641,7 @@ router.post(`/api/${V}/compliance/shield/evaluate`, authenticate, async (req: Au
     const reasoning = valid
       ? `Shield policy '${tool_name}' passed (enforcement=${policy.enforcement})`
       : `Shield policy '${tool_name}' violated [${failureReason}] (enforcement=${policy.enforcement}): ${errors.map((e) => `${e.path} ${e.message}`).join('; ').slice(0, 500)}`;
+    let auditFailed = false;
     try {
       const { error: auditError } = await supabase!.from('audit_log').insert({
         org_id: req.org.id,
@@ -659,9 +660,17 @@ router.post(`/api/${V}/compliance/shield/evaluate`, authenticate, async (req: Au
           failure_reason: valid ? null : failureReason,
         }
       });
-      if (auditError) console.error('[compliance] Failed to write to audit_log:', auditError.message);
+      if (auditError) { auditFailed = true; console.error('[compliance] audit_log write failed:', auditError.message); }
     } catch (auditErr) {
-      console.error('[compliance] Failed to write to audit_log:', auditErr);
+      auditFailed = true;
+      console.error('[compliance] audit_log write failed:', auditErr);
+    }
+
+    // Fail closed on an enforcement-positive verdict we could not record: a BLOCK that
+    // leaves no immutable audit trail must not be reported as decided. (REQUIRE_APPROVAL
+    // already persists a durable pending_approvals row; a plain ALLOW stays available.)
+    if (auditFailed && verdict === 'BLOCK') {
+      return res.status(503).json({ error: 'Shield BLOCK could not be recorded to the audit log; treat as unavailable and retry.' });
     }
 
     const response: Record<string, unknown> = { verdict, reason, policy_id: policy.id };
