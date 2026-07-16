@@ -1686,7 +1686,7 @@ export default function LandingPage() {
       {/* ══════════════════════════════════
            HOW IT WORKS — 3 Steps
          ══════════════════════════════════ */}
-      <section className="section" style={{ background: 'var(--bg-deep)' }}>
+      <section className="section" style={{ background: 'var(--bg-deep)' }} ref={ecoRef}>
         <div className="container section-center">
           <div className="section-label section-reveal">🛠️ GET STARTED</div>
           <h2 className="section-title section-reveal">Up and running in 3 minutes</h2>
