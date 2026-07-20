@@ -75,16 +75,26 @@ class StoicOS:
         content: str = "",
         agent: str | None = None,
         metadata: dict[str, Any] | None = None,
+        tags: list[str] | None = None,
     ) -> dict[str, Any] | None:
-        """Capture an observation."""
-        return await self._post("/observations", {
+        """Capture an observation.
+
+        tags: optional list of up to 5 labels (≤20 chars each) — over-limit
+        entries are trimmed client-side to match server-side validation.
+        """
+        payload: dict[str, Any] = {
             "workspace": self.workspace,
             "type": type,
             "title": title,
             "content": content,
             "agent": agent,
             "metadata": metadata or {},
-        })
+        }
+        if tags:
+            clean = [t.strip()[:20] for t in tags if isinstance(t, str) and t.strip()]
+            if clean:
+                payload["tags"] = clean[:5]
+        return await self._post("/observations", payload)
 
     async def get_observations(
         self,

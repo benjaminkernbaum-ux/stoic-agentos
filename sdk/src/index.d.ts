@@ -97,6 +97,8 @@ export interface Observation {
   agent?: string;
   /** Additional metadata */
   metadata?: Record<string, unknown>;
+  /** Optional labels for grouping/search — up to 5, ≤20 chars each */
+  tags?: string[];
 }
 
 export interface AgentDefinition {

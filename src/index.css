@@ -66,6 +66,36 @@
   --font-display: 'Inter', sans-serif;
 }
 
+/* ── Light theme overrides (opt-in via <html data-theme="light">) ──
+   Only colors that flow through CSS variables adjust here. Legacy
+   components with hardcoded rgba() will keep their dark look until
+   they migrate to variables — tracked as a follow-up. */
+:root[data-theme="light"] {
+  --bg-deep: #f5f5f8;
+  --bg-primary: #ffffff;
+  --bg-secondary: #f7f7fb;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f0f0f6;
+  --bg-elevated: #fafafd;
+  --border: #e4e4ee;
+  --border-glow: #d0d0dc;
+  --border-subtle: rgba(0,0,0,0.06);
+  --text-primary: #1a1a24;
+  --text-secondary: #55556a;
+  --text-dim: #8888a0;
+  --text-muted: #b0b0c0;
+
+  --glass: rgba(255, 255, 255, 0.85);
+  --glass-border: rgba(0, 0, 0, 0.06);
+  --glass-light: rgba(0, 0, 0, 0.03);
+
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+}
+
 html { scroll-behavior: smooth; }
 
 body {
