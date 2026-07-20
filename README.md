@@ -159,9 +159,9 @@ os.capture({
 
 Stoic AgentOS is designed to integrate with the modern LLMOps stack:
 
-- **🔬 OpenTelemetry-native** — Emit OTLP spans from every agent run. Compatible with Jaeger, Datadog, Grafana, and any OTLP backend. *(Shipping Q3 2026)*
-- **🔗 Langfuse adapter** — Drop-in `@stoic/langfuse` package to auto-instrument Stoic agents as Langfuse traces. *(Shipping Q3 2026)*
+- **🔗 Langfuse migration** — Import existing Langfuse traces directly into AgentOS (`POST /integrations/langfuse/import`), single or batch — a one-way path off Langfuse, not a dual-write adapter.
 - **📊 Trace-level observability** — Every agent execution captures inputs, outputs, latency, token counts, and error traces.
+- **🔬 OpenTelemetry** — Not built yet. On the roadmap; no committed date.
 - **🧠 Memory Layer** — Unlike pure observability tools, AgentOS persists agent decisions and architectural knowledge across sessions.
 - **🛡️ Active Defense** — Server-side active circuit breakers and Human-In-The-Loop approval loops prevent rogue agent loops and unauthorized operations.
 
@@ -175,7 +175,8 @@ Stoic AgentOS is designed to integrate with the modern LLMOps stack:
 | **Persistent Memory** | ✅ Three-tier | ❌ | ❌ | ❌ | ❌ | ❌ |
 | **Semantic Vector Search** | ✅ pgvector/HNSW | ❌ | ❌ | ❌ | ❌ | ❌ |
 | **autoRecall Prompt Injection**| ✅ SDK level | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **Active Shield (HITL approvals)**| ✅ Server-side | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **Active Shield (HITL approvals)**| ✅ Server-side, CAS-safe | ❌ | ❌ | ❌ | ❌ |
+| **Policy engine (schema + CEL + parsed SQL/shell/URL validators)** | ✅ Server-side | ❌ | ❌ | ❌ | ❌ | ❌ |
 | **Docker Self-host** | ✅ | ✅ | ❌ | ✅ | ❌ | ✅ |
 | **Open-source core** | ✅ MIT | ✅ MIT | ❌ | ✅ Apache-2 | Partial | ✅ |
 | **Setup time** | 3 min | 10 min | 2 min | 5 min | 5 min | 30 min |
@@ -216,7 +217,7 @@ Stoic AgentOS is designed to integrate with the modern LLMOps stack:
 ┌─────────────┐    ┌─────────────────┐
 │  Supabase   │    │  Stripe         │
 │  (Postgres) │    │  (Billing)      │
-│  8 tables   │    │  Checkout +     │
+│  18+ tables │    │  Checkout +     │
 │  RLS on all │    │  Portal +       │
 │             │    │  Webhooks       │
 └─────────────┘    └─────────────────┘
@@ -238,6 +239,19 @@ Stoic AgentOS is designed to integrate with the modern LLMOps stack:
 | `DELETE` | `/api/v1/api-keys/:id` | JWT | Revoke API key |
 | `POST` | `/api/v1/billing/checkout` | JWT | Start Stripe checkout |
 | `POST` | `/api/v1/billing/portal` | JWT | Open customer portal |
+| `GET`/`POST` | `/api/v1/memory/{working,episodic,semantic}` | API Key | Three-tier memory read/write |
+| `GET` | `/api/v1/memory/episodic/timeline` | API Key | Episodic memories grouped by day |
+| `GET`/`POST` | `/api/v1/compliance/audit-log` | API Key | Immutable audit trail |
+| `GET` | `/api/v1/compliance/circuit-breaker` | API Key | Per-agent breaker status |
+| `POST` | `/api/v1/compliance/shield/evaluate` | API Key | Active Shield policy verdict (ALLOW / BLOCK / REQUIRE_APPROVAL) |
+| `GET`/`POST`/`DELETE` | `/api/v1/compliance/shield/policies` | JWT (admin) | Manage per-tool Shield policies |
+| `GET`/`POST` | `/api/v1/compliance/shield/budgets` | JWT (admin) | Manage spend budgets |
+| `POST` | `/api/v1/reflection/run` | API Key | AI-powered episodic → semantic extraction |
+| `POST` | `/api/v1/reflection/decay` | API Key | Time-based memory decay |
+| `POST` | `/api/v1/integrations/langfuse/import` | API Key | Import a Langfuse-format trace |
+| `POST` | `/api/v1/insights/{summarize,analyze-agent,ask}` | API Key | Claude-powered insights (see Claude Integration below) |
+
+Full spec: [`api/openapi.yaml`](api/openapi.yaml).
 
 ## SDK Reference
 
@@ -263,7 +277,7 @@ await os.ask('Why did the email-agent fail?')      // Free-form Q&A
 
 AgentOS uses Anthropic Claude for AI-powered insights — summarizing observations, diagnosing agent failures, answering free-form questions about your fleet.
 
-**Models:** Haiku 4.5 for fast summaries, Sonnet 4 with adaptive thinking for deep diagnosis.
+**Models:** Haiku 4.5 for fast summaries, Sonnet 4.6 with adaptive thinking for deep diagnosis.
 
 **Three surfaces:**
 - **API**: `POST /insights/{summarize,analyze-agent,ask}` — see API Reference
@@ -276,23 +290,11 @@ AgentOS uses Anthropic Claude for AI-powered insights — summarizing observatio
 
 **Caching:** All requests use `cache_control: { type: 'ephemeral' }` so repeated system prompts hit the prefix cache at ~10% of input cost.
 
-## 🌍 Used By
+## 🌱 Where We Are
 
-Stoic AgentOS is trusted by modern engineering teams to monitor, persist, and orchestrate their autonomous systems.
+Stoic AgentOS is early — built and shipped in public, in the open, with a real production deployment you can go use right now at [stoicagentos.com](https://stoicagentos.com). We're not claiming an enterprise customer base yet; what we can show you is the engineering: a Postgres-enforced compare-and-swap approval state machine, a parse-not-regex policy engine (real SQL/shell/URL grammars, not denylists), and an audit log that's immutable at the database level.
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Fleet-Coding%20Copilots-blueviolet?style=for-the-badge&logo=github" alt="Coding Copilots" />
-  &nbsp;&nbsp;
-  <img src="https://img.shields.io/badge/Orchestrator-Customer%20Support-00BFFF?style=for-the-badge&logo=intercom" alt="Customer Support" />
-  &nbsp;&nbsp;
-  <img src="https://img.shields.io/badge/Pipeline-Autonomous%20Trading-FFD700?style=for-the-badge&logo=stripe" alt="Autonomous Trading" />
-  &nbsp;&nbsp;
-  <img src="https://img.shields.io/badge/Worker-Data%20Extraction-FF8C00?style=for-the-badge&logo=python" alt="Data Extraction" />
-</p>
-
-- **Autonomous DevOps:** Auto-monitoring CI/CD triage agents running 24/7.
-- **Enterprise Support Fleets:** Coordinating multi-agent support flows across 10k+ dynamic observations/mo.
-- **Dynamic Content Pipelines:** Tracking memory preservation for long-running creative video generation.
+If the problem — governance and persistent memory for AI agent fleets — is one you're already solving badly with cron jobs and hope, [try it](https://stoicagentos.com/signup), [open a discussion](https://github.com/benjaminkernbaum-ux/stoic-agentos/discussions), or just [star the repo](https://github.com/benjaminkernbaum-ux/stoic-agentos) to follow along.
 
 ---
 
@@ -324,7 +326,7 @@ See [SELF_HOSTING.md](SELF_HOSTING.md) for the full walkthrough.
 
 For the dashboard frontend, run `npm run dev` in the project root or deploy to Vercel/Netlify.
 
-See [self-hosting docs](https://stoicagentos.com/docs/self-hosting) for Kubernetes and Terraform guides.
+Kubernetes and Terraform guides aren't written yet — if you need one, [open a discussion](https://github.com/benjaminkernbaum-ux/stoic-agentos/discussions).
 
 ---
 
