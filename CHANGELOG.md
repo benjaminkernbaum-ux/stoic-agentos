@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Declarative Shield policies (server-side)** — New `shield_policies` table (migration 020) + CRUD API. Orgs declare glob rules (`stripe_*`, `*_delete`) mapping tool names to `ALLOW` / `REQUIRE_APPROVAL` / `BLOCK`, with per-policy approval timeouts. Enforcement no longer depends on client-side `criticalTools` config.
+- **`POST /compliance/shield/evaluate`** — Single server-side verdict endpoint: checks the agent's circuit breaker (blocks when open), evaluates policies by priority, creates the HITL approval when required, and writes the audit trail (`PROCEED`/`ESCALATE`/`BLOCK`).
+- **Governance report** — `GET /compliance/report?from&to`: actions taken, approvals requested/approved/rejected/timed-out, median resolution time, per-agent breakdown, active policies. Rendered in the Compliance tab with JSON download — the client-facing monthly artifact.
+- **SDK guard API (JS)** — `compliance.evaluate()`, `waitForApproval()`, `guard()` (evaluate → await approval → CAS-consume), `protectTool()` wrapper, policy CRUD, `report()`. New `AgentOSApprovalRejectedError` / `AgentOSApprovalTimeoutError`.
+- **Policy-driven instrumentors** — With `activeShield` on, every `tool_use`/`tool_call` is checked against server policies (not just `criticalTools`, which remains as a client-side force-escalation override). Shared enforcement path replaces the duplicated polling loops.
+- **Python SDK Shield parity** — `suspend`, `check_approval_status`, `resolve_approval`, `consume_approval`, `evaluate`, `wait_for_approval`, `guard`, `protect_tool`, policy CRUD, `report`, plus `PolicyBlockedError` / `ApprovalRejectedError` / `ApprovalTimeoutError`.
+- **Shield Policies UI** — Compliance tab now manages policies (create/toggle/delete) and shows per-policy timeouts.
+
+### Fixed
+
+- **HITL race conditions** — Approval resolution uses atomic compare-and-swap (migration 019 RPC) with a guarded-UPDATE fallback when the migration hasn't run; concurrent resolves return `409` instead of silently overwriting, and the dashboard explains the conflict. Approved tickets are claimed (`CONSUMED`) before execution to prevent double-runs.
+- **Per-policy timeouts server-side** — `pending_approvals.timeout_at` is set from the matching policy; the sweep and the status endpoint (lazy expiry) honor it, with the legacy 5-minute window as fallback. SDK poll windows derive from the server's `timeout_at`, so both clocks share one source.
+- Circuit-breaker threshold unified in `lib/shieldPolicy.ts` (single constant shared by all endpoints).
+
 ## [2.1.0] - 2026-06-08
 
 ### Added

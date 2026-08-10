@@ -93,100 +93,43 @@ export function instrumentAnthropicClient(anthropicClient, sdk) {
       const totalTokens = promptTokens + completionTokens;
       const costUsd = estimateCost(model, promptTokens, completionTokens);
 
-      // ── Human-in-the-Loop Interception ──
-      let isCritical = false;
-      let criticalToolName = '';
-      let criticalToolArgs = {};
+      // ── Policy-Driven Interception (server-side Shield policies + HITL) ──
+      // Every tool_use block is checked against the org's declarative policies
+      // via /shield/evaluate; tools pinned in sdk.criticalTools force approval
+      // regardless of server policies (client-side override, back-compat).
       if (sdk.activeShield && Array.isArray(result.content)) {
-        for (const block of result.content) {
-          if (block.type === 'tool_use' && sdk.criticalTools.includes(block.name)) {
-            isCritical = true;
-            criticalToolName = block.name;
-            criticalToolArgs = block.input;
-            break;
-          }
-        }
-      }
-
-      if (isCritical) {
-        try {
+        const toolBlocks = result.content.filter(b => b.type === 'tool_use');
+        for (const block of toolBlocks) {
           const activeTrace = getActiveTrace();
-          const suspendRes = await sdk.compliance.suspend(criticalToolName, {
+          if (sdk.debug) console.log(`[AgentOS Shield] Evaluating tool "${block.name}" against Shield policies...`);
+          const decision = await sdk.compliance.enforce(block.name, {
             agentId: activeTrace?.agent || null,
             traceId: activeTrace?.traceId || null,
-            toolArgs: criticalToolArgs || {},
+            toolArgs: block.input || {},
+            forceEscalate: sdk.criticalTools.includes(block.name),
           });
 
-          if (suspendRes && suspendRes.approval_id) {
-            const approvalId = suspendRes.approval_id;
-            if (sdk.debug) console.log(`[AgentOS Shield] ⏸️ Execution suspended. Awaiting approval for tool "${criticalToolName}" (ID: ${approvalId})...`);
-
-            const pollInterval = 2000;
-            const maxPollAttempts = 150; // 5 min timeout
-            let attempts = 0;
-            let approved = false;
-
-            while (attempts < maxPollAttempts) {
-              await new Promise(r => setTimeout(r, pollInterval));
-              attempts++;
-              try {
-                const statusRes = await sdk.compliance.checkApprovalStatus(approvalId);
-                if (statusRes && statusRes.status) {
-                  if (statusRes.status === 'APPROVED') {
-                    try {
-                      const consumeRes = await sdk.compliance.consumeApproval(approvalId);
-                      if (consumeRes && consumeRes.success) {
-                        approved = true;
-                      } else {
-                        approved = false;
-                      }
-                    } catch (consumeErr) {
-                      approved = false;
-                      if (sdk.debug) console.warn(`[AgentOS Shield] Failed to claim/consume approved ticket:`, consumeErr.message);
-                    }
-                    break;
-                  } else if (statusRes.status === 'REJECTED') {
-                    approved = false;
-                    break;
-                  }
+          if (!decision.allowed) {
+            if (sdk.debug) console.warn(`[AgentOS Shield] ❌ Tool "${block.name}" denied (${decision.reason}).`);
+            // Gateway failures under failClosed always throw — a refusal message
+            // would mask an outage as a human decision.
+            if (decision.reason === 'gateway_error') {
+              throw new AgentOSPolicyBlockError(`HITL Shield validation failed: compliance gateway unreachable (failClosed).`);
+            }
+            if (sdk.rejectionBehavior === 'throw') {
+              throw new AgentOSPolicyBlockError(`Tool execution blocked: Action "${block.name}" was denied (${decision.reason}).`);
+            }
+            return {
+              ...result,
+              content: [
+                {
+                  type: 'text',
+                  text: `Ação bloqueada: O Shield negou a execução da ferramenta "${block.name}" (${decision.reason}).`
                 }
-              } catch (pollErr) {
-                if (sdk.debug) console.warn(`[AgentOS Shield] Transient polling error (will retry):`, pollErr.message);
-              }
-            }
-
-            if (!approved) {
-              if (sdk.debug) console.warn(`[AgentOS Shield] ❌ Tool "${criticalToolName}" REJECTED or TIMED OUT.`);
-              if (sdk.rejectionBehavior === 'throw') {
-                throw new AgentOSPolicyBlockError(`Tool execution blocked: Action "${criticalToolName}" was rejected by policy/administrator.`);
-              } else {
-                const refusedResult = {
-                  ...result,
-                  content: [
-                    {
-                      type: 'text',
-                      text: `Ação bloqueada: O administrador do sistema rejeitou a execução da ferramenta "${criticalToolName}".`
-                    }
-                  ]
-                };
-                return refusedResult;
-              }
-            }
-            if (sdk.debug) console.log(`[AgentOS Shield] ✅ Tool "${criticalToolName}" APPROVED. Resuming.`);
-          } else {
-            if (sdk.failClosed) {
-              throw new AgentOSPolicyBlockError(`HITL Shield validation failed: Invalid response from compliance gateway.`);
-            }
+              ]
+            };
           }
-        } catch (err) {
-          if (err instanceof AgentOSError) throw err;
-          if (sdk.failClosed) {
-            throw new AgentOSPolicyBlockError(`HITL Shield validation failed: ${err.message}`);
-          } else {
-            if (sdk.debug) {
-              console.warn(`[AgentOS Shield] HITL Shield validation failed (Fail-Open active, proceeding):`, err.message);
-            }
-          }
+          if (sdk.debug) console.log(`[AgentOS Shield] ✅ Tool "${block.name}" allowed (${decision.reason}).`);
         }
       }
 

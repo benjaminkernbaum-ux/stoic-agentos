@@ -143,6 +143,8 @@ stoic-agentos/
 | `anthropic_usage` | org_id, endpoint, model, input_tokens, output_tokens, cache_read_tokens | Claude usage tracking |
 | `alert_rules` | org_id, name, type, config, channel, destination | User-defined alerts |
 | `alert_events` | org_id, rule_id, severity, message | Triggered alerts |
+| `pending_approvals` | org_id, agent_id, tool_name, tool_args, status (PENDING/APPROVED/REJECTED/TIMEOUT/CONSUMED), timeout_at, policy_id | HITL approval queue (CAS transitions, migration 018–020) |
+| `shield_policies` | org_id, name, tool_pattern (glob), action (ALLOW/REQUIRE_APPROVAL/BLOCK), priority, timeout_seconds, enabled | Declarative Shield policies (migration 020) |
 
 **Auth**: Supabase Email Auth (magic link or password) + Cloudflare Turnstile CAPTCHA.
 **RLS**: All tables have row-level security scoped by `org_id`.
@@ -219,6 +221,19 @@ stoic-agentos/
 | GET | `/compliance/audit-log/stats` | Aggregate stats by type, verdict, day |
 | GET | `/compliance/audit-log/export` | SIEM-compatible JSON export (?from, ?to) |
 | GET | `/compliance/circuit-breaker` | Circuit breaker status per agent |
+| GET | `/compliance/circuit-breaker/status` | Individual agent breaker status (?agent_id or ?agent_name) |
+| GET | `/compliance/report` | Governance report — actions, approvals, blocks, median resolution (?from, ?to) |
+| **Active Shield (HITL + Policies)** |||
+| POST | `/compliance/shield/evaluate` | Server-side verdict for a tool call: breaker gate + policy match → ALLOW/BLOCK/REQUIRE_APPROVAL |
+| POST | `/compliance/shield/suspend` | Manually request human approval for a tool call |
+| GET | `/compliance/shield/approvals` | List approvals (?status=PENDING) |
+| GET | `/compliance/shield/approvals/:id/status` | Poll approval status (lazy per-policy timeout) |
+| POST | `/compliance/shield/approvals/:id/resolve` | Approve/reject (atomic CAS; 409 on conflict) |
+| POST | `/compliance/shield/approvals/:id/consume` | CAS-claim an APPROVED ticket before execution (prevents double-run) |
+| GET | `/compliance/shield/policies` | List declarative Shield policies |
+| POST | `/compliance/shield/policies` | Create policy {name, tool_pattern, action, priority?, timeout_seconds?} |
+| PATCH | `/compliance/shield/policies/:id` | Update policy (partial) |
+| DELETE | `/compliance/shield/policies/:id` | Delete policy |
 | **Reflection** |||
 | POST | `/reflection/run` | AI-powered episodic→semantic extraction (Claude Haiku) |
 | POST | `/reflection/decay` | Time-based memory decay across all tiers |
@@ -288,6 +303,9 @@ The API caches decrypted keys in-process for 5 min to avoid an RPC per Claude ca
 13. `api/migrations/011_chat_conversations.sql` — chat_conversations, chat_messages
 14. `api/migrations/012_api_key_hashing.sql` — SHA-256 hashed API key column
 15. `api/migrations/013_drop_plaintext_keys.sql` — drop plaintext key column
+16. `api/migrations/018_hitl_and_shield_policies.sql` — pending_approvals table (HITL queue)
+17. `api/migrations/019_atomic_cas_transitions.sql` — CAS RPC `transition_approval_status`, CONSUMED status
+18. `api/migrations/020_shield_policies.sql` — shield_policies table + per-approval `timeout_at`/`policy_id`
 
 **Deploy order is not load-bearing.** If the API is deployed before migrations run, all new features gracefully degrade: memory/compliance/reflection routes return empty arrays, BYOK falls back to the platform `ANTHROPIC_API_KEY`, and the API logs warnings at boot. Once migrations run, features activate automatically.
 
@@ -351,6 +369,13 @@ const answer = await os.ask('Which agent has the highest error rate?');
 
 // Compliance audit
 os.compliance.logEvent('tool_call', 'executed rm -rf /', { verdict: 'BLOCKED' });
+
+// Active Shield — declarative, server-enforced policies
+await os.compliance.createPolicy({ name: 'Guard refunds', toolPattern: 'stripe_*', action: 'REQUIRE_APPROVAL', timeoutSeconds: 600 });
+const safeRefund = os.compliance.protectTool('stripe_refund', issueRefund);
+await safeRefund(chargeId);           // suspends until a human approves in the dashboard
+await os.compliance.guard('db_drop'); // throws AgentOSPolicyBlockError if a policy says BLOCK
+const govReport = await os.compliance.report({ from: '2026-07-01' }); // client-facing rollup
 
 // Reflection (AI knowledge extraction)
 await os.reflection.run();   // episodic → semantic triplets

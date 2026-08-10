@@ -45,6 +45,7 @@ import insightRoutes from './routes/insights.js';
 import chatRoutes from './routes/chat.js';
 import memoryRoutes from './routes/memory.js';
 import complianceRoutes from './routes/compliance.js';
+import shieldRoutes from './routes/shield.js';
 import gdprRoutes from './routes/gdpr.js';
 import reflectionRoutes from './routes/reflection.js';
 import evaluationRoutes from './routes/evaluations.js';
@@ -136,6 +137,7 @@ app.use(insightRoutes);
 app.use(chatRoutes);       // AI Chat Assistant
 app.use(memoryRoutes);     // Three-Tier Memory (Working/Episodic/Semantic)
 app.use(complianceRoutes); // Audit Log + Circuit Breaker
+app.use(shieldRoutes);     // Active Shield: policies, server-side evaluate, governance report
 app.use(gdprRoutes);       // GDPR Data Subject Rights (Art. 15-20)
 app.use(reflectionRoutes); // Reflection Worker + Memory Decay
 app.use(evaluationRoutes);  // Evaluation scores per trace
@@ -177,31 +179,58 @@ app.listen(PORT, async () => {
   }
   
   // ── Server-side Sweep for expired HITL pending approvals (Timeouts) ──
-  // The window MUST stay <= the SDK client poll window (150 polls x 2s = 5 min,
-  // see sdk/src/instrumentors/*.js). Otherwise the agent gives up and refuses
+  // Two-phase: per-policy deadlines (timeout_at, migration 020) are swept
+  // exactly; rows without one fall back to the legacy fixed window, which MUST
+  // stay <= the SDK client poll window (150 polls x 2s = 5 min, see
+  // sdk/src/instrumentors/*.js). Otherwise the agent gives up and refuses
   // locally while the row is still PENDING, letting an admin approve a call that
   // already failed — a dashboard-vs-reality divergence. Server is the arbiter.
-  const APPROVAL_TIMEOUT_MS = 5 * 60 * 1000; // 5 min, matched to client poll window
+  // For policy-driven approvals the SDK derives its poll window from the
+  // timeout_at returned by /shield/evaluate, so both clocks share one source.
+  const APPROVAL_TIMEOUT_MS = 5 * 60 * 1000; // 5 min legacy window
   if (supabase) {
+    let timeoutAtColumnMissing = false; // set when migration 020 hasn't run
     setInterval(async () => {
+      const nowIso = new Date().toISOString();
+      const expiryCutoff = new Date(Date.now() - APPROVAL_TIMEOUT_MS).toISOString();
+      let swept = 0;
       try {
-        const expiryCutoff = new Date(Date.now() - APPROVAL_TIMEOUT_MS).toISOString();
-        const { data, error } = await supabase!
-          .from('pending_approvals')
-          .update({
-            status: 'TIMEOUT',
-            resolved_at: new Date().toISOString()
-          })
-          .eq('status', 'PENDING')
-          .lt('created_at', expiryCutoff)
-          .select('id');
-
-        if (error) {
-          // Silent log or console warning
-          console.error('[compliance-sweep] Error sweeping expired approvals:', error.message);
-        } else if (data && data.length > 0) {
-          console.log(`[compliance-sweep] Marked ${data.length} expired approvals as TIMEOUT`);
+        // Phase 1: per-policy deadlines (skip permanently once we know the column is absent)
+        if (!timeoutAtColumnMissing) {
+          const { data, error } = await supabase!
+            .from('pending_approvals')
+            .update({ status: 'TIMEOUT', resolved_at: nowIso })
+            .eq('status', 'PENDING')
+            .not('timeout_at', 'is', null)
+            .lt('timeout_at', nowIso)
+            .select('id');
+          if (error) {
+            if ((error.message || '').toLowerCase().includes('timeout_at')) {
+              timeoutAtColumnMissing = true;
+              console.warn('[compliance-sweep] timeout_at column missing (run migration 020) — using legacy window only');
+            } else {
+              console.error('[compliance-sweep] Error sweeping policy timeouts:', error.message);
+            }
+          } else {
+            swept += (data || []).length;
+          }
         }
+
+        // Phase 2: legacy fixed window for rows without a per-policy deadline
+        let legacyQuery = supabase!
+          .from('pending_approvals')
+          .update({ status: 'TIMEOUT', resolved_at: nowIso })
+          .eq('status', 'PENDING')
+          .lt('created_at', expiryCutoff);
+        if (!timeoutAtColumnMissing) legacyQuery = legacyQuery.is('timeout_at', null);
+        const { data: legacyData, error: legacyError } = await legacyQuery.select('id');
+        if (legacyError) {
+          console.error('[compliance-sweep] Error sweeping expired approvals:', legacyError.message);
+        } else {
+          swept += (legacyData || []).length;
+        }
+
+        if (swept > 0) console.log(`[compliance-sweep] Marked ${swept} expired approvals as TIMEOUT`);
       } catch (e) {
         console.error('[compliance-sweep] Sweep crash:', e);
       }

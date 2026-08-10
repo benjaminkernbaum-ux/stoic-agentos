@@ -135,102 +135,51 @@ function patchInstance(instance, sdk) {
       const totalTokens = usage.total_tokens || promptTokens + completionTokens;
       const costUsd = estimateCost(model, promptTokens, completionTokens);
 
-      // ── Human-in-the-Loop Interception ──
-      let isCritical = false;
-      let criticalToolName = '';
-      let criticalToolArgs = {};
+      // ── Policy-Driven Interception (server-side Shield policies + HITL) ──
+      // Every tool_call is checked against the org's declarative policies via
+      // /shield/evaluate; tools pinned in sdk.criticalTools force approval
+      // regardless of server policies (client-side override, back-compat).
       if (sdk.activeShield && Array.isArray(result.choices?.[0]?.message?.tool_calls)) {
         for (const tc of result.choices[0].message.tool_calls) {
-          if (sdk.criticalTools.includes(tc.function?.name)) {
-            isCritical = true;
-            criticalToolName = tc.function.name;
-            criticalToolArgs = tc.function.arguments;
-            break;
+          const toolName = tc.function?.name;
+          if (!toolName) continue;
+          let toolArgs = tc.function?.arguments || {};
+          if (typeof toolArgs === 'string') {
+            try { toolArgs = JSON.parse(toolArgs); } catch { toolArgs = { raw: toolArgs }; }
           }
-        }
-      }
 
-      if (isCritical) {
-        try {
           const activeTrace = getActiveTrace();
-          const suspendRes = await sdk.compliance.suspend(criticalToolName, {
+          if (sdk.debug) console.log(`[AgentOS Shield] Evaluating tool "${toolName}" against Shield policies...`);
+          const decision = await sdk.compliance.enforce(toolName, {
             agentId: activeTrace?.agent || null,
             traceId: activeTrace?.traceId || null,
-            toolArgs: typeof criticalToolArgs === 'string' ? JSON.parse(criticalToolArgs) : criticalToolArgs,
+            toolArgs,
+            forceEscalate: sdk.criticalTools.includes(toolName),
           });
 
-          if (suspendRes && suspendRes.approval_id) {
-            const approvalId = suspendRes.approval_id;
-            if (sdk.debug) console.log(`[AgentOS Shield] ⏸️ Execution suspended. Awaiting approval for tool "${criticalToolName}" (ID: ${approvalId})...`);
-
-            const pollInterval = 2000;
-            const maxPollAttempts = 150; // 5 min timeout
-            let attempts = 0;
-            let approved = false;
-
-            while (attempts < maxPollAttempts) {
-              await new Promise(r => setTimeout(r, pollInterval));
-              attempts++;
-              try {
-                const statusRes = await sdk.compliance.checkApprovalStatus(approvalId);
-                if (statusRes && statusRes.status) {
-                  if (statusRes.status === 'APPROVED') {
-                    try {
-                      const consumeRes = await sdk.compliance.consumeApproval(approvalId);
-                      if (consumeRes && consumeRes.success) {
-                        approved = true;
-                      } else {
-                        approved = false;
-                      }
-                    } catch (consumeErr) {
-                      approved = false;
-                      if (sdk.debug) console.warn(`[AgentOS Shield] Failed to claim/consume approved ticket:`, consumeErr.message);
-                    }
-                    break;
-                  } else if (statusRes.status === 'REJECTED') {
-                    approved = false;
-                    break;
-                  }
+          if (!decision.allowed) {
+            if (sdk.debug) console.warn(`[AgentOS Shield] ❌ Tool "${toolName}" denied (${decision.reason}).`);
+            // Gateway failures under failClosed always throw — a refusal message
+            // would mask an outage as a human decision.
+            if (decision.reason === 'gateway_error') {
+              throw new AgentOSPolicyBlockError(`HITL Shield validation failed: compliance gateway unreachable (failClosed).`);
+            }
+            if (sdk.rejectionBehavior === 'throw') {
+              throw new AgentOSPolicyBlockError(`Tool execution blocked: Action "${toolName}" was denied (${decision.reason}).`);
+            }
+            return {
+              ...result,
+              choices: result.choices.map(c => ({
+                ...c,
+                message: {
+                  ...c.message,
+                  content: `Ação bloqueada: O Shield negou a execução da ferramenta "${toolName}" (${decision.reason}).`,
+                  tool_calls: null
                 }
-              } catch (pollErr) {
-                if (sdk.debug) console.warn(`[AgentOS Shield] Transient polling error (will retry):`, pollErr.message);
-              }
-            }
-
-            if (!approved) {
-              if (sdk.debug) console.warn(`[AgentOS Shield] ❌ Tool "${criticalToolName}" REJECTED or TIMED OUT.`);
-              if (sdk.rejectionBehavior === 'throw') {
-                throw new AgentOSPolicyBlockError(`Tool execution blocked: Action "${criticalToolName}" was rejected by policy/administrator.`);
-              } else {
-                const refusedResult = {
-                  ...result,
-                  choices: result.choices.map(c => ({
-                    ...c,
-                    message: {
-                      ...c.message,
-                      content: `Ação bloqueada: O administrador do sistema rejeitou a execução da ferramenta "${criticalToolName}".`,
-                      tool_calls: null
-                    }
-                  }))
-                };
-                return refusedResult;
-              }
-            }
-            if (sdk.debug) console.log(`[AgentOS Shield] ✅ Tool "${criticalToolName}" APPROVED. Resuming.`);
-          } else {
-            if (sdk.failClosed) {
-              throw new AgentOSPolicyBlockError(`HITL Shield validation failed: Invalid response from compliance gateway.`);
-            }
+              }))
+            };
           }
-        } catch (err) {
-          if (err instanceof AgentOSError) throw err;
-          if (sdk.failClosed) {
-            throw new AgentOSPolicyBlockError(`HITL Shield validation failed: ${err.message}`);
-          } else {
-            if (sdk.debug) {
-              console.warn(`[AgentOS Shield] HITL Shield validation failed (Fail-Open active, proceeding):`, err.message);
-            }
-          }
+          if (sdk.debug) console.log(`[AgentOS Shield] ✅ Tool "${toolName}" allowed (${decision.reason}).`);
         }
       }
 

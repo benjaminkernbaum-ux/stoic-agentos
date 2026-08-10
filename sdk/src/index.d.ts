@@ -356,6 +356,65 @@ export interface CircuitBreakerStatus {
   blocks_last_hour: number;
 }
 
+export type ShieldVerdict = 'ALLOW' | 'BLOCK' | 'REQUIRE_APPROVAL';
+export type ShieldPolicyAction = 'ALLOW' | 'REQUIRE_APPROVAL' | 'BLOCK';
+export type ApprovalStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'TIMEOUT' | 'CONSUMED';
+
+export interface ShieldPolicy {
+  id: string;
+  org_id: string;
+  name: string;
+  description: string | null;
+  tool_pattern: string;
+  action: ShieldPolicyAction;
+  priority: number;
+  timeout_seconds: number;
+  enabled: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ShieldEvaluation {
+  verdict: ShieldVerdict;
+  reason?: string;
+  approval_id?: string;
+  timeout_at?: string;
+  timeout_seconds?: number;
+  poll_interval_ms?: number;
+  policy?: { id: string; name: string; tool_pattern: string } | null;
+  policies_active?: boolean;
+  block_count?: number;
+}
+
+export interface GuardResult {
+  verdict: 'ALLOW' | 'APPROVED';
+  approvalId: string | null;
+  policy: { id: string; name: string; tool_pattern: string } | null;
+}
+
+export interface EnforceDecision {
+  allowed: boolean;
+  reason: string;
+}
+
+export interface GovernanceReport {
+  period: { from: string; to: string };
+  generated_at: string;
+  audit: {
+    total_events: number;
+    by_verdict: Record<string, number>;
+    by_event_type: Record<string, number>;
+  };
+  approvals: {
+    total_requested: number;
+    by_status: Record<string, number>;
+    by_tool: Record<string, number>;
+    median_resolution_seconds: number | null;
+  };
+  agents: Array<{ agent_id: string; agent_name: string | null; events: number; blocks: number }>;
+  policies: { total: number; enabled: number };
+}
+
 export declare class ComplianceClient {
   /** Log an immutable audit event */
   logEvent(eventType: string, action: string, options?: { agentId?: string; reasoning?: string; verdict?: string; metadata?: Record<string, unknown>; policyVersion?: string; contextHash?: string }): Promise<any>;
@@ -367,6 +426,51 @@ export declare class ComplianceClient {
   circuitBreaker(): Promise<CircuitBreakerStatus[]>;
   /** Get audit log statistics */
   stats(): Promise<AuditLogStats | null>;
+
+  // ── Active Shield & HITL ──
+
+  /** Suspend execution of a critical tool call and request approval */
+  suspend(toolName: string, options?: { agentId?: string; traceId?: string; toolArgs?: Record<string, unknown> }): Promise<{ success: boolean; approval_id: string } | null>;
+  /** Poll the status of a pending approval */
+  checkApprovalStatus(approvalId: string): Promise<{ status: ApprovalStatus; resolved_at: string | null; timeout_at: string | null } | null>;
+  /** Resolve an approval (approve or reject) */
+  resolveApproval(approvalId: string, verdict: 'APPROVED' | 'REJECTED'): Promise<any>;
+  /** Consume/claim an approved request atomically (CAS) before tool execution */
+  consumeApproval(approvalId: string): Promise<{ success: boolean; status: 'CONSUMED' } | null>;
+  /** List pending/resolved approvals */
+  getPendingApprovals(status?: ApprovalStatus): Promise<any[] | null>;
+
+  // ── Declarative Policies (server-side) ──
+
+  /** List the org's Shield policies */
+  listPolicies(): Promise<ShieldPolicy[] | null>;
+  /** Create a Shield policy */
+  createPolicy(policy: { name: string; toolPattern: string; action?: ShieldPolicyAction; priority?: number; timeoutSeconds?: number; description?: string; enabled?: boolean }): Promise<ShieldPolicy | null>;
+  /** Update a Shield policy (partial) */
+  updatePolicy(policyId: string, patch: { name?: string; toolPattern?: string; action?: ShieldPolicyAction; priority?: number; timeoutSeconds?: number; description?: string; enabled?: boolean }): Promise<ShieldPolicy | null>;
+  /** Delete a Shield policy */
+  deletePolicy(policyId: string): Promise<{ success: boolean } | null>;
+
+  /** Server-side policy + circuit-breaker evaluation for a tool call */
+  evaluate(toolName: string, options?: { agentId?: string; agentName?: string; traceId?: string; toolArgs?: Record<string, unknown> }): Promise<ShieldEvaluation | null>;
+  /** Poll an approval until resolution or local deadline; returns final status */
+  waitForApproval(approvalId: string, options?: { timeoutMs?: number; pollIntervalMs?: number }): Promise<ApprovalStatus>;
+  /** Evaluate → await human approval if required → CAS-consume. Throws on deny. */
+  guard(toolName: string, options?: { agentId?: string; agentName?: string; traceId?: string; toolArgs?: Record<string, unknown>; pollIntervalMs?: number }): Promise<GuardResult>;
+  /** Wrap a tool function so every call is guarded by the org's Shield policies */
+  protectTool<T extends (...args: any[]) => any>(toolName: string, fn: T, options?: { agentId?: string; agentName?: string }): (...args: Parameters<T>) => Promise<Awaited<ReturnType<T>>>;
+  /** Non-throwing enforcement — returns { allowed, reason } */
+  enforce(toolName: string, options?: { agentId?: string; traceId?: string; toolArgs?: Record<string, unknown>; forceEscalate?: boolean }): Promise<EnforceDecision>;
+  /** Governance report — the client-facing rollup for a period */
+  report(options?: { from?: string; to?: string }): Promise<GovernanceReport | null>;
+}
+
+export declare class AgentOSApprovalRejectedError extends AgentOSError {
+  approvalId: string;
+}
+
+export declare class AgentOSApprovalTimeoutError extends AgentOSError {
+  approvalId: string;
 }
 
 /** Create an AgentOS instance (convenience function) */

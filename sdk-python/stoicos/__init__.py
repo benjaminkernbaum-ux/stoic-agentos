@@ -20,10 +20,19 @@ from stoicos.client import StoicOS
 from stoicos.memory import Memory
 from stoicos.compliance import Compliance
 from stoicos.reflection import Reflection
-from stoicos.errors import AgentOSError, AuthError, ValidationError, RateLimitError
+from stoicos.errors import (
+    AgentOSError,
+    ApprovalRejectedError,
+    ApprovalTimeoutError,
+    AuthError,
+    PolicyBlockedError,
+    RateLimitError,
+    ValidationError,
+)
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 __all__ = [
     "StoicOS", "Memory", "Compliance", "Reflection",
     "AgentOSError", "AuthError", "ValidationError", "RateLimitError",
+    "PolicyBlockedError", "ApprovalRejectedError", "ApprovalTimeoutError",
 ]

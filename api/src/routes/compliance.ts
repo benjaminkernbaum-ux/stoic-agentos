@@ -12,14 +12,47 @@ import { requireMinRole } from '../middleware/rbac.js';
 import { supabase } from '../middleware/db.js';
 import { safeError } from '../lib/safeError.js';
 import type { AuthenticatedRequest } from '../types.js';
-import { isTableMissing } from '../lib/utils.js';
+import { isTableMissing, isRpcMissing } from '../lib/utils.js';
+import { CIRCUIT_BREAKER_BLOCK_THRESHOLD } from '../lib/shieldPolicy.js';
 
 const router = Router();
 const V = 'v1';
 
-// Number of BLOCK verdicts (per agent, rolling 1h window) that trips the circuit "open".
-// Kept in sync with the SQL threshold in migration 016 (check_agent_circuit_status).
-const CIRCUIT_BREAKER_BLOCK_THRESHOLD = 5;
+/**
+ * Compare-and-swap an approval's status. Prefers the atomic RPC from
+ * migration 019; when the RPC is absent (migration not applied), falls back
+ * to a single guarded UPDATE — `WHERE status = from` executes as one SQL
+ * statement, so it is still race-safe per row.
+ * Returns the transitioned row, or null when the CAS lost (already resolved).
+ */
+async function casTransition(orgId: string, approvalId: string, fromStatus: string, toStatus: string, userId: string | null) {
+  const { data, error } = await supabase!.rpc('transition_approval_status', {
+    p_org_id: orgId,
+    p_approval_id: approvalId,
+    p_from_status: fromStatus,
+    p_to_status: toStatus,
+    p_user_id: userId,
+  });
+  if (!error) return Array.isArray(data) ? (data[0] || null) : data;
+  if (!isRpcMissing(error)) throw error;
+
+  // Graceful degradation: migration 019 not run — guarded single-statement UPDATE
+  const patch: Record<string, unknown> = { status: toStatus };
+  if (toStatus === 'APPROVED' || toStatus === 'REJECTED') {
+    patch.resolved_at = new Date().toISOString();
+    patch.resolved_by = userId;
+  }
+  const { data: row, error: updateError } = await supabase!
+    .from('pending_approvals')
+    .update(patch)
+    .eq('id', approvalId)
+    .eq('org_id', orgId)
+    .eq('status', fromStatus)
+    .select()
+    .maybeSingle();
+  if (updateError) throw updateError;
+  return row;
+}
 
 
 // ══════════════════════════════════════
@@ -248,7 +281,7 @@ router.get(`/api/${V}/compliance/shield/approvals/:id/status`, authenticate, asy
   try {
     const { data, error } = await supabase!
       .from('pending_approvals')
-      .select('status')
+      .select('*')
       .eq('id', req.params.id)
       .eq('org_id', req.org.id)
       .maybeSingle();
@@ -258,7 +291,18 @@ router.get(`/api/${V}/compliance/shield/approvals/:id/status`, authenticate, asy
       return res.status(404).json({ error: 'Approval request not found' });
     }
 
-    res.json({ status: data.status });
+    // Lazy timeout: a PENDING row past its per-policy deadline is expired even
+    // if the 10s sweep hasn't caught it yet. CAS keeps this race-safe — if an
+    // admin resolves concurrently, the guarded UPDATE loses and we re-read.
+    if (data.status === 'PENDING' && data.timeout_at && new Date(data.timeout_at) < new Date()) {
+      const expired = await casTransition(req.org.id, String(req.params.id), 'PENDING', 'TIMEOUT', null);
+      if (expired) return res.json({ status: 'TIMEOUT', resolved_at: expired.resolved_at || null, timeout_at: data.timeout_at });
+      const { data: reread } = await supabase!.from('pending_approvals')
+        .select('status, resolved_at, timeout_at').eq('id', req.params.id).eq('org_id', req.org.id).maybeSingle();
+      if (reread) return res.json({ status: reread.status, resolved_at: reread.resolved_at || null, timeout_at: reread.timeout_at || null });
+    }
+
+    res.json({ status: data.status, resolved_at: data.resolved_at || null, timeout_at: data.timeout_at || null });
   } catch (err: unknown) {
     safeError(res, err);
   }
@@ -272,19 +316,8 @@ router.post(`/api/${V}/compliance/shield/approvals/:id/resolve`, authenticate, r
       return res.status(400).json({ error: 'verdict must be APPROVED or REJECTED' });
     }
 
-    // 1. Update the pending approval status atomically using Compare-and-Swap RPC
-    const { data, error: updateError } = await supabase!
-      .rpc('transition_approval_status', {
-        p_org_id: req.org.id,
-        p_approval_id: req.params.id,
-        p_from_status: 'PENDING',
-        p_to_status: verdict,
-        p_user_id: req.user?.id || null
-      });
-
-    if (updateError) throw updateError;
-    
-    const approval = Array.isArray(data) ? data[0] : data;
+    // 1. Update the pending approval status atomically (CAS RPC, guarded-UPDATE fallback)
+    const approval = await casTransition(req.org.id, String(req.params.id), 'PENDING', verdict, req.user?.id || null);
     if (!approval) {
       return res.status(409).json({ error: 'Resolution conflict. This approval request may have already been resolved or timed out.' });
     }
@@ -317,18 +350,7 @@ router.post(`/api/${V}/compliance/shield/approvals/:id/resolve`, authenticate, r
 // ── Consume Approval (SDK transitions status APPROVED -> CONSUMED to prevent double-execution) ──
 router.post(`/api/${V}/compliance/shield/approvals/:id/consume`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { data, error } = await supabase!
-      .rpc('transition_approval_status', {
-        p_org_id: req.org.id,
-        p_approval_id: req.params.id,
-        p_from_status: 'APPROVED',
-        p_to_status: 'CONSUMED',
-        p_user_id: null
-      });
-
-    if (error) throw error;
-
-    const approval = Array.isArray(data) ? data[0] : data;
+    const approval = await casTransition(req.org.id, String(req.params.id), 'APPROVED', 'CONSUMED', null);
     if (!approval) {
       return res.status(409).json({ error: 'Failed to claim approval. The request may have timed out, been rejected, or already consumed.' });
     }

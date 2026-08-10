@@ -83,6 +83,22 @@ export class AgentOSPolicyBlockError extends AgentOSError {
   }
 }
 
+export class AgentOSApprovalRejectedError extends AgentOSError {
+  constructor(message, approvalId) {
+    super(message, 'APPROVAL_REJECTED', 403);
+    this.name = 'AgentOSApprovalRejectedError';
+    this.approvalId = approvalId;
+  }
+}
+
+export class AgentOSApprovalTimeoutError extends AgentOSError {
+  constructor(message, approvalId) {
+    super(message, 'APPROVAL_TIMEOUT', 408);
+    this.name = 'AgentOSApprovalTimeoutError';
+    this.approvalId = approvalId;
+  }
+}
+
 // ── Main Client ──
 
 export class AgentOS {
@@ -759,6 +775,210 @@ class ComplianceClient {
   async getPendingApprovals(status) {
     const qs = status ? `?status=${status}` : '';
     return this._sdk._fetch(`/compliance/shield/approvals${qs}`);
+  }
+
+  // ── Declarative Policies (server-side, v4.1) ──
+
+  /** List the org's Shield policies */
+  async listPolicies() {
+    return this._sdk._fetch('/compliance/shield/policies');
+  }
+
+  /** Create a Shield policy. action: 'ALLOW' | 'REQUIRE_APPROVAL' | 'BLOCK' */
+  async createPolicy({ name, toolPattern, action, priority, timeoutSeconds, description, enabled } = {}) {
+    return this._sdk._send('/compliance/shield/policies', {
+      name, tool_pattern: toolPattern, action, priority,
+      timeout_seconds: timeoutSeconds, description, enabled,
+    });
+  }
+
+  /** Update a Shield policy (partial) */
+  async updatePolicy(policyId, patch = {}) {
+    const body = {};
+    if (patch.name !== undefined) body.name = patch.name;
+    if (patch.toolPattern !== undefined) body.tool_pattern = patch.toolPattern;
+    if (patch.action !== undefined) body.action = patch.action;
+    if (patch.priority !== undefined) body.priority = patch.priority;
+    if (patch.timeoutSeconds !== undefined) body.timeout_seconds = patch.timeoutSeconds;
+    if (patch.description !== undefined) body.description = patch.description;
+    if (patch.enabled !== undefined) body.enabled = patch.enabled;
+    return this._sdk._send(`/compliance/shield/policies/${policyId}`, body, 'PATCH');
+  }
+
+  /** Delete a Shield policy */
+  async deletePolicy(policyId) {
+    return this._sdk._send(`/compliance/shield/policies/${policyId}`, {}, 'DELETE');
+  }
+
+  /**
+   * Ask the server to evaluate a tool call against the org's Shield policies
+   * (and the agent's circuit breaker). Returns the raw verdict payload:
+   * { verdict: 'ALLOW'|'BLOCK'|'REQUIRE_APPROVAL', approval_id?, timeout_at?, ... }
+   */
+  async evaluate(toolName, { agentId, agentName, traceId, toolArgs } = {}) {
+    return this._sdk._send('/compliance/shield/evaluate', {
+      tool_name: toolName,
+      agent_id: agentId || null,
+      agent_name: agentName || null,
+      trace_id: traceId || null,
+      tool_args: toolArgs || {},
+    });
+  }
+
+  /**
+   * Poll an approval until it leaves PENDING or the local deadline passes.
+   * Returns the final status string: APPROVED | REJECTED | TIMEOUT.
+   */
+  async waitForApproval(approvalId, { timeoutMs = 5 * 60 * 1000, pollIntervalMs = 2000 } = {}) {
+    const deadline = Date.now() + timeoutMs;
+    while (Date.now() < deadline) {
+      await new Promise(r => setTimeout(r, pollIntervalMs));
+      try {
+        const res = await this.checkApprovalStatus(approvalId);
+        if (res && res.status && res.status !== 'PENDING') return res.status;
+      } catch (err) {
+        if (this._sdk.debug) console.warn('[AgentOS Shield] Transient polling error (will retry):', err.message);
+      }
+    }
+    return 'TIMEOUT';
+  }
+
+  /**
+   * The one-call guard: evaluate → (if needed) wait for human approval →
+   * atomically consume the ticket. Resolves when execution may proceed;
+   * throws AgentOSPolicyBlockError / AgentOSApprovalRejectedError /
+   * AgentOSApprovalTimeoutError otherwise.
+   *
+   * @returns {Promise<{verdict: string, approvalId: string|null, policy: object|null}>}
+   */
+  async guard(toolName, { agentId, agentName, traceId, toolArgs, pollIntervalMs } = {}) {
+    let evaluation;
+    try {
+      evaluation = await this.evaluate(toolName, { agentId, agentName, traceId, toolArgs });
+    } catch (err) {
+      if (this._sdk.failClosed) {
+        throw new AgentOSPolicyBlockError(`Shield evaluation failed and failClosed is set: ${err.message}`);
+      }
+      if (this._sdk.debug) console.warn('[AgentOS Shield] Evaluation unreachable, failing open:', err.message);
+      return { verdict: 'ALLOW', approvalId: null, policy: null };
+    }
+
+    if (!evaluation) {
+      // Transport swallowed a non-OK response into null
+      if (this._sdk.failClosed) {
+        throw new AgentOSPolicyBlockError('Shield evaluation returned no verdict and failClosed is set.');
+      }
+      return { verdict: 'ALLOW', approvalId: null, policy: null };
+    }
+    if (evaluation.verdict === 'ALLOW') {
+      return { verdict: 'ALLOW', approvalId: null, policy: evaluation.policy || null };
+    }
+
+    if (evaluation.verdict === 'BLOCK') {
+      const why = evaluation.reason === 'circuit_breaker_open'
+        ? `circuit breaker open (${evaluation.block_count} blocks in the last hour)`
+        : `policy "${evaluation.policy?.name || 'unknown'}"`;
+      throw new AgentOSPolicyBlockError(`Tool "${toolName}" blocked by ${why}.`);
+    }
+
+    // REQUIRE_APPROVAL — poll within the server's own deadline so both clocks agree
+    const approvalId = evaluation.approval_id;
+    const serverDeadlineMs = evaluation.timeout_at
+      ? Math.max(new Date(evaluation.timeout_at).getTime() - Date.now(), 0) + 5000 // small grace for the sweep
+      : 5 * 60 * 1000;
+    const status = await this.waitForApproval(approvalId, {
+      timeoutMs: serverDeadlineMs,
+      pollIntervalMs: pollIntervalMs || evaluation.poll_interval_ms || 2000,
+    });
+
+    if (status === 'APPROVED') {
+      // CAS-claim the ticket so a retry/second worker can't double-execute
+      try {
+        const consumed = await this.consumeApproval(approvalId);
+        if (consumed && consumed.success) {
+          return { verdict: 'APPROVED', approvalId, policy: evaluation.policy || null };
+        }
+      } catch (err) {
+        if (this._sdk.debug) console.warn('[AgentOS Shield] Failed to claim approved ticket:', err.message);
+      }
+      throw new AgentOSApprovalRejectedError(`Approval for "${toolName}" was claimed elsewhere or invalidated.`, approvalId);
+    }
+    if (status === 'REJECTED') {
+      throw new AgentOSApprovalRejectedError(`Tool "${toolName}" was rejected by an administrator.`, approvalId);
+    }
+    throw new AgentOSApprovalTimeoutError(`Approval for "${toolName}" timed out before a human resolved it.`, approvalId);
+  }
+
+  /**
+   * Wrap a tool function so every invocation is guarded by the org's
+   * server-side Shield policies. The declarative alternative to remembering
+   * to call suspend() by hand.
+   *
+   * @example
+   *   const safeRefund = os.compliance.protectTool('stripe_refund', issueRefund);
+   *   await safeRefund(chargeId); // waits for human approval if policy says so
+   */
+  protectTool(toolName, fn, { agentId, agentName } = {}) {
+    const compliance = this;
+    return async function guarded(...args) {
+      await compliance.guard(toolName, {
+        agentId, agentName,
+        toolArgs: { args: args.length === 1 ? args[0] : args },
+      });
+      return fn(...args);
+    };
+  }
+
+  /**
+   * Instrumentor-facing enforcement. Same pipeline as guard(), but returns
+   * { allowed, reason } instead of throwing, so callers can pick between
+   * refuse-and-continue and throw (sdk.rejectionBehavior).
+   * forceEscalate skips policy evaluation and demands approval directly —
+   * used for tools pinned in sdk.criticalTools (client-side override).
+   */
+  async enforce(toolName, { agentId, traceId, toolArgs, forceEscalate } = {}) {
+    try {
+      if (forceEscalate) {
+        const suspendRes = await this.suspend(toolName, { agentId, traceId, toolArgs });
+        if (!suspendRes || !suspendRes.approval_id) {
+          return this._sdk.failClosed
+            ? { allowed: false, reason: 'gateway_error' }
+            : { allowed: true, reason: 'fail_open' };
+        }
+        const status = await this.waitForApproval(suspendRes.approval_id);
+        if (status === 'APPROVED') {
+          try {
+            const consumed = await this.consumeApproval(suspendRes.approval_id);
+            if (consumed && consumed.success) return { allowed: true, reason: 'approved' };
+          } catch (err) {
+            if (this._sdk.debug) console.warn('[AgentOS Shield] Failed to claim approved ticket:', err.message);
+          }
+          return { allowed: false, reason: 'claim_failed' };
+        }
+        return { allowed: false, reason: status === 'REJECTED' ? 'rejected' : 'timeout' };
+      }
+
+      await this.guard(toolName, { agentId, traceId, toolArgs });
+      return { allowed: true, reason: 'allowed' };
+    } catch (err) {
+      if (err instanceof AgentOSPolicyBlockError ||
+          err instanceof AgentOSApprovalRejectedError ||
+          err instanceof AgentOSApprovalTimeoutError) {
+        return { allowed: false, reason: err.code };
+      }
+      if (this._sdk.failClosed) return { allowed: false, reason: 'gateway_error' };
+      if (this._sdk.debug) console.warn('[AgentOS Shield] Enforcement failed (fail-open):', err.message);
+      return { allowed: true, reason: 'fail_open' };
+    }
+  }
+
+  /** Governance report — the client-facing monthly rollup */
+  async report({ from, to } = {}) {
+    const params = new URLSearchParams();
+    if (from) params.set('from', from);
+    if (to) params.set('to', to);
+    const qs = params.toString();
+    return this._sdk._fetch(`/compliance/report${qs ? `?${qs}` : ''}`);
   }
 }
 

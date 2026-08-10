@@ -31,3 +31,26 @@ class RateLimitError(AgentOSError):
         super().__init__(message, code="RATE_LIMIT", status_code=429)
         self.limit = limit
         self.current = current
+
+
+class PolicyBlockedError(AgentOSError):
+    """Raised when a tool call is blocked by a Shield policy or open circuit breaker."""
+
+    def __init__(self, message: str):
+        super().__init__(message, code="POLICY_BLOCKED", status_code=403)
+
+
+class ApprovalRejectedError(AgentOSError):
+    """Raised when a human administrator rejects a pending approval."""
+
+    def __init__(self, message: str, approval_id: str | None = None):
+        super().__init__(message, code="APPROVAL_REJECTED", status_code=403)
+        self.approval_id = approval_id
+
+
+class ApprovalTimeoutError(AgentOSError):
+    """Raised when a pending approval expires before a human resolves it."""
+
+    def __init__(self, message: str, approval_id: str | None = None):
+        super().__init__(message, code="APPROVAL_TIMEOUT", status_code=408)
+        self.approval_id = approval_id
