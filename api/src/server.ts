@@ -176,6 +176,35 @@ app.listen(PORT, async () => {
                 : status === 'pending' ? 'Vault BYOK PENDING — run migration_003_vault_anthropic_keys.sql'
                 : 'Vault BYOK status unknown (probe failed)';
     console.log(`   ${icon} ${label}`);
+
+    // ── Active Shield migration probe (018/019/020) ──
+    // Missing pieces fail open at runtime; this makes the degradation visible
+    // in the boot log instead of silent. One consolidated fix:
+    // api/migrations/RUN_SHIELD_MIGRATIONS.sql in the Supabase SQL Editor.
+    try {
+      const nilUuid = '00000000-0000-0000-0000-000000000000';
+      const [approvalsQ, policiesQ, timeoutQ, rpcQ] = await Promise.all([
+        supabase.from('pending_approvals').select('id', { count: 'exact', head: true }),
+        supabase.from('shield_policies').select('id', { count: 'exact', head: true }),
+        supabase.from('pending_approvals').select('timeout_at').limit(1),
+        // CAS probe with the nil UUID: matches no row, mutates nothing
+        supabase.rpc('transition_approval_status', {
+          p_org_id: nilUuid, p_approval_id: nilUuid,
+          p_from_status: 'PENDING', p_to_status: 'TIMEOUT', p_user_id: null,
+        }),
+      ]);
+      const missing: string[] = [];
+      if (approvalsQ.error) missing.push('018 (pending_approvals)');
+      if (rpcQ.error) missing.push('019 (CAS RPC)');
+      if (policiesQ.error || timeoutQ.error) missing.push('020 (shield_policies/timeout_at)');
+      if (missing.length === 0) {
+        console.log('   ✅ Active Shield ready — policies, CAS transitions, per-policy timeouts');
+      } else {
+        console.log(`   ⚠️  Active Shield DEGRADED (fail-open) — missing ${missing.join(', ')} → run api/migrations/RUN_SHIELD_MIGRATIONS.sql`);
+      }
+    } catch (probeErr) {
+      console.log('   ❓ Active Shield status unknown (probe failed):', (probeErr as Error).message);
+    }
   }
   
   // ── Server-side Sweep for expired HITL pending approvals (Timeouts) ──

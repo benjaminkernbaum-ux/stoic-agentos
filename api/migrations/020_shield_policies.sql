@@ -34,6 +34,11 @@ CREATE INDEX IF NOT EXISTS idx_shield_policies_org_enabled
 ALTER TABLE shield_policies ENABLE ROW LEVEL SECURITY;
 
 -- Same org-isolation model as pending_approvals (018)
+DROP POLICY IF EXISTS "shield_policies_select_org" ON shield_policies;
+DROP POLICY IF EXISTS "shield_policies_insert_org" ON shield_policies;
+DROP POLICY IF EXISTS "shield_policies_update_org" ON shield_policies;
+DROP POLICY IF EXISTS "shield_policies_delete_org" ON shield_policies;
+
 CREATE POLICY "shield_policies_select_org" ON shield_policies
   FOR SELECT USING (org_id IN (
     SELECT org_id FROM org_members WHERE user_id = auth.uid()
