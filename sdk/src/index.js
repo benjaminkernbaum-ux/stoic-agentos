@@ -85,6 +85,55 @@ export class AgentOSPolicyBlockError extends AgentOSError {
 
 // ── Main Client ──
 
+// ── Process-exit flush (shared by all instances) ──
+// One beforeExit/SIGINT handler pair for the whole process, so N instances
+// don't leak N listeners. Instances are held weakly so short-lived clients
+// can still be garbage-collected.
+
+const liveInstances = new Set();
+let beforeExitRegistered = false;
+let sigintRegistered = false;
+const SIGINT_FLUSH_TIMEOUT_MS = 2000;
+
+function flushAllInstances() {
+  const pending = [];
+  for (const ref of liveInstances) {
+    const inst = ref.deref();
+    if (!inst) { liveInstances.delete(ref); continue; }
+    pending.push(inst.flush().catch(() => {}));
+    if (inst.backgroundQueue) pending.push(Promise.resolve(inst.backgroundQueue.flush()).catch(() => {}));
+  }
+  return Promise.all(pending);
+}
+
+function onBeforeExit() {
+  flushAllInstances();
+}
+
+function onSigint() {
+  const flushed = flushAllInstances();
+  // If the app has its own SIGINT handler, it owns shutdown: just flush.
+  if (process.listenerCount('SIGINT') > 1) return;
+  // Otherwise we replaced Node's default (terminate) by listening. Flush,
+  // then re-raise the signal so the process ends exactly as it would have.
+  process.removeListener('SIGINT', onSigint);
+  sigintRegistered = false;
+  const timeout = new Promise((r) => setTimeout(r, SIGINT_FLUSH_TIMEOUT_MS).unref());
+  Promise.race([flushed, timeout]).finally(() => process.kill(process.pid, 'SIGINT'));
+}
+
+function registerExitFlush(instance) {
+  if (typeof process === 'undefined' || typeof process.on !== 'function' || typeof WeakRef === 'undefined') return;
+  instance._exitRef = new WeakRef(instance);
+  liveInstances.add(instance._exitRef);
+  if (!beforeExitRegistered) { beforeExitRegistered = true; process.on('beforeExit', onBeforeExit); }
+  if (!sigintRegistered) { sigintRegistered = true; process.on('SIGINT', onSigint); }
+}
+
+function unregisterExitFlush(instance) {
+  if (instance._exitRef) liveInstances.delete(instance._exitRef);
+}
+
 export class AgentOS {
   constructor(options = {}) {
     this.apiKey = options.apiKey || process.env.AGENTOS_API_KEY || '';
@@ -126,11 +175,9 @@ export class AgentOS {
       );
     }
 
-    // Auto-flush on process exit
-    if (typeof process !== 'undefined') {
-      process.on('beforeExit', () => this.flush());
-      process.on('SIGINT', () => { this.flush(); process.exit(0); });
-    }
+    // Best-effort flush on process exit. Handlers are registered once for all
+    // instances, and the SDK never calls process.exit() on the app's behalf.
+    if (options.handleSignals !== false) registerExitFlush(this);
   }
 
   // ═══════════════════════════════════
@@ -508,6 +555,7 @@ export class AgentOS {
    */
   async shutdown() {
     this._shutdownCalled = true;
+    unregisterExitFlush(this);
     if (this.backgroundQueue) {
       this.backgroundQueue.stop();
       await this.backgroundQueue.flush();
