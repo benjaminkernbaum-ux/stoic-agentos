@@ -25,7 +25,8 @@ import {
   globalErrorHandler,
   installProcessHandlers,
 } from './middleware/production.js';
-import { apiLimiter, authLimiter } from './middleware/rateLimiter.js';
+import { preAuthLimiter, authLimiter } from './middleware/rateLimiter.js';
+import { jsonBodyParser } from './middleware/bodyParsing.js';
 
 // Route modules
 import healthRoutes from './routes/health.js';
@@ -103,14 +104,15 @@ app.use(cors({
 // 2b. Security headers (HSTS, CSP, X-Frame-Options, etc.)
 app.use(securityHeaders);
 
-// 3. Body parsing
-app.use(express.json({ limit: '1mb' }));
+// 3. Body parsing (skips the Stripe webhook, which needs the raw body)
+app.use(jsonBodyParser);
 
 // 4. Metrics + structured logging
 app.use(metricsMiddleware);
 
-// 5. Rate limiting (applied to all API routes)
-app.use('/api/', apiLimiter);
+// 5. Rate limiting — per-IP abuse ceiling here; the plan-aware per-org
+//    limit runs inside `authenticate`, once the org is known.
+app.use('/api/', preAuthLimiter);
 
 // 5b. Stricter auth rate limiting (anti-brute-force)
 app.use('/api/v1/auth/', authLimiter);
