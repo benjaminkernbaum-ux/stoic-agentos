@@ -52,6 +52,7 @@ import evaluationRoutes from './routes/evaluations.js';
 import statusRoutes from './routes/status.js';
 import integrationRoutes from './routes/integrations.js';
 import langfuseRoutes from './routes/langfuse.js';
+import waitlistRoutes from './routes/waitlist.js';
 import { probeVaultRpc } from './lib/anthropic.js';
 
 // ── Install process-level safety nets ──
@@ -144,6 +145,7 @@ app.use(evaluationRoutes);  // Evaluation scores per trace
 app.use(statusRoutes);     // Self-monitoring + Status Page
 app.use(integrationRoutes); // Integration connection state
 app.use(langfuseRoutes);  // Langfuse trace import
+app.use(waitlistRoutes);  // Public landing-page waitlist
 
 // ── 404 handler ──
 app.use((req: Request, res: Response) => {

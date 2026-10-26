@@ -72,6 +72,8 @@ const INGEST_LIMITS: Record<string, RateLimitConfig> = {
 
 const AUTH_LIMIT: RateLimitConfig = { windowMs: 900_000, max: 15 }; // 15 attempts per 15 min
 
+const WAITLIST_LIMIT: RateLimitConfig = { windowMs: 3_600_000, max: 5 }; // 5 sign-ups per hour per IP
+
 // Pre-auth, per-IP ceiling. Requests carrying a Bearer credential are limited
 // per org (by plan) after authentication, so the IP ceiling only guards against
 // abuse and is set to the highest plan limit — a Team/Enterprise customer
@@ -336,6 +338,12 @@ export const ingestLimiter = createLimiter(
 export const authLimiter = createLimiter(
   () => AUTH_LIMIT,
   'rl-auth'
+);
+
+/** Public waitlist form — per IP, strict (anti-spam) */
+export const waitlistLimiter = createLimiter(
+  () => WAITLIST_LIMIT,
+  'rl-waitlist'
 );
 
 /** AI endpoint rate limiter — protects against LLM cost abuse */
