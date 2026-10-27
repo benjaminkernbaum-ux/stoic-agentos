@@ -12,6 +12,7 @@ import { writeFileSync, mkdirSync, existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { execSync } from 'child_process';
 import { createRequire } from 'module';
+import { POST_COMMIT_HOOK } from './git-hook.js';
 
 const require = createRequire(import.meta.url);
 
@@ -82,30 +83,8 @@ function initGitHooks() {
 
   mkdirSync(hooksDir, { recursive: true });
 
-  const hookScript = `#!/bin/sh
-# AgentOS — Auto-capture git commits
-# Installed by: npx stoic-agentos-sdk init-hooks
-
-if [ -f .agentos.json ]; then
-  API_KEY=$(node -e "console.log(JSON.parse(require('fs').readFileSync('.agentos.json','utf-8')).api_key || '')" 2>/dev/null)
-  WORKSPACE=$(node -e "console.log(JSON.parse(require('fs').readFileSync('.agentos.json','utf-8')).workspace || '')" 2>/dev/null)
-  REPO=$(basename "$(git rev-parse --show-toplevel)")
-  HASH=$(git rev-parse HEAD)
-  MSG=$(git log -1 --pretty=%B)
-  BRANCH=$(git branch --show-current)
-  AUTHOR=$(git log -1 --pretty=%an)
-
-  if [ -n "$API_KEY" ]; then
-    curl -s -X POST "https://api.stoicagentos.com/api/v1/webhooks/git" \\
-      -H "Content-Type: application/json" \\
-      -d "{\\"api_key\\":\\"$API_KEY\\",\\"repo\\":\\"$REPO\\",\\"branch\\":\\"$BRANCH\\",\\"commit_hash\\":\\"$HASH\\",\\"commit_message\\":\\"$MSG\\",\\"author\\":\\"$AUTHOR\\"}" \\
-      > /dev/null 2>&1 &
-  fi
-fi
-`;
-
   const hookPath = join(hooksDir, 'post-commit');
-  writeFileSync(hookPath, hookScript, { mode: 0o755 });
+  writeFileSync(hookPath, POST_COMMIT_HOOK, { mode: 0o755 });
   console.log('  ✅ Git post-commit hook installed');
 }
 

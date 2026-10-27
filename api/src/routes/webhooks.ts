@@ -15,6 +15,7 @@ import { authenticate, hashApiKey } from '../middleware/auth.js';
 import { supabase } from '../middleware/db.js';
 import type { AuthenticatedRequest } from '../types.js';
 import { safeError } from '../lib/safeError.js';
+import type { RawBodyRequest } from '../middleware/bodyParsing.js';
 import {
   logWebhookEvent,
   markDelivered,
@@ -82,8 +83,10 @@ router.post(`/api/${API_VERSION}/webhooks/git`, async (req, res) => {
         request_id: req.requestId,
       });
     }
-    const rawBody = JSON.stringify(req.body);
-    if (!verifySignature(rawBody, signature, api_key)) {
+    // HMAC over the exact bytes received — re-serializing req.body would
+    // change key order/whitespace and never match the client's signature.
+    const rawBody = (req as RawBodyRequest).rawBody;
+    if (!rawBody || !verifySignature(rawBody.toString('utf8'), signature, api_key)) {
       return res.status(401).json({
         error: 'Invalid webhook signature',
         code: 'INVALID_SIGNATURE',
