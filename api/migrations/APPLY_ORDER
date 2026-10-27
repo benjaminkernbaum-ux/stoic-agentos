@@ -22,3 +22,4 @@
 023_vector_scaling_instrumentation.sql  # vector — was 022
 030_tool_policies.sql                   # Shield L1 — schema policies
 031_shield_predicates_budgets.sql       # Shield L2/3 — CEL predicates, budgets
+032_waitlist.sql                        # landing-page waitlist (service-role only)

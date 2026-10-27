@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Stripe webhook.** The global JSON parser consumed the body before `/webhooks/stripe`, so signature verification failed on every event and paid plans never activated or downgraded. The raw body now reaches the route.
+- **Plan-aware rate limits.** The general limiter ran before authentication, so every customer was limited per IP at the Free tier (100/min). It now runs per org after `authenticate`; a per-IP pre-auth limiter keeps the Free limit for anonymous calls.
+- **JS SDK no longer calls `process.exit()` on SIGINT.** One shared exit handler for all instances; it flushes and only re-raises SIGINT when the app has no handler of its own. New `handleSignals: false` option. The background queue timer no longer keeps a finished process alive.
+- **Landing waitlist.** Emails were only stored in the visitor's `localStorage`. They now go to `POST /api/v1/waitlist` (migration `032_waitlist.sql`), and the form shows real errors.
+
+### Security
+
+- Cleared all high/critical `npm audit` advisories in the frontend, API, SDK and MCP server (vitest 2 → 5, `lodash-es` override).
+- CI: the dependency audit now fails the build; JS and Python SDK tests run in CI; Node 22 in all jobs.
+
 ## [2.2.0] - 2026-07-15
 
 ### Added — Active Shield: server-side policy engine (Layers 1–3)

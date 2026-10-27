@@ -16,7 +16,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
       - run: npm ci
       - run: npm run lint
@@ -27,7 +27,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
       - run: npm ci
       - run: cd api && npm ci
@@ -39,7 +39,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
       - run: npm ci
       - run: cd api && npm ci
@@ -51,12 +51,39 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
-      - run: npm ci
-      - run: npm audit --audit-level=high || true
-      - run: cd api && npm ci
-      - run: cd api && npm audit --audit-level=high || true
+      # Fails the build on any high/critical advisory. npm audit reads the
+      # lockfile, so no install is needed.
+      - run: npm audit --audit-level=high
+      - run: cd api && npm audit --audit-level=high
+      - run: cd sdk && npm audit --audit-level=high
+      - run: cd mcp-server && npm audit --audit-level=high
+
+  sdk-js-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: sdk/package-lock.json
+      - run: cd sdk && npm ci
+      - run: cd sdk && npm test
+
+  sdk-python-test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.9', '3.12']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: cd sdk-python && pip install -e '.[dev]'
+      - run: cd sdk-python && python -m pytest -q
 
   frontend-test:
     runs-on: ubuntu-latest
@@ -64,7 +91,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
       - run: npm ci
       - name: Install Playwright Chromium
@@ -84,7 +111,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
       - run: npm ci
       - run: cd api && npm ci
