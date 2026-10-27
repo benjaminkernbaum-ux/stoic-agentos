@@ -24,3 +24,4 @@
 031_shield_predicates_budgets.sql       # Shield L2/3 — CEL predicates, budgets
 032_waitlist.sql                        # landing-page waitlist (service-role only)
 033_revoke_definer_exec.sql             # lock SECURITY DEFINER RPCs to service_role
+034_function_search_path.sql            # pin search_path on public functions
