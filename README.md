@@ -175,7 +175,7 @@ Stoic AgentOS is designed to integrate with the modern LLMOps stack:
 | **Persistent Memory** | ✅ Three-tier | ❌ | ❌ | ❌ | ❌ | ❌ |
 | **Semantic Vector Search** | ✅ pgvector/HNSW | ❌ | ❌ | ❌ | ❌ | ❌ |
 | **autoRecall Prompt Injection**| ✅ SDK level | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **Active Shield (HITL approvals)**| ✅ Server-side, CAS-safe | ❌ | ❌ | ❌ | ❌ |
+| **Active Shield (HITL approvals)**| ✅ Server-side, CAS-safe | ❌ | ❌ | ❌ | ❌ | ❌ |
 | **Policy engine (schema + CEL + parsed SQL/shell/URL validators)** | ✅ Server-side | ❌ | ❌ | ❌ | ❌ | ❌ |
 | **Docker Self-host** | ✅ | ✅ | ❌ | ✅ | ❌ | ✅ |
 | **Open-source core** | ✅ MIT | ✅ MIT | ❌ | ✅ Apache-2 | Partial | ✅ |
