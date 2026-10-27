@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { API_BASE } from '../lib/supabase';
 
 export default function WaitlistCapture() {
   const [email, setEmail] = useState('');
@@ -17,11 +18,17 @@ export default function WaitlistCapture() {
     setErrorMsg('');
 
     try {
-      // Store in localStorage as reliable fallback
-      const existing = JSON.parse(localStorage.getItem('waitlist_emails') || '[]');
-      if (!existing.includes(email)) {
-        existing.push(email);
-        localStorage.setItem('waitlist_emails', JSON.stringify(existing));
+      const res = await fetch(`${API_BASE}/api/v1/waitlist`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, source: 'landing' }),
+      });
+      if (!res.ok) {
+        setErrorMsg(res.status === 429
+          ? 'Too many attempts. Please try again later.'
+          : 'Could not save your email. Please try again.');
+        setStatus('error');
+        return;
       }
 
       // Track analytics
@@ -29,7 +36,8 @@ export default function WaitlistCapture() {
 
       setStatus('success');
     } catch {
-      setStatus('success'); // Still show success even if localStorage fails
+      setErrorMsg('Could not reach the server. Please try again.');
+      setStatus('error');
     }
   };
 

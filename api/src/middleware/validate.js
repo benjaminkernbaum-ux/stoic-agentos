@@ -129,6 +129,7 @@ export const observationCreateSchema = {
   agent:       { type: 'string', required: false, maxLength: 100 },
   session_id:  { type: 'string', required: false, maxLength: 100 },
   metadata:    { type: 'object', required: false },
+  tags:        { type: 'array',  required: false, maxItems: 5 },
 };
 
 /** POST /api/v1/observations/batch */

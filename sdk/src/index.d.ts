@@ -44,6 +44,13 @@ export interface AgentOSOptions {
   maxRetries?: number;
   /** Base delay for exponential backoff in ms (default: 500) */
   baseDelay?: number;
+  /**
+   * Flush pending data on `beforeExit` and SIGINT (default true). The SDK
+   * never calls process.exit(): on SIGINT it flushes and, only if the app has
+   * no SIGINT handler of its own, re-raises the signal. Set false to manage
+   * shutdown yourself via `shutdown()`.
+   */
+  handleSignals?: boolean;
 }
 
 export interface InstrumentOptions {
@@ -97,6 +104,8 @@ export interface Observation {
   agent?: string;
   /** Additional metadata */
   metadata?: Record<string, unknown>;
+  /** Optional labels for grouping/search — up to 5, ≤20 chars each */
+  tags?: string[];
 }
 
 export interface AgentDefinition {

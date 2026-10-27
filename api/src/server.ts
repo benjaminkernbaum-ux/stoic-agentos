@@ -25,7 +25,8 @@ import {
   globalErrorHandler,
   installProcessHandlers,
 } from './middleware/production.js';
-import { apiLimiter, authLimiter } from './middleware/rateLimiter.js';
+import { preAuthLimiter, authLimiter } from './middleware/rateLimiter.js';
+import { jsonBodyParser } from './middleware/bodyParsing.js';
 
 // Route modules
 import healthRoutes from './routes/health.js';
@@ -51,6 +52,7 @@ import evaluationRoutes from './routes/evaluations.js';
 import statusRoutes from './routes/status.js';
 import integrationRoutes from './routes/integrations.js';
 import langfuseRoutes from './routes/langfuse.js';
+import waitlistRoutes from './routes/waitlist.js';
 import { probeVaultRpc } from './lib/anthropic.js';
 
 // ── Install process-level safety nets ──
@@ -103,14 +105,15 @@ app.use(cors({
 // 2b. Security headers (HSTS, CSP, X-Frame-Options, etc.)
 app.use(securityHeaders);
 
-// 3. Body parsing
-app.use(express.json({ limit: '1mb' }));
+// 3. Body parsing (skips the Stripe webhook, which needs the raw body)
+app.use(jsonBodyParser);
 
 // 4. Metrics + structured logging
 app.use(metricsMiddleware);
 
-// 5. Rate limiting (applied to all API routes)
-app.use('/api/', apiLimiter);
+// 5. Rate limiting — per-IP abuse ceiling here; the plan-aware per-org
+//    limit runs inside `authenticate`, once the org is known.
+app.use('/api/', preAuthLimiter);
 
 // 5b. Stricter auth rate limiting (anti-brute-force)
 app.use('/api/v1/auth/', authLimiter);
@@ -142,6 +145,7 @@ app.use(evaluationRoutes);  // Evaluation scores per trace
 app.use(statusRoutes);     // Self-monitoring + Status Page
 app.use(integrationRoutes); // Integration connection state
 app.use(langfuseRoutes);  // Langfuse trace import
+app.use(waitlistRoutes);  // Public landing-page waitlist
 
 // ── 404 handler ──
 app.use((req: Request, res: Response) => {

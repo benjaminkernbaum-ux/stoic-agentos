@@ -195,6 +195,7 @@ npx stoic-agentos-sdk test
 | `debug` | `boolean` | `false` | Enable debug logging |
 | `batchSize` | `number` | `10` | Flush after N observations |
 | `flushInterval` | `number` | `5000` | Auto-flush interval (ms) |
+| `handleSignals` | `boolean` | `true` | Flush on `beforeExit`/SIGINT. Never calls `process.exit()`; set `false` to manage shutdown via `shutdown()` |
 | `maxRetries` | `number` | `3` | Max retries on network/429 errors |
 | `baseDelay` | `number` | `500` | Base delay for exponential backoff (ms) |
 

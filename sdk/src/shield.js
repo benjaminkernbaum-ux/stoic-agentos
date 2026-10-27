@@ -88,6 +88,8 @@ export class BackgroundQueue {
   start() {
     if (this.timer) return;
     this.timer = setInterval(() => this.flush(), this.intervalMs);
+    // Don't keep the host process alive just for this timer; beforeExit flushes.
+    this.timer.unref?.();
   }
 
   stop() {
