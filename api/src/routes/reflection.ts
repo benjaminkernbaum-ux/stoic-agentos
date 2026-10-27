@@ -4,6 +4,9 @@
  * POST /reflection/run   — Extract semantic triplets from episodic memories via Claude
  * POST /reflection/decay — Apply time-based memory decay across all tiers
  * GET  /reflection/status — Last reflection and decay timestamps
+ *
+ * The POST routes rewrite org memory, so they need at least the admin role
+ * (API keys count as owner); the two that call Claude also go through aiLimiter.
  */
 
 import { Router } from 'express';
@@ -11,6 +14,8 @@ import type { Response } from 'express';
 import { randomUUID } from 'node:crypto';
 import { authenticate } from '../middleware/auth.js';
 import { supabase } from '../middleware/db.js';
+import { aiLimiter } from '../middleware/rateLimiter.js';
+import { requireMinRole } from '../middleware/rbac.js';
 import { complete, hasAnthropic } from '../lib/anthropic.js';
 import type { AuthenticatedRequest } from '../types.js';
 import { isTableMissing } from '../lib/utils.js';
@@ -21,7 +26,7 @@ const V = 'v1';
 
 
 // ── Reflection: episodic -> semantic extraction via Claude ──
-router.post(`/api/${V}/reflection/run`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
+router.post(`/api/${V}/reflection/run`, authenticate, requireMinRole('admin'), aiLimiter, async (req: AuthenticatedRequest, res: Response) => {
   try {
     if (!hasAnthropic(req.org)) {
       return res.status(402).json({
@@ -131,7 +136,7 @@ router.post(`/api/${V}/reflection/run`, authenticate, async (req: AuthenticatedR
 //    triples, then MOVE the raw rows into episodic_memory_archive.
 //    Non-destructive: raw episodes preserved + restorable; triples carry
 //    source_episodes[] provenance. Shrinks the hot halfvec HNSW index.
-router.post(`/api/${V}/reflection/consolidate`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
+router.post(`/api/${V}/reflection/consolidate`, authenticate, requireMinRole('admin'), aiLimiter, async (req: AuthenticatedRequest, res: Response) => {
   try {
     if (!hasAnthropic(req.org)) {
       return res.status(402).json({
@@ -287,7 +292,7 @@ router.post(`/api/${V}/reflection/consolidate`, authenticate, async (req: Authen
 });
 
 // ── Memory Decay (optimized — single UPDATE statements instead of N+1) ──
-router.post(`/api/${V}/reflection/decay`, authenticate, async (req: AuthenticatedRequest, res: Response) => {
+router.post(`/api/${V}/reflection/decay`, authenticate, requireMinRole('admin'), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const results = { working_expired: 0, episodic_decayed: 0, semantic_decayed: 0 };
 
