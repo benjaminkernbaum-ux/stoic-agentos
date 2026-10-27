@@ -144,8 +144,8 @@ await myAgent({ invoiceId: 'INV-001' });
 **[ACTION: Show the three commands on screen]**
 ```bash
 git clone https://github.com/benjaminkernbaum-ux/stoic-agentos.git
-cp .env.selfhost.example .env.selfhost
-docker compose -f docker-compose.selfhost.yml up -d
+cp .env.selfhost.example .env
+docker compose up -d
 ```
 
 > "Three commands. Your data stays on your servers."

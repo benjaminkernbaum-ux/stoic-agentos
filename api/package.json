@@ -4,6 +4,7 @@
   "type": "module",
   "description": "Stoic AgentOS — Backend API for AI Agent Operations Platform",
   "main": "src/server.ts",
+  "license": "MIT",
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "start": "tsx src/server.ts",
