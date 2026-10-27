@@ -13,11 +13,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Plan-aware rate limits.** The general limiter ran before authentication, so every customer was limited per IP at the Free tier (100/min). It now runs per org after `authenticate`; a per-IP pre-auth limiter keeps the Free limit for anonymous calls.
 - **JS SDK no longer calls `process.exit()` on SIGINT.** One shared exit handler for all instances; it flushes and only re-raises SIGINT when the app has no handler of its own. New `handleSignals: false` option. The background queue timer no longer keeps a finished process alive.
 - **Landing waitlist.** Emails were only stored in the visitor's `localStorage`. They now go to `POST /api/v1/waitlist` (migration `032_waitlist.sql`), and the form shows real errors.
+- **Git commit capture.** The `init-hooks` post-commit hook never sent the required `X-Webhook-Signature`, so every commit was rejected with 401, and its shell-built JSON broke on quotes or newlines in commit messages. The hook now builds and signs the body in Node, and the API checks the HMAC over the exact bytes received instead of a re-serialized `req.body`. Re-run `npx stoic-agentos-sdk init-hooks` to update an installed hook.
+
+### Changed
+
+- **Active Shield fails closed when it can't evaluate.** A missing `tool_policies` table now returns `503 SHIELD_UNAVAILABLE` instead of `ALLOW`. A budget predicate or `x-budget-arg` debit whose storage is missing (migration 031 not run) fails with `budget_unavailable` and goes through the policy's enforcement, instead of passing unmetered. In the JS SDK, an evaluate call that returns no verdict now honours `failClosed` instead of being treated as `ALLOW`.
+- **Langfuse import counts toward the monthly trace quota.** Single and batch imports return 429 when they would exceed the plan limit; a batch that doesn't fit is rejected whole.
+- **Reflection routes.** `run`, `consolidate` and `decay` require at least the `admin` role (API keys count as owner); `run` and `consolidate` go through the AI rate limiter. The dashboard Memory tab now shows these errors.
 
 ### Security
 
 - Cleared all high/critical `npm audit` advisories in the frontend, API, SDK and MCP server (vitest 2 → 5, `lodash-es` override).
 - CI: the dependency audit now fails the build; JS and Python SDK tests run in CI; Node 22 in all jobs.
+- Database: `SECURITY DEFINER` functions are no longer executable by `anon`/`authenticated` (migration `033`), and public functions pin `search_path` (migration `034`).
 
 ## [2.2.0] - 2026-07-15
 

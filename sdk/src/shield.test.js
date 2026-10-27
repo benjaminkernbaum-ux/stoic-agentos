@@ -321,6 +321,27 @@ describe('Policy Shield (server engine wiring)', () => {
     expect(res.choices[0].message.content).toBe('ran');
   });
 
+  // _send resolves null on an HTTP error (e.g. 503 SHIELD_UNAVAILABLE)
+  it('blocks when evaluate returns no verdict and failClosed is true', async () => {
+    const { instrumentOpenAIClient } = await import('./instrumentors/openai.js');
+    const sdk = await makeSdk({ failClosed: true, rejectionBehavior: 'throw' });
+    vi.spyOn(sdk.compliance, 'evaluate').mockResolvedValue(null);
+    const client = openAiWith('charge_card');
+    instrumentOpenAIClient(client, sdk);
+    await expect(client.chat.completions.create({ model: 'gpt-4', messages: [] }))
+      .rejects.toThrow(/Shield policy validation failed/);
+  });
+
+  it('proceeds when evaluate returns no verdict and failClosed is false', async () => {
+    const { instrumentOpenAIClient } = await import('./instrumentors/openai.js');
+    const sdk = await makeSdk({ failClosed: false });
+    vi.spyOn(sdk.compliance, 'evaluate').mockResolvedValue(null);
+    const client = openAiWith('charge_card');
+    instrumentOpenAIClient(client, sdk);
+    const res = await client.chat.completions.create({ model: 'gpt-4', messages: [] });
+    expect(res.choices[0].message.content).toBe('ran');
+  });
+
   it('does not consult the policy engine when policyShield is off', async () => {
     const { instrumentOpenAIClient } = await import('./instrumentors/openai.js');
     const sdk = await makeSdk({ policyShield: false });

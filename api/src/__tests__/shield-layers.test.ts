@@ -217,13 +217,23 @@ describe('Layer 2: CEL predicate evaluation', () => {
     expect(body.verdict).toBe('BLOCK');
   });
 
-  it('skips the predicate (treat as pass) with a warning when the budgets table is missing (pre-031)', async () => {
+  it('fails the budget predicate when the budgets table is missing (pre-031) — never silently unlimited', async () => {
     queued.tool_policies = [{ data: policyRow('block', { predicate: 'args.amount_cents <= budget_remaining' }), error: null }];
     queued.budgets = [{ data: null, error: TABLE_MISSING }];
     const res = await evaluate({ tool_name: 'spend_money', tool_args: { amount_cents: 999999 } });
     const body = await res.json();
+    expect(body.verdict).toBe('BLOCK');
+    expect(body.reason).toBe('budget_unavailable');
+  });
+
+  it('routes a missing budgets table through the policy enforcement (monitor still ALLOWs)', async () => {
+    queued.tool_policies = [{ data: policyRow('monitor', { predicate: 'args.amount_cents <= budget_remaining' }), error: null }];
+    queued.budgets = [{ data: null, error: TABLE_MISSING }];
+    const res = await evaluate({ tool_name: 'spend_money', tool_args: { amount_cents: 1 } });
+    const body = await res.json();
     expect(body.verdict).toBe('ALLOW');
-    expect(body.reason).toBe('schema_valid');
+    expect(body.reason).toBe('monitor_only');
+    expect(body.errors[0].keyword).toBe('budget_unavailable');
   });
 });
 
@@ -273,12 +283,13 @@ describe('Layer 2: atomic consume_budget CAS', () => {
     expect(rpcMock).not.toHaveBeenCalled();
   });
 
-  it('skips the debit with a warning when the consume_budget RPC is missing (pre-031)', async () => {
+  it('refuses the spend when the consume_budget RPC is missing (pre-031) instead of running it unmetered', async () => {
     queued.tool_policies = [{ data: policyRow('block', { schema: SPEND_SCHEMA }), error: null }];
     rpcQueued.push({ data: null, error: FN_MISSING });
     const res = await evaluate({ tool_name: 'spend_money', tool_args: { amount_cents: 200 } });
     const body = await res.json();
-    expect(body.verdict).toBe('ALLOW');
+    expect(body.verdict).toBe('BLOCK');
+    expect(body.reason).toBe('budget_unavailable');
   });
 
   it('never debits when an earlier layer already failed (blocked calls do not spend)', async () => {

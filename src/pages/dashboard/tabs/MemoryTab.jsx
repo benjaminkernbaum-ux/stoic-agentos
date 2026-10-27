@@ -8,6 +8,12 @@ function importanceBadge(imp) {
   return { color: '#22c55e', label: 'Low' };
 }
 
+function actionErrorMessage(status, data) {
+  if (status === 403) return 'Only admins and owners can run reflection or decay.';
+  if (status === 429) return 'Too many AI requests. Please wait a minute and try again.';
+  return data?.error || `Request failed (${status}).`;
+}
+
 export default function MemoryTab() {
   const [stats, setStats] = useState({ working: 0, episodic: 0, semantic: 0 });
   const [working, setWorking] = useState([]);
@@ -19,6 +25,7 @@ export default function MemoryTab() {
   const [reflectionStatus, setReflectionStatus] = useState(null);
   const [reflecting, setReflecting] = useState(false);
   const [decaying, setDecaying] = useState(false);
+  const [actionError, setActionError] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [searching, setSearching] = useState(false);
@@ -49,24 +56,30 @@ export default function MemoryTab() {
 
   const triggerReflection = async () => {
     setReflecting(true);
+    setActionError('');
     try {
       const h = await headers();
       const res = await fetch(`${API_BASE}/api/v1/reflection/run`, { method: 'POST', headers: h });
-      const data = await res.json();
-      if (data.triplets_extracted !== undefined) {
-        await fetchAll();
-      }
-    } catch { /* ignore */ }
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) setActionError(actionErrorMessage(res.status, data));
+      else if (data.triplets_extracted !== undefined) await fetchAll();
+    } catch {
+      setActionError('Could not reach the server.');
+    }
     setReflecting(false);
   };
 
   const triggerDecay = async () => {
     setDecaying(true);
+    setActionError('');
     try {
       const h = await headers();
-      await fetch(`${API_BASE}/api/v1/reflection/decay`, { method: 'POST', headers: h });
-      await fetchAll();
-    } catch { /* ignore */ }
+      const res = await fetch(`${API_BASE}/api/v1/reflection/decay`, { method: 'POST', headers: h });
+      if (!res.ok) setActionError(actionErrorMessage(res.status, await res.json().catch(() => ({}))));
+      else await fetchAll();
+    } catch {
+      setActionError('Could not reach the server.');
+    }
     setDecaying(false);
   };
 
@@ -218,7 +231,7 @@ export default function MemoryTab() {
 
       {/* Reflection Panel */}
       <div className="dash-card" style={{ marginBottom: '1rem', padding: '1rem 1.25rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <h3 style={{ margin: '0 0 0.25rem', color: 'hsl(45, 90%, 65%)' }}>⚡ Reflection Engine</h3>
             <div style={{ display: 'flex', gap: '1.5rem', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
@@ -252,6 +265,9 @@ export default function MemoryTab() {
               {reflecting ? '⏳ Extracting...' : '🧠 Run Reflection'}
             </button>
           </div>
+          {actionError && (
+            <div role="alert" style={{ flexBasis: '100%', fontSize: '0.8rem', color: 'hsl(0, 70%, 65%)' }}>{actionError}</div>
+          )}
         </div>
       </div>
 

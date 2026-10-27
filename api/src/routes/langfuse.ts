@@ -15,11 +15,11 @@ import { Router } from 'express';
 import type { Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { authenticate } from '../middleware/auth.js';
-import { supabase } from '../middleware/db.js';
+import { supabase, checkLimit, PLAN_LIMITS } from '../middleware/db.js';
 import { calculateCost } from '../middleware/cost.js';
 import { safeError } from '../lib/safeError.js';
 import type { AuthenticatedRequest } from '../types.js';
-import { incrementCounter } from '../lib/counterCache.js';
+import { getMonthlyCount, incrementCounter } from '../lib/counterCache.js';
 
 const router = Router();
 const API_VERSION = 'v1';
@@ -216,6 +216,22 @@ async function importSingleTrace(
   };
 }
 
+/**
+ * Imported traces count toward the monthly trace quota exactly like ingested
+ * ones. Returns a 429 body when importing `incoming` more would exceed it.
+ */
+async function overTraceLimit(req: AuthenticatedRequest, incoming: number): Promise<Record<string, unknown> | null> {
+  const monthlyCount = await getMonthlyCount(supabase!, req.org.id, 'traces');
+  if (monthlyCount < 0 || checkLimit(req.org.plan, 'traces', monthlyCount + incoming - 1)) return null;
+  return {
+    error: 'Monthly trace limit reached',
+    limit: PLAN_LIMITS[req.org.plan]?.traces,
+    current: monthlyCount,
+    requested: incoming,
+    upgrade_url: '/pricing',
+  };
+}
+
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 //  SINGLE TRACE IMPORT
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -235,6 +251,9 @@ router.post(
       if (!trace.name) {
         return res.status(400).json({ error: 'name is required in the Langfuse trace' });
       }
+
+      const limited = await overTraceLimit(req, 1);
+      if (limited) return res.status(429).json(limited);
 
       const result = await importSingleTrace(trace, req.org.id);
 
@@ -274,6 +293,9 @@ router.post(
       if (traces.length > 100) {
         return res.status(400).json({ error: 'Maximum 100 traces per batch' });
       }
+
+      const limited = await overTraceLimit(req, traces.length);
+      if (limited) return res.status(429).json(limited);
 
       const results: Array<Record<string, unknown>> = [];
       const errors: Array<{ index: number; langfuse_trace_id: string; error: string }> = [];
