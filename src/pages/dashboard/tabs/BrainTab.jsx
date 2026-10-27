@@ -284,6 +284,35 @@ function InsightsPanel() {
   );
 }
 
+// RFC 4180 CSV escape — wrap in quotes if contains comma/quote/newline, double-escape inner quotes
+function csvCell(value) {
+  const s = value == null ? '' : String(value);
+  return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+
+function downloadObservationsCsv(observations) {
+  const headers = ['id', 'timestamp', 'agent_id', 'type', 'title', 'content'];
+  const rows = observations.map(o => [
+    o.id ?? '',
+    o.created_at ?? '',
+    o.agent_id ?? '',
+    o.type ?? '',
+    o.title ?? '',
+    o.content ?? '',
+  ].map(csvCell).join(','));
+  const csv = [headers.join(','), ...rows].join('\r\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const date = new Date().toISOString().slice(0, 10);
+  a.href = url;
+  a.download = `agentos-observations-${date}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 export default function BrainTab({ observations, brainFilter, setBrainFilter, obsSearch, setObsSearch, expandedObs, setExpandedObs, handleDeleteObs, handleSeedDemo, seedLoading, knowledgeItems, setShowKiModal }) {
   const filteredObs = observations.filter(o => {
     if (brainFilter !== 'all' && o.type !== brainFilter) return false;
@@ -299,13 +328,35 @@ export default function BrainTab({ observations, brainFilter, setBrainFilter, ob
       <HotCachePanel />
       <InsightsPanel />
       <div className="dash-panel">
-        {/* Search bar */}
-        <div style={{ marginBottom: 12 }}>
+        {/* Search bar + Export CSV */}
+        <div style={{ marginBottom: 12, display: 'flex', gap: 8, alignItems: 'stretch' }}>
           <input
             type="text" placeholder="Search observations..."
             value={obsSearch} onChange={e => setObsSearch(e.target.value)}
-            style={{ width: '100%', padding: '10px 14px', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)', borderRadius: 8, color: '#fff', fontSize: 13, outline: 'none', fontFamily: 'var(--font-body)' }}
+            style={{ flex: 1, padding: '10px 14px', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)', borderRadius: 8, color: '#fff', fontSize: 13, outline: 'none', fontFamily: 'var(--font-body)' }}
           />
+          <button
+            className="btn btn-sm"
+            onClick={() => downloadObservationsCsv(filteredObs)}
+            disabled={filteredObs.length === 0}
+            title={filteredObs.length === 0 ? 'No observations to export' : `Export ${filteredObs.length} observations`}
+            style={{
+              background: filteredObs.length === 0 ? 'rgba(255,255,255,0.03)' : 'rgba(155,89,255,0.08)',
+              border: `1px solid ${filteredObs.length === 0 ? 'var(--border)' : 'rgba(155,89,255,0.25)'}`,
+              color: filteredObs.length === 0 ? 'var(--text-secondary)' : 'var(--accent-purple)',
+              padding: '0 14px',
+              borderRadius: 8,
+              fontSize: 12,
+              fontWeight: 600,
+              cursor: filteredObs.length === 0 ? 'not-allowed' : 'pointer',
+              whiteSpace: 'nowrap',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+            }}
+          >
+            ⬇ Export CSV
+          </button>
         </div>
         {/* Filter pills with counts */}
         <div className="dash-filter-bar">

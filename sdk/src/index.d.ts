@@ -44,6 +44,13 @@ export interface AgentOSOptions {
   maxRetries?: number;
   /** Base delay for exponential backoff in ms (default: 500) */
   baseDelay?: number;
+  /**
+   * Flush pending data on `beforeExit` and SIGINT (default true). The SDK
+   * never calls process.exit(): on SIGINT it flushes and, only if the app has
+   * no SIGINT handler of its own, re-raises the signal. Set false to manage
+   * shutdown yourself via `shutdown()`.
+   */
+  handleSignals?: boolean;
 }
 
 export interface InstrumentOptions {
@@ -97,6 +104,8 @@ export interface Observation {
   agent?: string;
   /** Additional metadata */
   metadata?: Record<string, unknown>;
+  /** Optional labels for grouping/search — up to 5, ≤20 chars each */
+  tags?: string[];
 }
 
 export interface AgentDefinition {
@@ -367,6 +376,18 @@ export declare class ComplianceClient {
   circuitBreaker(): Promise<CircuitBreakerStatus[]>;
   /** Get audit log statistics */
   stats(): Promise<AuditLogStats | null>;
+  /** Evaluate a tool call against the server-side policy engine (Active Shield L1–L3) */
+  evaluate(toolName: string, toolArgs: Record<string, unknown>, options?: { agentId?: string; traceId?: string }): Promise<{ verdict: 'ALLOW' | 'BLOCK' | 'REQUIRE_APPROVAL'; reason?: string; approval_id?: string; errors?: unknown[]; policy_id?: string }>;
+  /** List the org's tool policies */
+  getPolicies(): Promise<any[]>;
+  /** Create or update a tool policy (admin) */
+  setPolicy(toolName: string, options?: { schema?: Record<string, unknown>; enforcement?: 'block' | 'require_approval' | 'monitor'; predicate?: string; active?: boolean }): Promise<any>;
+  /** Delete a tool policy by id (admin) */
+  deletePolicy(id: string): Promise<any>;
+  /** List spend budgets */
+  getBudgets(): Promise<any[]>;
+  /** Create or update a spend budget (admin) */
+  setBudget(options: { key: string; limitCents: number; agentId?: string | null; period?: string }): Promise<any>;
 }
 
 /** Create an AgentOS instance (convenience function) */

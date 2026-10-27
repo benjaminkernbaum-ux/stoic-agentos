@@ -124,6 +124,22 @@ describe('POST /api/v1/compliance/shield/evaluate', () => {
     expect(chains.audit_log).toBeUndefined();
   });
 
+  it('returns 503 when a BLOCK verdict cannot be recorded to the audit log (fail-closed)', async () => {
+    queued.tool_policies = [{ data: policyRow('block'), error: null }];
+    queued.audit_log = [{ data: null, error: { message: 'audit write failed' } }];
+    // cmd exceeds maxLength 20 → schema violation → BLOCK; audit insert then fails.
+    const res = await post('/api/v1/compliance/shield/evaluate', { tool_name: 'run_command', tool_args: { cmd: 'this-is-far-too-long-to-pass-validation' } });
+    expect(res.status).toBe(503);
+  });
+
+  it('still returns the verdict when a non-BLOCK audit write fails (ALLOW stays available)', async () => {
+    queued.tool_policies = [{ data: policyRow('block'), error: null }];
+    queued.audit_log = [{ data: null, error: { message: 'audit write failed' } }];
+    const res = await post('/api/v1/compliance/shield/evaluate', { tool_name: 'run_command', tool_args: { cmd: 'ls' } });
+    expect(res.status).toBe(200);
+    expect((await res.json()).verdict).toBe('ALLOW');
+  });
+
   it('ALLOWs with reason no_policy when the tool_policies table is missing (fail-open pre-migration)', async () => {
     queued.tool_policies = [{ data: null, error: TABLE_MISSING }];
     const res = await post('/api/v1/compliance/shield/evaluate', { tool_name: 'run_command', tool_args: { cmd: 'ls' } });

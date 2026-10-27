@@ -2,6 +2,7 @@ import type { Request, Response, NextFunction } from 'express';
 import { createHash } from 'crypto';
 import type { AuthenticatedRequest } from '../types.js';
 import { supabase } from './db.js';
+import { apiLimiter } from './rateLimiter.js';
 
 /** Hash an API key using SHA-256 for secure storage comparison */
 export function hashApiKey(key: string): string {
@@ -37,7 +38,19 @@ setInterval(() => {
   }
 }, 5 * 60_000);
 
+/**
+ * Authenticate, then apply the plan-aware rate limit for the resolved org.
+ * The limit has to run here: before authentication there is no org or plan,
+ * so a global limiter could only key by IP on the Free tier.
+ */
 export async function authenticate(req: Request, res: Response, next: NextFunction): Promise<void> {
+  await resolveAuth(req, res, (err?: unknown) => {
+    if (err) return next(err);
+    return apiLimiter(req, res, next);
+  });
+}
+
+async function resolveAuth(req: Request, res: Response, next: NextFunction): Promise<void> {
   const auth = req.headers.authorization;
   if (!auth?.startsWith('Bearer ')) {
     res.status(401).json({ error: 'Missing authorization header' });

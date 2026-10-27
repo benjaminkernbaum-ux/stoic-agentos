@@ -26,7 +26,8 @@
  *    enterprise: 10000 (effectively unlimited)
  *
  *  Separate limiters:
- *    - general:  Standard API routes
+ *    - pre-auth: Per-IP, before authentication (anti-abuse ceiling)
+ *    - general:  Standard API routes, per org — applied by `authenticate`
  *    - ingest:   POST /traces/ingest (higher burst)
  *    - auth:     Login/signup (strict, anti-brute-force)
  *
@@ -70,6 +71,19 @@ const INGEST_LIMITS: Record<string, RateLimitConfig> = {
 };
 
 const AUTH_LIMIT: RateLimitConfig = { windowMs: 900_000, max: 15 }; // 15 attempts per 15 min
+
+const WAITLIST_LIMIT: RateLimitConfig = { windowMs: 3_600_000, max: 5 }; // 5 sign-ups per hour per IP
+
+// Pre-auth, per-IP ceiling. Requests carrying a Bearer credential are limited
+// per org (by plan) after authentication, so the IP ceiling only guards against
+// abuse and is set to the highest plan limit — a Team/Enterprise customer
+// sending everything from one server must not hit a Free-sized IP cap.
+const PRE_AUTH_ANON_LIMIT: RateLimitConfig = TIER_LIMITS.free;
+const PRE_AUTH_CREDENTIALED_LIMIT: RateLimitConfig = TIER_LIMITS.enterprise;
+
+// Routes with their own plan-aware limiter are exempt from the general one,
+// so the stricter general limit doesn't silently cap them.
+const GENERAL_LIMIT_EXEMPT_PATHS = new Set(['/api/v1/traces/ingest']);
 
 const AI_LIMITS: Record<string, RateLimitConfig> = {
   free:       { windowMs: 60_000, max: 20   },
@@ -286,11 +300,33 @@ function logRateLimit(
 
 // ── Exported Limiters ───────────────────────────────
 
-/** General API rate limiter — tier-based */
-export const apiLimiter = createLimiter(
+const tierLimiter = createLimiter(
   (plan) => TIER_LIMITS[plan] || TIER_LIMITS.free,
   'rl'
 );
+
+/**
+ * General API rate limiter — tier-based, keyed by org.
+ * Must run AFTER authentication (req.org set); `authenticate` applies it.
+ */
+export function apiLimiter(req: RateLimitRequest, res: Response, next: NextFunction): Promise<void> | void {
+  if (GENERAL_LIMIT_EXEMPT_PATHS.has(req.originalUrl.split('?')[0])) return next();
+  return tierLimiter(req, res, next);
+}
+
+/**
+ * Pre-auth limiter — keyed by IP, runs before authentication on all /api/ routes.
+ * Anonymous requests get the Free limit; credentialed requests get a high
+ * abuse ceiling and are then limited per org by `apiLimiter`.
+ */
+const anonIpLimiter = createLimiter(() => PRE_AUTH_ANON_LIMIT, 'rl-ip-anon');
+const credentialedIpLimiter = createLimiter(() => PRE_AUTH_CREDENTIALED_LIMIT, 'rl-ip-auth');
+
+export function preAuthLimiter(req: RateLimitRequest, res: Response, next: NextFunction): Promise<void> {
+  return req.headers.authorization?.startsWith('Bearer ')
+    ? credentialedIpLimiter(req, res, next)
+    : anonIpLimiter(req, res, next);
+}
 
 /** Trace ingest rate limiter — higher burst for SDK */
 export const ingestLimiter = createLimiter(
@@ -304,10 +340,16 @@ export const authLimiter = createLimiter(
   'rl-auth'
 );
 
+/** Public waitlist form — per IP, strict (anti-spam) */
+export const waitlistLimiter = createLimiter(
+  () => WAITLIST_LIMIT,
+  'rl-waitlist'
+);
+
 /** AI endpoint rate limiter — protects against LLM cost abuse */
 export const aiLimiter = createLimiter(
   (plan) => AI_LIMITS[plan] || AI_LIMITS.free,
   'rl-ai'
 );
 
-export default { apiLimiter, ingestLimiter, authLimiter, aiLimiter };
+export default { apiLimiter, preAuthLimiter, ingestLimiter, authLimiter, aiLimiter };

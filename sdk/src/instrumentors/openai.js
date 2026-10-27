@@ -12,6 +12,7 @@
 import { estimateCost } from '../pricing.js';
 import { getActiveTrace } from '../trace.js';
 import { AgentOSError, AgentOSCircuitBreakerError, AgentOSPolicyBlockError } from '../index.js';
+import { enforceToolPolicy } from './shieldEnforce.js';
 
 let _patched = false;
 
@@ -134,6 +135,48 @@ function patchInstance(instance, sdk) {
       const completionTokens = usage.completion_tokens || 0;
       const totalTokens = usage.total_tokens || promptTokens + completionTokens;
       const costUsd = estimateCost(model, promptTokens, completionTokens);
+
+      // ── Server-side Policy Engine (Active Shield L1–L3), opt-in via policyShield ──
+      // Asks the server for a graduated verdict on each tool call. Runs before the
+      // static critical-tool HITL below; a BLOCK / rejected-approval short-circuits here.
+      if (sdk.activeShield && sdk.policyShield && Array.isArray(result.choices?.[0]?.message?.tool_calls)) {
+        const activeTrace = getActiveTrace();
+        for (const tc of result.choices[0].message.tool_calls) {
+          const toolName = tc.function?.name;
+          if (!toolName) continue;
+          let parsedArgs = {};
+          try {
+            parsedArgs = typeof tc.function.arguments === 'string'
+              ? JSON.parse(tc.function.arguments || '{}')
+              : (tc.function.arguments || {});
+          } catch { parsedArgs = {}; }
+          try {
+            const { allowed, verdict } = await enforceToolPolicy(sdk, toolName, parsedArgs, {
+              agentId: activeTrace?.agent || null,
+              traceId: activeTrace?.traceId || null,
+            });
+            if (!allowed) {
+              if (sdk.debug) console.warn(`[AgentOS Shield] ⛔ Policy ${verdict} for tool "${toolName}".`);
+              if (sdk.rejectionBehavior === 'throw') {
+                throw new AgentOSPolicyBlockError(`Tool execution blocked: Action "${toolName}" denied by policy (${verdict}).`);
+              }
+              return {
+                ...result,
+                choices: result.choices.map(c => ({
+                  ...c,
+                  message: { ...c.message, content: `Action blocked: policy denied execution of "${toolName}".`, tool_calls: null }
+                }))
+              };
+            }
+          } catch (err) {
+            if (err instanceof AgentOSError) throw err;
+            if (sdk.failClosed) {
+              throw new AgentOSPolicyBlockError(`Shield policy validation failed: ${err.message}`);
+            }
+            if (sdk.debug) console.warn('[AgentOS Shield] policy check failed (fail-open, proceeding):', err.message);
+          }
+        }
+      }
 
       // ── Human-in-the-Loop Interception ──
       let isCritical = false;

@@ -85,6 +85,55 @@ export class AgentOSPolicyBlockError extends AgentOSError {
 
 // ── Main Client ──
 
+// ── Process-exit flush (shared by all instances) ──
+// One beforeExit/SIGINT handler pair for the whole process, so N instances
+// don't leak N listeners. Instances are held weakly so short-lived clients
+// can still be garbage-collected.
+
+const liveInstances = new Set();
+let beforeExitRegistered = false;
+let sigintRegistered = false;
+const SIGINT_FLUSH_TIMEOUT_MS = 2000;
+
+function flushAllInstances() {
+  const pending = [];
+  for (const ref of liveInstances) {
+    const inst = ref.deref();
+    if (!inst) { liveInstances.delete(ref); continue; }
+    pending.push(inst.flush().catch(() => {}));
+    if (inst.backgroundQueue) pending.push(Promise.resolve(inst.backgroundQueue.flush()).catch(() => {}));
+  }
+  return Promise.all(pending);
+}
+
+function onBeforeExit() {
+  flushAllInstances();
+}
+
+function onSigint() {
+  const flushed = flushAllInstances();
+  // If the app has its own SIGINT handler, it owns shutdown: just flush.
+  if (process.listenerCount('SIGINT') > 1) return;
+  // Otherwise we replaced Node's default (terminate) by listening. Flush,
+  // then re-raise the signal so the process ends exactly as it would have.
+  process.removeListener('SIGINT', onSigint);
+  sigintRegistered = false;
+  const timeout = new Promise((r) => setTimeout(r, SIGINT_FLUSH_TIMEOUT_MS).unref());
+  Promise.race([flushed, timeout]).finally(() => process.kill(process.pid, 'SIGINT'));
+}
+
+function registerExitFlush(instance) {
+  if (typeof process === 'undefined' || typeof process.on !== 'function' || typeof WeakRef === 'undefined') return;
+  instance._exitRef = new WeakRef(instance);
+  liveInstances.add(instance._exitRef);
+  if (!beforeExitRegistered) { beforeExitRegistered = true; process.on('beforeExit', onBeforeExit); }
+  if (!sigintRegistered) { sigintRegistered = true; process.on('SIGINT', onSigint); }
+}
+
+function unregisterExitFlush(instance) {
+  if (instance._exitRef) liveInstances.delete(instance._exitRef);
+}
+
 export class AgentOS {
   constructor(options = {}) {
     this.apiKey = options.apiKey || process.env.AGENTOS_API_KEY || '';
@@ -101,6 +150,9 @@ export class AgentOS {
     this.autoRecall = options.autoRecall || false;
     this.activeShield = options.activeShield || false;
     this.criticalTools = options.criticalTools || [];
+    // Opt-in: consult the server-side policy engine (Shield L1–L3) per tool call,
+    // in addition to the static criticalTools HITL list. Off by default.
+    this.policyShield = options.policyShield || false;
     this.rejectionBehavior = options.rejectionBehavior || 'refuse'; // 'refuse' | 'throw'
     this.failClosed = options.failClosed || false; // default false (fail-open)
 
@@ -123,11 +175,9 @@ export class AgentOS {
       );
     }
 
-    // Auto-flush on process exit
-    if (typeof process !== 'undefined') {
-      process.on('beforeExit', () => this.flush());
-      process.on('SIGINT', () => { this.flush(); process.exit(0); });
-    }
+    // Best-effort flush on process exit. Handlers are registered once for all
+    // instances, and the SDK never calls process.exit() on the app's behalf.
+    if (options.handleSignals !== false) registerExitFlush(this);
   }
 
   // ═══════════════════════════════════
@@ -211,6 +261,7 @@ export class AgentOS {
    * @param {string} [observation.content] - Detailed content
    * @param {string} [observation.agent] - Agent name/ID
    * @param {Object} [observation.metadata] - Extra data
+   * @param {string[]} [observation.tags] - Up to 5 tags, ≤20 chars each
    */
   async capture(observation) {
     if (!observation || typeof observation !== 'object') {
@@ -225,6 +276,22 @@ export class AgentOS {
         `Valid types: ${VALID_OBSERVATION_TYPES.join(', ')}`
       );
     }
+    if (observation.tags !== undefined) {
+      if (!Array.isArray(observation.tags)) {
+        throw new AgentOSValidationError('capture() tags must be an array of strings');
+      }
+      if (observation.tags.length > 5) {
+        throw new AgentOSValidationError('capture() accepts at most 5 tags');
+      }
+      for (const t of observation.tags) {
+        if (typeof t !== 'string') {
+          throw new AgentOSValidationError('capture() tags must all be strings');
+        }
+        if (t.length > 20) {
+          throw new AgentOSValidationError('capture() tags must be ≤20 characters each');
+        }
+      }
+    }
 
     const payload = {
       workspace: this.workspace,
@@ -234,6 +301,9 @@ export class AgentOS {
       agent: observation.agent || null,
       metadata: observation.metadata || {},
     };
+    if (observation.tags && observation.tags.length > 0) {
+      payload.tags = observation.tags;
+    }
 
     this._queue.push(payload);
 
@@ -485,6 +555,7 @@ export class AgentOS {
    */
   async shutdown() {
     this._shutdownCalled = true;
+    unregisterExitFlush(this);
     if (this.backgroundQueue) {
       this.backgroundQueue.stop();
       await this.backgroundQueue.flush();
@@ -759,6 +830,44 @@ class ComplianceClient {
   async getPendingApprovals(status) {
     const qs = status ? `?status=${status}` : '';
     return this._sdk._fetch(`/compliance/shield/approvals${qs}`);
+  }
+
+  // ── Server-side Policy Engine (Active Shield Layers 1–3) ──
+
+  /**
+   * Evaluate a tool call against the org's server-side policy.
+   * → { verdict: 'ALLOW' | 'BLOCK' | 'REQUIRE_APPROVAL', approval_id?, errors?, reason }
+   */
+  async evaluate(toolName, toolArgs, { agentId, traceId } = {}) {
+    return this._sdk._send('/compliance/shield/evaluate', {
+      tool_name: toolName,
+      tool_args: toolArgs || {},
+      agent_id: agentId || null,
+      trace_id: traceId || null,
+    });
+  }
+
+  /** List tool policies for the org */
+  async getPolicies() { return this._sdk._fetch('/compliance/shield/policies'); }
+
+  /** Create or update a tool policy (admin). enforcement: 'block' | 'require_approval' | 'monitor' */
+  async setPolicy(toolName, { schema, enforcement, predicate, active } = {}) {
+    return this._sdk._send('/compliance/shield/policies', {
+      tool_name: toolName, schema, enforcement, predicate, active,
+    });
+  }
+
+  /** Delete a tool policy by id (admin) */
+  async deletePolicy(id) { return this._sdk._send(`/compliance/shield/policies/${id}`, null, 'DELETE'); }
+
+  /** List spend budgets */
+  async getBudgets() { return this._sdk._fetch('/compliance/shield/budgets'); }
+
+  /** Create or update a spend budget (admin). agentId null = fleet-wide */
+  async setBudget({ key, limitCents, agentId, period } = {}) {
+    return this._sdk._send('/compliance/shield/budgets', {
+      key, limit_cents: limitCents, agent_id: agentId || null, period,
+    });
   }
 }
 

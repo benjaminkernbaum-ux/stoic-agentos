@@ -1,5 +1,9 @@
 import { useState, useEffect } from 'react';
 import { TAB_TITLES } from '../constants';
+import { getStoredTheme, setTheme, THEME_MODES } from '../../../lib/theme.js';
+
+const THEME_ICONS = { dark: '🌙', light: '☀️', system: '🖥️' };
+const THEME_LABELS = { dark: 'Dark', light: 'Light', system: 'System' };
 
 export default function Topbar({ activeTab, setActiveTab, setCmdOpen, setCmdQuery, liveAgents, userName, orgName, firstInit, onMobileMenuToggle }) {
   const [time, setTime] = useState(new Date());
@@ -7,6 +11,22 @@ export default function Topbar({ activeTab, setActiveTab, setCmdOpen, setCmdQuer
     const t = setInterval(() => setTime(new Date()), 1000);
     return () => clearInterval(t);
   }, []);
+
+  const [themeMode, setThemeMode] = useState(() => getStoredTheme());
+  useEffect(() => {
+    // Sync when the theme is changed in another tab.
+    const onStorage = (e) => {
+      if (e.key === 'agentos-theme') setThemeMode(getStoredTheme());
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
+  const cycleTheme = () => {
+    const next = THEME_MODES[(THEME_MODES.indexOf(themeMode) + 1) % THEME_MODES.length];
+    setThemeMode(next);
+    setTheme(next);
+  };
+
   const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.userAgent);
   const shortcutHint = isMac ? '⌘K' : 'Ctrl+K';
   return (
@@ -59,6 +79,29 @@ export default function Topbar({ activeTab, setActiveTab, setCmdOpen, setCmdQuer
       >
         ⭐ <span className="dash-capture-text">Star us</span>
       </a>
+      <button
+        type="button"
+        onClick={cycleTheme}
+        title={`Theme: ${THEME_LABELS[themeMode]} — click to cycle`}
+        aria-label={`Theme: ${THEME_LABELS[themeMode]}, click to cycle`}
+        style={{
+          background: 'transparent',
+          border: '1px solid var(--border)',
+          color: 'var(--text-secondary)',
+          padding: '6px 10px',
+          borderRadius: 6,
+          fontSize: 14,
+          cursor: 'pointer',
+          marginRight: 6,
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 6,
+          lineHeight: 1,
+          transition: 'background 0.15s, border-color 0.15s',
+        }}
+      >
+        <span aria-hidden="true">{THEME_ICONS[themeMode]}</span>
+      </button>
       <button
         className="dash-avatar"
         onClick={() => setActiveTab('settings')}

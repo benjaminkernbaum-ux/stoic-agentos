@@ -50,23 +50,54 @@ function asStringArray(value: unknown): string[] | undefined {
 //  SQL — pgsql-parser (real PostgreSQL grammar)
 // ─────────────────────────────────────────────
 
-/** Recursively collect RangeVar relnames + CTE names from a parse tree */
-function walkSqlNode(node: unknown, tables: Set<string>, ctes: Set<string>): void {
+// Built-in functions that read files, run programs, do network I/O, or manage
+// large objects — always rejected regardless of the table allowlist, because a
+// permitted SELECT can otherwise exfiltrate or act through them.
+const DANGEROUS_SQL_FUNCTIONS: ReadonlySet<string> = new Set([
+  'pg_read_file', 'pg_read_binary_file', 'pg_ls_dir', 'pg_stat_file',
+  'lo_import', 'lo_export', 'lo_get', 'lo_put', 'lo_from_bytea',
+  'dblink', 'dblink_exec', 'dblink_connect',
+  'pg_terminate_backend', 'pg_cancel_backend', 'pg_reload_conf', 'pg_sleep',
+]);
+
+/** Extract a pgsql-parser String node's value ({ String: { sval } } or legacy { str }) */
+function sqlStringValue(n: unknown): string | null {
+  if (n === null || typeof n !== 'object') return null;
+  const s = (n as Record<string, unknown>).String as Record<string, unknown> | undefined;
+  if (s) {
+    if (typeof s.sval === 'string') return s.sval;
+    if (typeof s.str === 'string') return s.str;
+  }
+  return null;
+}
+
+/** Recursively collect RangeVar relations, CTE names, and function calls */
+function walkSqlNode(node: unknown, tables: Set<string>, ctes: Set<string>, funcs: Set<string>): void {
   if (node === null || typeof node !== 'object') return;
   if (Array.isArray(node)) {
-    for (const item of node) walkSqlNode(item, tables, ctes);
+    for (const item of node) walkSqlNode(item, tables, ctes, funcs);
     return;
   }
   const obj = node as Record<string, unknown>;
   const rangeVar = obj.RangeVar as Record<string, unknown> | undefined;
   if (rangeVar && typeof rangeVar.relname === 'string') {
-    tables.add(rangeVar.relname.toLowerCase());
+    // Include the schema qualifier when present so `otherschema.users` can't
+    // ride an allowlist entry of the bare `users`.
+    const rel = rangeVar.relname.toLowerCase();
+    const schema = typeof rangeVar.schemaname === 'string' ? rangeVar.schemaname.toLowerCase() : null;
+    tables.add(schema ? `${schema}.${rel}` : rel);
   }
   const cte = obj.CommonTableExpr as Record<string, unknown> | undefined;
   if (cte && typeof cte.ctename === 'string') {
     ctes.add(cte.ctename.toLowerCase());
   }
-  for (const value of Object.values(obj)) walkSqlNode(value, tables, ctes);
+  const funcCall = obj.FuncCall as Record<string, unknown> | undefined;
+  if (funcCall && Array.isArray(funcCall.funcname)) {
+    // funcname is a (possibly schema-qualified) list of String nodes; take the last.
+    const parts = funcCall.funcname.map(sqlStringValue).filter((s): s is string => s !== null);
+    if (parts.length > 0) funcs.add(parts[parts.length - 1].toLowerCase());
+  }
+  for (const value of Object.values(obj)) walkSqlNode(value, tables, ctes, funcs);
 }
 
 /** SelectStmt → SELECT, DropStmt → DROP, AlterTableStmt → ALTERTABLE, … */
@@ -113,12 +144,23 @@ export async function validateSqlArg(
     violations.push({ path, message: `SQL statement type ${stmtType} is not allowed (allowed: ${allowedStatements.join(', ')})`, keyword: 'sql_statement_denied' });
   }
 
+  // Walk once: collect referenced relations, CTE names, and function calls.
+  const tables = new Set<string>();
+  const ctes = new Set<string>();
+  const funcs = new Set<string>();
+  walkSqlNode(stmtNode, tables, ctes, funcs);
+
+  // Dangerous built-in functions are ALWAYS rejected — a SELECT that references
+  // no forbidden table can still exfiltrate via pg_read_file(), dblink(), etc.
+  for (const fn of funcs) {
+    if (DANGEROUS_SQL_FUNCTIONS.has(fn)) {
+      violations.push({ path, message: `SQL calls disallowed function '${fn}()'`, keyword: 'sql_function_denied' });
+    }
+  }
+
   // Table allowlist — every referenced relation must be listed (CTE names are
   // query-local aliases, not relations, so they are implicitly permitted).
   if (config.allowTables) {
-    const tables = new Set<string>();
-    const ctes = new Set<string>();
-    walkSqlNode(stmtNode, tables, ctes);
     const allowed = new Set(config.allowTables.map((t) => t.toLowerCase()));
     for (const table of tables) {
       if (!ctes.has(table) && !allowed.has(table)) {
@@ -237,29 +279,25 @@ function extractConfig(prop: Record<string, unknown>): ValidatorConfig | null {
   };
 }
 
-/**
- * Run every x-validator declared on the policy schema's TOP-LEVEL properties
- * against the matching args. Non-string / absent args are skipped — presence
- * and type belong to Layer 1 (JSON Schema required/type keywords).
- * Returns all violations; [] = pass.
- */
-export async function runSemanticValidators(
-  schema: unknown,
-  args: Record<string, unknown>,
-): Promise<SchemaViolation[]> {
-  if (schema === null || typeof schema !== 'object') return [];
-  const properties = (schema as Record<string, unknown>).properties;
-  if (properties === null || typeof properties !== 'object') return [];
+// Recursion guards for nested schema walking — real tool-call payloads are
+// shallow and small; these bound the walk against a pathological schema/args
+// pair (deep nesting or huge arrays) rather than reflect any real use case.
+const MAX_WALK_DEPTH = 8;
+const MAX_ARRAY_ITEMS = 200;
 
-  const violations: SchemaViolation[] = [];
-  for (const [name, rawProp] of Object.entries(properties as Record<string, unknown>)) {
-    if (rawProp === null || typeof rawProp !== 'object') continue;
-    const config = extractConfig(rawProp as Record<string, unknown>);
-    if (!config) continue;
-    const value = args[name];
-    if (typeof value !== 'string') continue;
+async function walkSchemaProperties(
+  schemaNode: unknown,
+  value: unknown,
+  path: string,
+  depth: number,
+  violations: SchemaViolation[],
+): Promise<void> {
+  if (depth > MAX_WALK_DEPTH || schemaNode === null || typeof schemaNode !== 'object') return;
+  const node = schemaNode as Record<string, unknown>;
 
-    const path = `/${name}`;
+  // A leaf carrying x-validator is checked directly, regardless of nesting depth.
+  const config = extractConfig(node);
+  if (config && typeof value === 'string') {
     if (config.type === 'sql') {
       violations.push(...await validateSqlArg(path, value, config));
     } else if (config.type === 'shell') {
@@ -267,6 +305,40 @@ export async function runSemanticValidators(
     } else {
       violations.push(...validateUrlArg(path, value, config));
     }
+    return; // a validated leaf doesn't also recurse as a container
   }
+
+  // Object schema — recurse into each declared property.
+  const properties = node.properties;
+  if (properties !== null && typeof properties === 'object' && value !== null && typeof value === 'object' && !Array.isArray(value)) {
+    const argObj = value as Record<string, unknown>;
+    for (const [name, rawProp] of Object.entries(properties as Record<string, unknown>)) {
+      await walkSchemaProperties(rawProp, argObj[name], `${path}/${name}`, depth + 1, violations);
+    }
+  }
+
+  // Array schema — recurse into each item against the same `items` schema.
+  const items = node.items;
+  if (items !== null && typeof items === 'object' && !Array.isArray(items) && Array.isArray(value)) {
+    const arr = value.slice(0, MAX_ARRAY_ITEMS);
+    for (let i = 0; i < arr.length; i++) {
+      await walkSchemaProperties(items, arr[i], `${path}/${i}`, depth + 1, violations);
+    }
+  }
+}
+
+/**
+ * Run every x-validator declared anywhere in the policy schema (top-level or
+ * nested inside object/array properties) against the matching args. Non-string
+ * / absent leaf values are skipped — presence and type belong to Layer 1 (JSON
+ * Schema required/type keywords). Returns all violations; [] = pass.
+ */
+export async function runSemanticValidators(
+  schema: unknown,
+  args: Record<string, unknown>,
+): Promise<SchemaViolation[]> {
+  if (schema === null || typeof schema !== 'object') return [];
+  const violations: SchemaViolation[] = [];
+  await walkSchemaProperties(schema, args, '', 0, violations);
   return violations;
 }

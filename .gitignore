@@ -36,6 +36,8 @@ run-migrations-*.mjs
 # Python SDK build artifacts
 sdk-python/dist/
 sdk-python/*.egg-info/
+sdk-python/**/__pycache__/
+sdk-python/.pytest_cache/
 
 # Internal Investor/GTM docs (keep local-only)
 INVESTOR_PITCH_DECK.md
