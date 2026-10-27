@@ -465,7 +465,9 @@ router.post(`/api/${V}/compliance/shield/evaluate`, authenticate, async (req: Au
     const args = tool_args ?? {};
 
     // 1. Load the active policy for this (org, tool).
-    //    Fail-open on unconfigured tools: no policy (or migration 030 not run) → ALLOW.
+    //    An unconfigured tool (no policy row) → ALLOW. A missing policy table
+    //    (migration 030 not run) is NOT "no policy": the server can't tell, so
+    //    it answers 503 and the SDK applies the caller's failClosed choice.
     const { data: policy, error: policyError } = await supabase!
       .from('tool_policies')
       .select('*')
@@ -474,7 +476,14 @@ router.post(`/api/${V}/compliance/shield/evaluate`, authenticate, async (req: Au
       .eq('active', true)
       .maybeSingle();
     if (policyError) {
-      if (isTableMissing(policyError)) return res.json({ verdict: 'ALLOW', reason: 'no_policy' });
+      if (isTableMissing(policyError)) {
+        console.error('[shield] tool_policies table missing (migration 030 not run) — refusing to evaluate');
+        return res.status(503).json({
+          error: 'Shield unavailable: policy storage not configured',
+          code: 'SHIELD_UNAVAILABLE',
+          hint: 'Run migration 030_tool_policies.sql',
+        });
+      }
       throw policyError;
     }
     if (!policy) return res.json({ verdict: 'ALLOW', reason: 'no_policy' });
@@ -507,7 +516,6 @@ router.post(`/api/${V}/compliance/shield/evaluate`, authenticate, async (req: Au
     //    Pre-031 databases never reach here (select * simply has no predicate column).
     if (violations.length === 0 && typeof policy.predicate === 'string' && policy.predicate.trim()) {
       let budgetRemaining = 0;
-      let skipPredicate = false;
       if (predicateUsesBudget(policy.predicate)) {
         let budgetQuery = supabase!
           .from('budgets')
@@ -526,10 +534,12 @@ router.post(`/api/${V}/compliance/shield/evaluate`, authenticate, async (req: Au
           .limit(1);
         if (budgetError) {
           if (isTableMissing(budgetError)) {
-            // Migration 031 not run — skip the predicate (treat as pass), same
-            // graceful-degradation philosophy as Layer 1's missing tool_policies.
-            console.warn(`[shield] budgets table missing (migration 031 not run) — skipping predicate for '${tool_name}'`);
-            skipPredicate = true;
+            // Migration 031 not run. The org's own rule depends on a budget the
+            // server can't read, so it fails — never silently unlimited. The
+            // policy's enforcement (block / approval / monitor) still applies.
+            console.error(`[shield] budgets table missing (migration 031 not run) — failing budget predicate for '${tool_name}'`);
+            violations.push({ path: '/', message: 'budget storage unavailable (migration 031 not run)', keyword: 'budget_unavailable' });
+            failureReason = 'budget_unavailable';
           } else {
             throw budgetError;
           }
@@ -540,7 +550,7 @@ router.post(`/api/${V}/compliance/shield/evaluate`, authenticate, async (req: Au
         // budget gets zero spend until a budget is configured (fail-closed on
         // the org's own rule, never silently unlimited).
       }
-      if (!skipPredicate) {
+      if (violations.length === 0) {
         const predicateResult = evaluatePredicate(policy.predicate, {
           args: args as Record<string, unknown>,
           agent_id: agent_id || null,
@@ -580,8 +590,15 @@ router.post(`/api/${V}/compliance/shield/evaluate`, authenticate, async (req: Au
         });
         if (consumeError) {
           if (isTableMissing(consumeError)) {
-            // consume_budget() not deployed (migration 031 not run) — skip with a warning
-            console.warn(`[shield] consume_budget RPC missing (migration 031 not run) — skipping budget debit for '${tool_name}'`);
+            // consume_budget() not deployed (migration 031 not run): the spend
+            // can't be debited, so it isn't allowed through unmetered.
+            console.error(`[shield] consume_budget RPC missing (migration 031 not run) — refusing budget debit for '${tool_name}'`);
+            violations.push({
+              path: `/${budgetArg}`,
+              message: 'budget storage unavailable (migration 031 not run)',
+              keyword: 'budget_unavailable',
+            });
+            failureReason = 'budget_unavailable';
           } else {
             throw consumeError;
           }

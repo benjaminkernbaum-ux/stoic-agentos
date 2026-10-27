@@ -140,11 +140,13 @@ describe('POST /api/v1/compliance/shield/evaluate', () => {
     expect((await res.json()).verdict).toBe('ALLOW');
   });
 
-  it('ALLOWs with reason no_policy when the tool_policies table is missing (fail-open pre-migration)', async () => {
+  it('returns 503 (no verdict) when the tool_policies table is missing, so the SDK applies failClosed', async () => {
     queued.tool_policies = [{ data: null, error: TABLE_MISSING }];
     const res = await post('/api/v1/compliance/shield/evaluate', { tool_name: 'run_command', tool_args: { cmd: 'ls' } });
-    expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ verdict: 'ALLOW', reason: 'no_policy' });
+    expect(res.status).toBe(503);
+    const body = await res.json();
+    expect(body.code).toBe('SHIELD_UNAVAILABLE');
+    expect(body.verdict).toBeUndefined();
   });
 
   it('ALLOWs valid args and writes a PROCEED audit entry synchronously', async () => {

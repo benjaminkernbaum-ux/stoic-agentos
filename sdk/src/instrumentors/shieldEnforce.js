@@ -48,7 +48,10 @@ export async function waitForApproval(sdk, approvalId) {
  */
 export async function enforceToolPolicy(sdk, toolName, toolArgs, ctx = {}) {
   const res = await sdk.compliance.evaluate(toolName, toolArgs, ctx);
-  const verdict = (res && res.verdict) || 'ALLOW';
+  // _send returns null on an HTTP error (e.g. 503 when the server can't
+  // evaluate). No verdict is a failure, not an ALLOW: throw so failClosed applies.
+  if (!res || !res.verdict) throw new Error('Shield evaluate returned no verdict');
+  const verdict = res.verdict;
   if (verdict === 'ALLOW') return { allowed: true, verdict };
   if (verdict === 'BLOCK') return { allowed: false, verdict };
   if (verdict === 'REQUIRE_APPROVAL' && res.approval_id) {
