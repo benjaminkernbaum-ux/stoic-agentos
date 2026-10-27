@@ -55,6 +55,7 @@ const SettingsTab = lazy(() => import('./tabs/SettingsTab'));
 import WelcomeModal from './components/WelcomeModal';
 
 import '../Dashboard.css';
+import './stoic-theme.css';
 
 function TabSkeleton() {
   return (
@@ -526,6 +527,10 @@ export default function Dashboard() {
 
             {activeTab === 'memory' && (
               <MemoryTab />
+            )}
+
+            {activeTab === 'compliance' && (
+              <ComplianceTab />
             )}
 
 

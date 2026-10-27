@@ -1,0 +1,315 @@
+/* ═══════════════════════════════════════════════════════════════
+   STOIC THEME — premium design layer for AgentOS dashboard
+   Import AFTER Dashboard.css in src/pages/dashboard/index.jsx:
+     import '../Dashboard.css';
+     import './stoic-theme.css';
+   Strategy: Dashboard.css scopes all tokens to .dash — every panel,
+   including inline-styled tab components, reads var(--surface-*),
+   var(--gray-*), var(--accent*). Redefining them here rethemes ~80%
+   of the app in one file. The rest is structural refinement below.
+   ═══════════════════════════════════════════════════════════════ */
+
+@import url('https://fonts.googleapis.com/css2?family=Marcellus&family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+.dash {
+  /* ── Ink & bone palette (replaces neutral zinc) ── */
+  --black:     #08090F;
+  --surface-1: #0B0C14;
+  --surface-2: #10121C;
+  --surface-3: #151827;
+  --surface-4: #1B1F31;
+
+  /* Warm hairlines — parchment tint instead of pure white alpha */
+  --line:      rgba(201, 182, 150, 0.08);
+  --line-mid:  rgba(201, 182, 150, 0.11);
+  --line-hi:   rgba(201, 182, 150, 0.20);
+
+  --white:     #ECE7DB;
+  --gray-1:    rgba(236, 231, 219, 0.92);
+  --gray-2:    rgba(180, 182, 198, 0.88);
+  --gray-3:    rgba(141, 145, 165, 0.75);
+  --gray-4:    rgba(86, 90, 110, 0.60);
+  --gray-5:    rgba(50, 53, 70, 0.50);
+
+  /* ── Bronze replaces purple as the single interactive accent ── */
+  --accent:        #CE9B4F;
+  --accent-bright: #EFC584;
+  --accent-deep:   #A67833;
+  --accent-glow:   rgba(206, 155, 79, 0.16);
+  --gradient-hero: linear-gradient(135deg, #A67833 0%, #EFC584 100%);
+
+  /* Functional status — desaturated, terminal-calm */
+  --status-live:  #5FC48D;
+  --status-error: #E36D6D;
+  --status-idle:  rgba(141, 145, 165, 0.30);
+  --status-warn:  #E2A94F;
+
+  /* Secondary cold accent for memory / episodic data */
+  --synapse:      #8E9EFF;
+  --synapse-soft: rgba(142, 158, 255, 0.12);
+
+  --radius: 10px;
+  --radius-lg: 14px;
+
+  font-family: 'Instrument Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  letter-spacing: 0.01em;
+  background:
+    radial-gradient(1100px 500px at 85% -10%, rgba(142, 158, 255, 0.04), transparent 60%),
+    radial-gradient(800px 420px at -5% 105%, rgba(206, 155, 79, 0.04), transparent 55%),
+    var(--black);
+}
+
+/* Film grain for depth (GPU-cheap, pure CSS) */
+.dash::after {
+  content: "";
+  position: fixed; inset: 0;
+  pointer-events: none; z-index: 999; opacity: 0.3;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .025 0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+.dash ::selection { background: rgba(206, 155, 79, 0.22); color: var(--white); }
+
+.dash :focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ═══════════════════════════════════════════
+   SIDEBAR
+   ═══════════════════════════════════════════ */
+.dash-sidebar {
+  background: linear-gradient(180deg, #0C0D16 0%, var(--black) 65%);
+  border-right: 1px solid var(--line);
+}
+
+.dash-brand { padding: 20px 16px 18px; gap: 12px; }
+
+.dash-brand-icon {
+  width: 36px; height: 36px;
+  display: grid; place-items: center;
+  font-size: 15px;
+  border-radius: 10px;
+  border: 1px solid var(--line-hi);
+  background:
+    radial-gradient(circle at 30% 15%, rgba(206, 155, 79, 0.22), transparent 70%),
+    var(--surface-2);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.dash-brand-name {
+  font-family: 'Marcellus', serif;
+  font-size: 17px;
+  font-weight: 400;
+  letter-spacing: 0.05em;
+  color: var(--white);
+}
+
+.dash-brand-version {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8.5px;
+  letter-spacing: 0.22em;
+  color: var(--accent);
+  border: 1px solid rgba(206, 155, 79, 0.35);
+  border-radius: 100px;
+  padding: 2px 8px;
+  background: var(--accent-glow);
+}
+
+/* Section labels rendered by the redesigned Sidebar */
+.st-nav-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--gray-4);
+  padding: 16px 14px 7px;
+  user-select: none;
+}
+.dash-sidebar.collapsed .st-nav-label { visibility: hidden; padding: 8px 0 0; }
+
+.dash-nav-btn {
+  border-radius: 9px;
+  color: var(--gray-3);
+  font-size: 13.5px;
+  font-weight: 500;
+  position: relative;
+  transition: color 0.15s, background 0.15s;
+}
+.dash-nav-btn:hover { color: var(--white); background: rgba(255, 255, 255, 0.03); }
+.dash-nav-btn.active {
+  color: var(--white);
+  background: linear-gradient(90deg, var(--accent-glow), transparent 82%);
+}
+.dash-nav-btn.active::before {
+  content: "";
+  position: absolute; left: -14px; top: 8px; bottom: 8px;
+  width: 2px; border-radius: 2px;
+  background: var(--accent);
+}
+
+.dash-nav-icon { opacity: 0.8; display: grid; place-items: center; }
+.dash-nav-btn.active .dash-nav-icon { opacity: 1; }
+
+/* Pending-count badge (HITL approvals etc.) */
+.st-nav-badge {
+  margin-left: auto;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9.5px;
+  font-weight: 600;
+  color: var(--status-warn);
+  border: 1px solid rgba(226, 169, 79, 0.35);
+  background: rgba(226, 169, 79, 0.08);
+  border-radius: 100px;
+  padding: 1px 7px;
+}
+
+.dash-nav-search-btn {
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  border-radius: 9px;
+  color: var(--gray-4);
+  transition: border-color 0.15s;
+}
+.dash-nav-search-btn:hover { border-color: var(--line-hi); color: var(--gray-3); }
+.dash-nav-kbd {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9.5px;
+  border: 1px solid var(--line-mid);
+  border-radius: 5px;
+  padding: 1px 6px;
+  color: var(--gray-4);
+}
+
+.dash-plan-chip {
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: linear-gradient(160deg, var(--surface-3), var(--surface-2));
+  position: relative;
+  overflow: hidden;
+}
+.dash-plan-chip::after {
+  content: "XII";
+  position: absolute; right: 10px; top: 4px;
+  font-family: 'Marcellus', serif;
+  font-size: 22px;
+  color: rgba(206, 155, 79, 0.12);
+}
+.dash-plan-dot { background: var(--status-live); }
+.dash-plan-text {
+  font-family: 'Marcellus', serif;
+  font-size: 11.5px;
+  letter-spacing: 0.12em;
+  color: var(--accent);
+}
+
+/* ═══════════════════════════════════════════
+   TOPBAR
+   ═══════════════════════════════════════════ */
+.dash-topbar {
+  background: rgba(8, 9, 15, 0.72);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--line);
+}
+
+.dash-topbar-title {
+  font-family: 'Marcellus', serif;
+  font-size: 16.5px;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+}
+
+.dash-search-btn {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  color: var(--gray-4);
+  transition: border-color 0.15s;
+}
+.dash-search-btn:hover { border-color: var(--line-hi); }
+
+.dash-live-indicator {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--status-live);
+  border: 1px solid rgba(95, 196, 141, 0.28);
+  background: rgba(95, 196, 141, 0.05);
+  border-radius: 100px;
+  padding: 5px 12px;
+}
+.dash-live-dot {
+  background: var(--status-live);
+  animation: st-pulse 2.2s ease-in-out infinite;
+}
+@keyframes st-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(95, 196, 141, 0.5); }
+  55%      { box-shadow: 0 0 0 5px rgba(95, 196, 141, 0); }
+}
+
+.dash-time {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11.5px;
+  color: var(--gray-3);
+}
+
+/* GitHub star — align with brand instead of shouting yellow */
+.dash-topbar-star {
+  background: var(--accent-glow) !important;
+  border: 1px solid rgba(206, 155, 79, 0.35) !important;
+  color: var(--accent-bright) !important;
+}
+
+.dash-avatar {
+  background: linear-gradient(135deg, var(--accent-bright), #8A6430);
+  color: #161001;
+  font-family: 'Marcellus', serif;
+  font-weight: 400;
+}
+
+/* ═══════════════════════════════════════════
+   PANELS / SHARED
+   ═══════════════════════════════════════════ */
+.dash-panel {
+  background: linear-gradient(180deg, var(--surface-2), #0C0E17);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.03) inset;
+}
+
+.dash-panel-title {
+  font-family: 'Marcellus', serif;
+  font-size: 15.5px;
+  font-weight: 400;
+  letter-spacing: 0.05em;
+}
+
+.dash-filter-pill {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px !important;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border-radius: 7px;
+}
+.dash-filter-pill.active {
+  background: var(--surface-4);
+  border-color: var(--line-hi);
+  color: var(--white);
+}
+
+/* Numbers everywhere read as instrument data */
+.dash [style*="tabular-nums"] { font-family: 'JetBrains Mono', monospace; }
+
+/* Scrollbars */
+.dash ::-webkit-scrollbar { width: 8px; height: 8px; }
+.dash ::-webkit-scrollbar-thumb { background: var(--surface-4); border-radius: 8px; }
+.dash ::-webkit-scrollbar-track { background: transparent; }
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .dash *, .dash *::before, .dash *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
